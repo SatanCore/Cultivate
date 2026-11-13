@@ -32,5 +32,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Cultivate-Game-APK
-          path: "**/*.apk"
+          path: .github/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
           

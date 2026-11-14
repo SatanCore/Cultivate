@@ -941,6 +941,7 @@ private fun CultivateApp() {
 
             if (selectedMenu == 7) GameCard("Духовный зверинец", "Коллекция питомцев · активен: ${activePet.name}") {
                 Text("Каждый зверь меняет стиль боя. Опыт связи получает только активный питомец за победы. Развитие намеренно сложное: нужны опыт, эссенция зверя и ядра для ключевых рубежей.", color = Color.LightGray, fontSize = 12.sp)
+                PetCompanionArt()
                 Text("Эссенция: $petEssence · ядра зверя: $petCores · поиск редкого зверя: $petPity / 20 побед", color = Jade, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 Text("Активен: ${activePet.symbol} ${activePet.name} · уровень $petLevel / 30 · опыт связи $petXp · пробуждение $petAscension / 5", color = Gold)
                 Text("Бонусы: атака +$petAttack · защита +$petDefense · здоровье +${activePet.hp + petLevel * 3 + if (petSynergy) 20 else 0} · техника +$petSkill · крит +${activePet.critical + if (petSynergy) 2 else 0}% · лечение +${activePet.healing + if (petSynergy) 2 else 0}", color = Jade, fontSize = 11.sp)
@@ -1144,6 +1145,33 @@ private fun BattleScene(autoBattle: Boolean, actionText: String) {
     }
     Text(if(autoBattle)"БОЙ · ТЕХНИКИ И ЭФФЕКТЫ АКТИВНЫ" else actionText,color=if(autoBattle) Jade else Color.LightGray,fontSize=11.sp,fontWeight=FontWeight.Bold)
 }
+@Composable
+private fun PetCompanionArt() {
+    val transition = rememberInfiniteTransition(label = "spirit-fox-art")
+    val breath by transition.animateFloat(.985f, 1.025f, infiniteRepeatable(tween(1900), RepeatMode.Reverse), label = "fox-breath")
+    val glow by transition.animateFloat(.25f, .8f, infiniteRepeatable(tween(1200), RepeatMode.Reverse), label = "fox-glow")
+    Box(Modifier.fillMaxWidth().height(174.dp)) {
+        Image(
+            painter = painterResource(id = R.drawable.pet_companion_banner),
+            contentDescription = "Культиватор и его дух-лис",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = breath; scaleY = breath }
+        )
+        Canvas(Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+            for (i in 0..13) {
+                val x = ((i * .173f + glow * .12f) % 1f) * w
+                val y = h * (.18f + ((i * 29) % 68) / 100f)
+                drawCircle(Color(0xFFB9F7FF).copy(alpha = glow * .55f), if (i % 3 == 0) 2.8f else 1.5f, Offset(x, y))
+            }
+            drawRect(brush = Brush.horizontalGradient(0f to Color(0x66101820), .45f to Color.Transparent, 1f to Color(0x55101820)))
+            drawRect(brush = Brush.verticalGradient(0f to Color.Transparent, .7f to Color.Transparent, 1f to Color(0x99101820)))
+        }
+        Text("ДУХОВНЫЕ СПУТНИКИ", Modifier.align(Alignment.BottomStart).padding(10.dp), color = Color(0xFFE8D6AD), fontSize = 10.sp, fontWeight = FontWeight.Black)
+    }
+}
+
 @Composable
 private fun TownBuilding(name: String, description: String, symbol: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(modifier = modifier.heightIn(min = 104.dp).clickable(onClick = onClick), color = Color(0xFF1B3035), shape = MaterialTheme.shapes.large, border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.42f)), shadowElevation = 7.dp) {

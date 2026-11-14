@@ -1028,7 +1028,7 @@ private fun TownScene(stage: Int, storyChapter: Int) {
         3 -> Color(0xFF9A5BC1).copy(alpha = .24f)
         else -> Color(0xFF173F50).copy(alpha = .08f)
     }
-    Box(Modifier.fillMaxWidth().height(342.dp)) {
+    Box(Modifier.fillMaxWidth().height(248.dp)) {
         Image(
             painter = painterResource(id = R.drawable.lunar_harbor_bg),
             contentDescription = "Лунная Гавань — панорама игрового мира",

@@ -52,13 +52,26 @@ private fun CultivateApp() {
     val now = remember { System.currentTimeMillis() }
     val previousVisit = remember { prefs.getLong("last_seen", now) }
     val offlineSeconds = ((now - previousVisit) / 1000L).coerceIn(0L, OFFLINE_CAP_SECONDS)
-    val restoredQi = (offlineSeconds / QI_INTERVAL_SECONDS).toInt()
+    val savedAbodeLevel = prefs.getInt("abode_level", 1).coerceIn(1, 5)
+    val restoredQi = (offlineSeconds / (QI_INTERVAL_SECONDS - (savedAbodeLevel - 1).coerceAtMost(3))).toInt()
 
     var qi by remember {
         mutableIntStateOf((prefs.getInt("qi", 0) + restoredQi).coerceAtMost(9999))
     }
     var stones by remember { mutableIntStateOf(prefs.getInt("stones", 120)) }
     var stage by remember { mutableIntStateOf(prefs.getInt("stage", 1).coerceAtLeast(1)) }
+    var abodeLevel by remember { mutableIntStateOf(savedAbodeLevel) }
+    var ironOre by remember { mutableIntStateOf(prefs.getInt("abode_iron_ore", 0).coerceAtLeast(0)) }
+    var spiritHerbs by remember { mutableIntStateOf(prefs.getInt("abode_herbs", 0).coerceAtLeast(0)) }
+    var spiritWater by remember { mutableIntStateOf(prefs.getInt("abode_water", 0).coerceAtLeast(0)) }
+    var qiPills by remember { mutableIntStateOf(prefs.getInt("abode_qi_pills", 0).coerceAtLeast(0)) }
+    var bodyPills by remember { mutableIntStateOf(prefs.getInt("abode_body_pills", 0).coerceAtLeast(0)) }
+    var bodyPillBonus by remember { mutableIntStateOf(prefs.getInt("abode_body_bonus", 0).coerceAtLeast(0)) }
+    var forgeTemper by remember { mutableIntStateOf(prefs.getInt("abode_forge_temper", 0).coerceAtLeast(0)) }
+    var alchemyRank by remember { mutableIntStateOf(prefs.getInt("abode_alchemy_rank", 1).coerceIn(1, 5)) }
+    var gardenReadyAt by remember { mutableLongStateOf(prefs.getLong("abode_garden_ready", 0L)) }
+    var springReadyAt by remember { mutableLongStateOf(prefs.getLong("abode_spring_ready", 0L)) }
+    var abodeSection by remember { mutableStateOf("sanctuary") }
     var petLevel by remember { mutableIntStateOf(prefs.getInt("pet", 1).coerceAtLeast(1)) }
     var bossLevel by remember { mutableIntStateOf(prefs.getInt("boss_level", 1).coerceAtLeast(1)) }
     var enemyHp by remember { mutableIntStateOf(prefs.getInt("enemy", 100).coerceAtLeast(0)) }
@@ -134,7 +147,7 @@ private fun CultivateApp() {
     val gearDefenseTotal = equippedGear.sumOf { it.defenseBonus } + activeSetBonus.defense
     val gearHpTotal = equippedGear.sumOf { it.hpBonus } + activeSetBonus.hp
     val gearSkillTotal = equippedGear.sumOf { it.skillBonus } + activeSetBonus.skill
-    val playerMaxHp = 500 + stage * 30 + classProfile.bonusHp + gearHpTotal
+    val playerMaxHp = 500 + stage * 30 + classProfile.bonusHp + gearHpTotal + bodyPillBonus
     val defensiveNodes = listOf(listOf(3,4,7), listOf(2,4,7), listOf(5,7), listOf(3,5,7))
     val defensiveSkillCount = if(chosenClass < 0) 0 else defensiveNodes[chosenClass].count { skillTreeLevels[chosenClass*9+it] == 1 }
     val passiveSkillCount = if(chosenClass < 0) 0 else (0..8).count { skillTreeLevels[chosenClass*9+it] == 1 && !skillDefinitions[chosenClass][it].active && it !in defensiveNodes[chosenClass] }
@@ -221,6 +234,8 @@ private fun CultivateApp() {
             skillMaterials[materialTier] = skillMaterials[materialTier] + 1
             val weaponDrop = rollWeaponDrop(stage, ownedWeaponList)
             val gearDrop = if (Random.nextInt(100) < 35) rollGearDrop(stage) else null
+            val oreFound = 1 + (bossLevel / 5).coerceAtMost(3)
+            ironOre += oreFound
             val rareSkillFound = chosenClass >= 0 && rareSkill.isBlank() && Random.nextDouble() < 0.008
             val weaponText = if (weaponDrop != null) {
                 val encodedDrop = encodeWeaponInstance(weaponDrop)
@@ -232,7 +247,7 @@ private fun CultivateApp() {
                 " Экипировка: ${gearDrop.name} · ${gearDrop.rarity.title}."
             } else ""
             if (rareSkillFound) rareSkill = rareArts[chosenClass]
-            message = "Победа! Получено $reward камней, 1 очко навыков и ${skillMaterialNames[materialTier]}.$weaponText$gearText" +
+            message = "Победа! Получено $reward камней, 1 очко навыков, ${skillMaterialNames[materialTier]} и железная руда ×$oreFound.$weaponText$gearText" +
                 if (rareSkillFound) " Редкое наследие: $rareSkill!" else ""
         } else if (playerHp <= 0) {
             autoBattle = false
@@ -277,16 +292,27 @@ private fun CultivateApp() {
 
     LaunchedEffect(Unit) {
         while (true) {
-            delay(QI_INTERVAL_SECONDS * 1000L)
+            delay((QI_INTERVAL_SECONDS - (abodeLevel - 1).coerceAtMost(3)).coerceAtLeast(2) * 1000L)
             qi = (qi + 1).coerceAtMost(9999)
         }
     }
 
-    LaunchedEffect(qi, stones, stage, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, ownedGearIds, equippedGearIds.toList(), questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
+    LaunchedEffect(qi, stones, stage, abodeLevel, ironOre, spiritHerbs, spiritWater, qiPills, bodyPills, bodyPillBonus, forgeTemper, alchemyRank, gardenReadyAt, springReadyAt, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, ownedGearIds, equippedGearIds.toList(), questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
         prefs.edit()
             .putInt("qi", qi)
             .putInt("stones", stones)
             .putInt("stage", stage)
+            .putInt("abode_level", abodeLevel)
+            .putInt("abode_iron_ore", ironOre)
+            .putInt("abode_herbs", spiritHerbs)
+            .putInt("abode_water", spiritWater)
+            .putInt("abode_qi_pills", qiPills)
+            .putInt("abode_body_pills", bodyPills)
+            .putInt("abode_body_bonus", bodyPillBonus)
+            .putInt("abode_forge_temper", forgeTemper)
+            .putInt("abode_alchemy_rank", alchemyRank)
+            .putLong("abode_garden_ready", gardenReadyAt)
+            .putLong("abode_spring_ready", springReadyAt)
             .putInt("pet", petLevel)
             .putInt("boss_level", bossLevel)
             .putInt("enemy", enemyHp)
@@ -342,7 +368,7 @@ private fun CultivateApp() {
             }
 
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("Город", "Путь", "Арена", "Персонаж", "Инвентарь", "Навыки", "Секты", "Спутник").forEachIndexed { index, label ->
+                listOf("Город", "Путь", "Арена", "Персонаж", "Инвентарь", "Навыки", "Секты", "Спутник", "Обитель").forEachIndexed { index, label ->
                     if (selectedMenu == index) Button(onClick = { selectedMenu = index; selectedTownBuilding = "" }) { Text(label) }
                     else OutlinedButton(onClick = { selectedMenu = index; selectedTownBuilding = "" }) { Text(label) }
                 }
@@ -372,6 +398,7 @@ private fun CultivateApp() {
                         TownBuilding("Дом спутника", "Уход за духовным лисом", "🦊", Modifier.weight(1f)) { selectedMenu = 7 }
                         TownBuilding("Склад", "Экипировка и находки", "🎒", Modifier.weight(1f)) { selectedMenu = 4 }
                     }
+                    TownBuilding("Личная обитель", "Медитация · кузница · алхимия", "🏡", Modifier.fillMaxWidth()) { selectedMenu = 8; abodeSection = "sanctuary" }
                 }
                 when (selectedTownBuilding) {
                     "shop" -> GameCard("Лавка Мэй", "Торговка материалов") {
@@ -445,6 +472,123 @@ private fun CultivateApp() {
                 }
             }
 
+            if (selectedMenu == 8) {
+                val currentWorld = worldName(stage)
+                val abodeUpgradeCost = abodeLevel * 100
+                val oreUpgradeCost = (abodeLevel - 1).coerceAtLeast(0)
+                val nowMillis = System.currentTimeMillis()
+                val gardenMinutes = ((gardenReadyAt - nowMillis).coerceAtLeast(0L) / 60000L)
+                val springMinutes = ((springReadyAt - nowMillis).coerceAtLeast(0L) / 60000L)
+                GameCard("Личная обитель", "Уровень $abodeLevel · $currentWorld · тихое место для роста") {
+                    AbodeScene(abodeLevel, currentWorld)
+                    Text("Небольшой двор в стороне от Лунной Гавани. Здесь ты можешь укрыться от суеты, собирать Ци и постепенно превращать скромное убежище в настоящую резиденцию культиватора.", color = Color.LightGray)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        StatCard("Железная руда", ironOre.toString(), Modifier.weight(1f))
+                        StatCard("Травы", spiritHerbs.toString(), Modifier.weight(1f))
+                        StatCard("Духовная вода", spiritWater.toString(), Modifier.weight(1f))
+                    }
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("sanctuary" to "Двор", "forge" to "Кузница", "alchemy" to "Алхимия", "garden" to "Сад духов", "worlds" to "Миры").forEach { (key, label) ->
+                            if (abodeSection == key) Button(onClick = { abodeSection = key }) { Text(label) }
+                            else OutlinedButton(onClick = { abodeSection = key }) { Text(label) }
+                        }
+                    }
+                    when (abodeSection) {
+                        "sanctuary" -> {
+                            Text("Пещера уединения", color = Gold, fontWeight = FontWeight.Bold)
+                            Text("Ци накапливается автоматически даже вне игры. Уровень обители ускоряет медитацию: сейчас одна единица Ци каждые ${QI_INTERVAL_SECONDS - (abodeLevel - 1).coerceAtMost(3)} сек. Прогресс сохраняется.", color = Color.LightGray, fontSize = 12.sp)
+                            Button(onClick = { qi = (qi + 20 + abodeLevel * 5).coerceAtMost(9999); message = "Ты провёл короткую медитацию и собрал ${20 + abodeLevel * 5} Ци." }, modifier = Modifier.fillMaxWidth()) { Text("Погрузиться в медитацию · +${20 + abodeLevel * 5} Ци") }
+                            Divider(color = Color(0xFF3B4B4F))
+                            Text("Развитие обители", color = Gold, fontWeight = FontWeight.Bold)
+                            Text(if (abodeLevel < 5) "Следующий уровень: $abodeUpgradeCost камней духа и $oreUpgradeCost руды. Ускоряет пассивное накопление Ци и расширяет хозяйство." else "Обитель достигла предела развития Смертного мира. Дальнейшие улучшения станут доступны за пределами этого мира.", color = Color.LightGray, fontSize = 12.sp)
+                            Button(onClick = {
+                                if (abodeLevel >= 5) message = "Для дальнейшего расширения обители потребуется сила следующего мира."
+                                else if (stones >= abodeUpgradeCost && ironOre >= oreUpgradeCost) {
+                                    stones -= abodeUpgradeCost; ironOre -= oreUpgradeCost; abodeLevel++
+                                    message = "Обитель улучшена до $abodeLevel уровня. Потоки Ци стали плотнее."
+                                } else message = "Не хватает ресурсов для улучшения обители."
+                            }, enabled = abodeLevel < 5 && stones >= abodeUpgradeCost && ironOre >= oreUpgradeCost, modifier = Modifier.fillMaxWidth()) { Text(if (abodeLevel >= 5) "Предел Смертного мира" else "Улучшить обитель · $abodeUpgradeCost камней") }
+                            Text("Склад обители · пилюли Ци: $qiPills · пилюли крепкого тела: $bodyPills · постоянная закалка: +$bodyPillBonus к здоровью", color = Jade, fontSize = 11.sp)
+                        }
+                        "forge" -> {
+                            Text("Кузница у каменного склона", color = Gold, fontWeight = FontWeight.Bold)
+                            Text("Пока здесь только простой горн и ручной молот. Чэнь помог наладить его работу: железная руда добывается в боях со стражами, а закалка усиливает надетое оружие, не уничтожая его историю и случайные свойства.", color = Color.LightGray, fontSize = 12.sp)
+                            Text("Оружие: ${equippedWeapon.name} · заточка обители +$forgeTemper · атака +${equippedWeapon.attackBonus} · доп. урон +${equippedWeapon.bonusDamage}", color = Jade)
+                            val temperCost = 60 + forgeTemper * 40
+                            val temperOre = 1 + forgeTemper / 3
+                            Button(onClick = {
+                                if (ironOre >= temperOre && stones >= temperCost) {
+                                    val oldItem = resolveWeaponInstance(equippedWeaponId) ?: weaponCatalog.first()
+                                    val upgraded = oldItem.copy(attackBonus = oldItem.attackBonus + 2, defenseBonus = oldItem.defenseBonus + 1, bonusDamage = oldItem.bonusDamage + 1)
+                                    val encodedOld = encodeWeaponInstance(oldItem)
+                                    val encodedNew = encodeWeaponInstance(upgraded)
+                                    ownedWeaponIds = ownedWeaponList.map { if (it == encodedOld) encodedNew else it }.let { if (encodedOld !in ownedWeaponList) it + encodedNew else it }.joinToString("|")
+                                    equippedWeaponId = encodedNew
+                                    ironOre -= temperOre; stones -= temperCost; forgeTemper++
+                                    message = "Закалка завершена: атака +2, защита +1, дополнительный урон +1."
+                                } else message = "Для закалки нужны $temperOre ед. руды и $temperCost камней духа."
+                            }, enabled = ironOre >= temperOre && stones >= temperCost, modifier = Modifier.fillMaxWidth()) { Text("Закалить оружие · $temperOre руды · $temperCost камней") }
+                            Text("Кузнечный навык: ${1 + forgeTemper / 3} · каждая третья закалка повышает мастерство кузницы.", color = Color.LightGray, fontSize = 11.sp)
+                        }
+                        "alchemy" -> {
+                            Text("Алхимическая печь", color = Gold, fontWeight = FontWeight.Bold)
+                            Text("Алхимия Смертного мира не творит чудес: простые травы и вода из родника превращаются в пилюли, помогающие пережить путь и ускорить накопление Ци.", color = Color.LightGray, fontSize = 12.sp)
+                            Text("Ранг алхимии: $alchemyRank / 5 · готовых пилюль Ци: $qiPills · пилюль закалки: $bodyPills", color = Jade)
+                            Button(onClick = {
+                                if (spiritHerbs >= 3 && spiritWater >= 1) { spiritHerbs -= 3; spiritWater--; qiPills++; message = "Создана пилюля сбора Ци." }
+                                else message = "Нужно 3 духовные травы и 1 порция духовной воды."
+                            }, enabled = spiritHerbs >= 3 && spiritWater >= 1, modifier = Modifier.fillMaxWidth()) { Text("Сварить пилюлю Ци · 3 травы + 1 вода") }
+                            Button(onClick = {
+                                if (spiritHerbs >= 5 && spiritWater >= 2) { spiritHerbs -= 5; spiritWater -= 2; bodyPills++; message = "Создана пилюля крепкого тела." }
+                                else message = "Нужно 5 духовных трав и 2 порции духовной воды."
+                            }, enabled = spiritHerbs >= 5 && spiritWater >= 2, modifier = Modifier.fillMaxWidth()) { Text("Сварить пилюлю закалки · 5 трав + 2 вода") }
+                            OutlinedButton(onClick = {
+                                if (qiPills > 0) { qiPills--; qi = (qi + 80).coerceAtMost(9999); message = "Пилюля растворилась, даровав 80 Ци." }
+                                else message = "В запасе нет пилюль сбора Ци."
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Принять пилюлю Ци · +80") }
+                            OutlinedButton(onClick = {
+                                if (bodyPills > 0) { bodyPills--; bodyPillBonus += 15; playerHp = (playerHp + 15).coerceAtMost(playerMaxHp + 15); message = "Тело укреплено навсегда: максимальное здоровье +15." }
+                                else message = "В запасе нет пилюль закалки."
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Принять пилюлю закалки · здоровье +15 навсегда") }
+                            if (alchemyRank < 5 && spiritHerbs >= alchemyRank * 4 && spiritWater >= alchemyRank) {
+                                OutlinedButton(onClick = { spiritHerbs -= alchemyRank * 4; spiritWater -= alchemyRank; alchemyRank++; message = "Ранг алхимии повышен до $alchemyRank. Пилюли стали эффективнее." }, modifier = Modifier.fillMaxWidth()) { Text("Повысить ранг алхимии · травы ${alchemyRank * 4} + вода $alchemyRank") }
+                            } else Text("Для следующего ранга нужны ${alchemyRank * 4} трав и $alchemyRank порций воды.", color = Color.LightGray, fontSize = 11.sp)
+                        }
+                        "garden" -> {
+                            Text("Сад духовных трав", color = Gold, fontWeight = FontWeight.Bold)
+                            Text("На небольшом участке растут самые простые травы Смертного мира. Позже, в других мирах, сад сможет принимать семена с совершенно иной природой.", color = Color.LightGray, fontSize = 12.sp)
+                            Text(if (gardenReadyAt <= nowMillis) "Урожай созрел: можно собрать травы." else "До следующего урожая примерно $gardenMinutes мин.", color = Jade)
+                            Button(onClick = {
+                                val now = System.currentTimeMillis()
+                                if (now >= gardenReadyAt) { val harvest = 2 + abodeLevel; spiritHerbs += harvest; gardenReadyAt = now + 300000L; message = "Собрано духовных трав: $harvest. Следующий урожай через 5 минут." }
+                                else message = "Сад ещё растёт. Вернись позже."
+                            }, enabled = gardenReadyAt <= nowMillis, modifier = Modifier.fillMaxWidth()) { Text("Собрать урожай · ${2 + abodeLevel} травы") }
+                            Text("Урожайность растёт вместе с уровнем обители.", color = Color.LightGray, fontSize = 11.sp)
+                        }
+                        "worlds" -> {
+                            Text("Путь через четыре мира", color = Gold, fontWeight = FontWeight.Bold)
+                            worldEntries.forEachIndexed { index, entry ->
+                                val unlocked = stage >= entry.second
+                                Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text("${index + 1}. ${entry.first}", color = if (unlocked) Jade else Gold, fontWeight = FontWeight.Bold)
+                                    Text(entry.third, color = Color.LightGray, fontSize = 11.sp)
+                                    Text(if (unlocked) "Доступен · текущая ступень $stage" else "Запечатан · требуется ступень ${entry.second}", color = if (unlocked) Jade else Color.Gray, fontSize = 10.sp)
+                                }
+                            }
+                            Text("Сейчас ты лишь начинаешь путь. За пределами смертных земель существуют целые цивилизации, законы Дао и испытания, о которых жители Лунной Гавани даже не подозревают.", color = Gold, fontSize = 12.sp)
+                        }
+                    }
+                }
+                GameCard("Родник и хозяйство", "Небольшие источники ресурсов для ремесла") {
+                    Text(if (springReadyAt <= nowMillis) "Родник наполнился духовной водой." else "Родник восстановится примерно через $springMinutes мин.", color = Color.LightGray, fontSize = 12.sp)
+                    Button(onClick = {
+                        val now = System.currentTimeMillis()
+                        if (now >= springReadyAt) { spiritWater += 1 + abodeLevel / 3; springReadyAt = now + 300000L; message = "Набрана духовная вода из родника." }
+                        else message = "Родник ещё не восстановился."
+                    }, enabled = springReadyAt <= nowMillis, modifier = Modifier.fillMaxWidth()) { Text("Набрать духовную воду") }
+                }
+            }
+
             if (selectedMenu == 1) {
             GameCard("Культивация", "Ступень $stage · ${stageName(stage)}") {
                 val breakthroughCost = stage * 35
@@ -461,10 +605,11 @@ private fun CultivateApp() {
                     onClick = {
                         if (qi >= breakthroughCost) {
                             qi -= breakthroughCost
+                            val oldWorld = worldName(stage)
                             stage++
                             skillPoints++
                             stones += 25
-                            message = "Прорыв свершился! Ты достиг ступени $stage."
+                            message = if (worldName(stage) != oldWorld) "Врата открылись! Ты покинул $oldWorld и вступил в ${worldName(stage)}. Перед тобой совершенно новый путь." else "Прорыв свершился! Ты достиг ступени $stage в мире ${worldName(stage)}."
                         } else {
                             message = "Недостаточно Ци. Продолжай медитировать."
                         }
@@ -810,6 +955,50 @@ private fun TownScene(stage: Int, storyChapter: Int) {
         if (storyChapter == 0) "Лунная Гавань · ступень $stage · северные врата закрыты" else "Лунная Гавань · ступень $stage · путь за северные врата открыт",
         color = Gold, fontSize = 11.sp, fontWeight = FontWeight.Bold
     )
+}
+
+@Composable
+private fun AbodeScene(level: Int, world: String) {
+    val transition = rememberInfiniteTransition(label = "abode-breath")
+    val glow by transition.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 0.65f,
+        animationSpec = infiniteRepeatable(tween(2200), repeatMode = RepeatMode.Reverse),
+        label = "spring-glow"
+    )
+    Canvas(Modifier.fillMaxWidth().height(190.dp)) {
+        val w = size.width
+        val h = size.height
+        drawRect(brush = Brush.verticalGradient(listOf(Color(0xFF182B3A), Color(0xFF40564A), Color(0xFF24362F))))
+        val ridge = Path().apply {
+            moveTo(0f, h * 0.62f); lineTo(w * 0.18f, h * 0.22f); lineTo(w * 0.34f, h * 0.61f)
+            lineTo(w * 0.55f, h * 0.18f); lineTo(w * 0.78f, h * 0.58f); lineTo(w, h * 0.28f)
+            lineTo(w, h); lineTo(0f, h); close()
+        }
+        drawPath(ridge, Color(0xFF293E3B))
+        drawRect(Color(0xFF526247), Offset(0f, h * 0.72f), Size(w, h * 0.28f))
+        drawRoundRect(Color(0xFF9B7956), Offset(w * 0.12f, h * 0.48f), Size(w * 0.27f, h * 0.30f))
+        val roof = Path().apply {
+            moveTo(w * 0.08f, h * 0.51f); lineTo(w * 0.25f, h * 0.30f); lineTo(w * 0.43f, h * 0.51f); close()
+        }
+        drawPath(roof, Color(0xFF624638))
+        drawRect(Color(0xFF4B332A), Offset(w * 0.22f, h * 0.61f), Size(w * 0.06f, h * 0.17f))
+        drawRect(Color(0xFFFFD38B).copy(alpha = glow), Offset(w * 0.15f, h * 0.57f), Size(w * 0.045f, h * 0.055f))
+        drawRoundRect(Color(0xFF18252B), Offset(w * 0.59f, h * 0.48f), Size(w * 0.23f, h * 0.29f))
+        val cave = Path().apply {
+            moveTo(w * 0.56f, h * 0.51f); lineTo(w * 0.70f, h * 0.30f); lineTo(w * 0.85f, h * 0.51f); close()
+        }
+        drawPath(cave, Color(0xFF46504B))
+        drawCircle(Color(0xFF8ED9B2).copy(alpha = glow), 12f, Offset(w * 0.70f, h * 0.63f))
+        drawCircle(Color(0xFF8ED9B2).copy(alpha = glow * 0.20f), 26f, Offset(w * 0.70f, h * 0.63f))
+        for (i in 0..4) {
+            val x = w * (0.43f + i * 0.045f)
+            drawLine(Color(0xFF8CA36A), Offset(x, h * 0.78f), Offset(x - 3f, h * 0.68f), 3f)
+            drawCircle(Color(0xFF9FC47A), 4f, Offset(x - 3f, h * 0.68f))
+        }
+        drawLine(Color(0xFF91B8A4).copy(alpha = glow), Offset(w * 0.03f, h * 0.89f), Offset(w * 0.97f, h * 0.89f), 3f)
+    }
+    Text("Убежище Смертного мира · уровень $level · $world", color = Gold, fontSize = 11.sp, fontWeight = FontWeight.Bold)
 }
 
 @Composable
@@ -1258,6 +1447,19 @@ private fun techniqueName(index: Int): String = when (index) {
 }
 
 private fun bossMaxHp(level: Int): Int = 100 + (level - 1) * 35
+
+private val worldEntries = listOf(
+    Triple("Смертный мир", 1, "Мир простых людей, горных долин и первых искателей Дао. Здесь всё начинается с тела, дыхания и крупицы Ци."),
+    Triple("Духовный мир", 7, "Земли, где духовная энергия наполняет реки и леса, а секты хранят искусства древних мастеров."),
+    Triple("Бессмертный мир", 13, "Обители бессмертных, небесные города и испытания, меняющие саму природу души."),
+    Triple("Мир Хаоса", 19, "Первозданная область за пределами привычных законов. Даже само пространство здесь подчиняется Дао.")
+)
+private fun worldName(stage: Int): String = when {
+    stage >= 19 -> "Мир Хаоса"
+    stage >= 13 -> "Бессмертный мир"
+    stage >= 7 -> "Духовный мир"
+    else -> "Смертный мир"
+}
 
 private fun stageName(stage: Int): String = when {
     stage < 4 -> "Закалка тела"

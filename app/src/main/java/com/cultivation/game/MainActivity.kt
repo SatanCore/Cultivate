@@ -782,12 +782,13 @@ private fun CultivateApp() {
                 Text(activeSetBonus.description.ifBlank { "Бонус комплекта: не активен · собери 2 или 4 предмета одного набора." }, color = Gold, fontSize = 11.sp)
                 classNames.forEachIndexed { i, n ->
                     val profile = classCombatProfiles[i]
-                    Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(n, color = Gold, fontWeight = FontWeight.Bold)
-                        Text(classDescriptions[i], color = Color.LightGray, fontSize = 12.sp)
-                        Text("Атака +${profile.attack} · Защита +${profile.defense} · Здоровье +${profile.bonusHp} · Крит. шанс ${profile.criticalChance}%", color = Jade, fontSize = 11.sp)
-                        Text("Сила техник +${profile.skillPower} · Бонус лечения +${profile.healingBonus}", color = Jade, fontSize = 11.sp)
-                        OutlinedButton(onClick = {
+                    ClassPortraitCard(
+                        name = n,
+                        description = classDescriptions[i],
+                        profile = profile,
+                        sigil = listOf("blademaster", "ironbody", "elementalist", "spiritmystic")[i],
+                        selected = chosenClass == i,
+                        onSelect = {
                             chosenClass = i
                             rotationOrder.clear()
                             (0..8).filter { skillTreeLevels[i*9+it] == 1 && skillDefinitions[i][it].active }.forEach { rotationOrder.add(it) }
@@ -796,8 +797,8 @@ private fun CultivateApp() {
                             if (skillTreeLevels[i*9+activeSkillNode] == 0 || !skillDefinitions[i][activeSkillNode].active) activeSkillNode = 0
                             playerHp = playerHp.coerceAtMost(500 + stage*30 + profile.bonusHp)
                             message = "Выбран класс: $n"
-                        }, modifier = Modifier.fillMaxWidth()) { Text(if (chosenClass == i) "Текущий класс" else "Выбрать класс") }
-                    }
+                        }
+                    )
                 }
                 Text("Снаряжение персонажа", color = Gold, fontWeight = FontWeight.Bold)
                 Text("Слот: основное оружие", color = Color.LightGray, fontSize = 11.sp)
@@ -1150,6 +1151,75 @@ private fun HomeNavItem(title: String, symbol: String, target: Int, onNavigate: 
 }
 
 @Composable
+private fun ClassPortraitCard(
+    name: String,
+    description: String,
+    profile: ClassCombatProfile,
+    sigil: String,
+    selected: Boolean,
+    onSelect: () -> Unit
+) {
+    Surface(
+        color = if (selected) Color(0xE52B405A) else Color(0xD916253A),
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = if (selected) 10.dp else 4.dp,
+        shadowElevation = if (selected) 8.dp else 3.dp
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(9.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RpgIcon(sigil, Modifier.size(78.dp))
+            Spacer(Modifier.width(9.dp))
+            Column(
+                Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(name, color = if (selected) Color(0xFFFFE4A0) else Color.White, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                    if (selected) {
+                        Spacer(Modifier.width(6.dp))
+                        Text("ПУТЬ ВЫБРАН", color = Jade, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    }
+                }
+                Text(description, color = Color(0xFFD1DCEB), fontSize = 10.sp, maxLines = 2)
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ClassMetric("weapon", profile.attack.toString())
+                    ClassMetric("shield", profile.defense.toString())
+                    ClassMetric("health", profile.bonusHp.toString())
+                    ClassMetric("critical", "${profile.criticalChance}%")
+                }
+                Text(
+                    "Техники +${profile.skillPower}  ·  лечение +${profile.healingBonus}",
+                    color = Color(0xFF9BDCC5),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            Spacer(Modifier.width(6.dp))
+            Surface(
+                modifier = Modifier.size(43.dp).clickable(onClick = onSelect),
+                shape = MaterialTheme.shapes.extraLarge,
+                color = if (selected) Color(0xFF315C51) else Color(0xFF263B58),
+                tonalElevation = 5.dp
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    RpgIcon(if (selected) "check" else "plus", Modifier.size(35.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClassMetric(icon: String, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        RpgIcon(icon, Modifier.size(17.dp))
+        Text(value, color = Color(0xFFF4E8D0), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
 private fun RpgIcon(kind: String, modifier: Modifier = Modifier) {
     Canvas(modifier) {
         val w = size.width
@@ -1173,6 +1243,54 @@ private fun RpgIcon(kind: String, modifier: Modifier = Modifier) {
             drawCircle(color, unit*r, Offset(w*x,h*y), style = if(fill) androidx.compose.ui.graphics.drawscope.Fill else stroke)
         }
         when (kind) {
+            "blademaster" -> {
+                p.moveTo(w*.49f,h*.13f); p.lineTo(w*.64f,h*.54f); p.lineTo(w*.52f,h*.68f); p.lineTo(w*.36f,h*.54f); p.close()
+                drawPath(p, goldBright.copy(alpha=.92f))
+                line(.5f,.64f,.5f,.83f,blue,sw*1.2f)
+                line(.35f,.57f,.65f,.57f,goldBright,sw*1.5f)
+                line(.25f,.72f,.75f,.25f,purple,sw*.8f)
+                circle(.5f,.57f,.045f,blue,true)
+            }
+            "ironbody" -> {
+                p.moveTo(w*.5f,h*.14f); p.cubicTo(w*.64f,h*.23f,w*.75f,h*.25f,w*.76f,h*.32f)
+                p.lineTo(w*.72f,h*.61f); p.cubicTo(w*.68f,h*.73f,w*.57f,h*.81f,w*.5f,h*.85f)
+                p.cubicTo(w*.43f,h*.81f,w*.32f,h*.73f,w*.28f,h*.61f); p.lineTo(w*.24f,h*.32f); p.cubicTo(w*.25f,h*.25f,w*.36f,h*.23f,w*.5f,h*.14f)
+                drawPath(p, goldBright, style=stroke)
+                p.moveTo(w*.36f,h*.44f); p.lineTo(w*.44f,h*.38f); p.lineTo(w*.55f,h*.40f); p.lineTo(w*.65f,h*.47f); p.lineTo(w*.59f,h*.57f); p.lineTo(w*.49f,h*.54f); p.lineTo(w*.43f,h*.62f); p.lineTo(w*.34f,h*.55f); p.close()
+                drawPath(p, blue.copy(alpha=.85f), style=stroke)
+            }
+            "elementalist" -> {
+                p.moveTo(w*.28f,h*.68f); p.cubicTo(w*.13f,h*.48f,w*.30f,h*.35f,w*.36f,h*.22f); p.cubicTo(w*.48f,h*.39f,w*.50f,h*.55f,w*.39f,h*.69f); p.close()
+                drawPath(p, Color(0xFFFFA45D), style=stroke)
+                p.moveTo(w*.58f,h*.22f); p.lineTo(w*.75f,h*.48f); p.lineTo(w*.58f,h*.73f); p.lineTo(w*.43f,h*.48f); p.close()
+                drawPath(p, blue, style=stroke)
+                line(.62f,.31f,.50f,.52f,purple,sw*1.4f); line(.50f,.52f,.64f,.52f,purple,sw*1.4f); line(.64f,.52f,.53f,.73f,purple,sw*1.4f)
+                circle(.30f,.75f,.035f,goldBright,true)
+            }
+            "spiritmystic" -> {
+                p.moveTo(w*.62f,h*.18f); p.cubicTo(w*.34f,h*.18f,w*.25f,h*.43f,w*.37f,h*.65f); p.cubicTo(w*.48f,h*.83f,w*.73f,h*.72f,w*.77f,h*.51f); p.cubicTo(w*.66f,h*.65f,w*.48f,h*.62f,w*.42f,h*.48f); p.cubicTo(w*.35f,h*.34f,w*.47f,h*.22f,w*.62f,h*.18f)
+                drawPath(p,purple.copy(alpha=.95f),style=stroke)
+                p.moveTo(w*.5f,h*.37f); p.cubicTo(w*.66f,h*.43f,w*.68f,h*.61f,w*.5f,h*.69f); p.cubicTo(w*.32f,h*.61f,w*.34f,h*.43f,w*.5f,h*.37f); drawPath(p,blue,style=stroke)
+                circle(.5f,.53f,.045f,goldBright,true)
+            }
+            "health" -> {
+                p.moveTo(w*.5f,h*.77f); p.cubicTo(w*.36f,h*.63f,w*.18f,h*.48f,w*.24f,h*.34f); p.cubicTo(w*.29f,h*.20f,w*.45f,h*.24f,w*.5f,h*.36f); p.cubicTo(w*.55f,h*.24f,w*.71f,h*.20f,w*.76f,h*.34f); p.cubicTo(w*.82f,h*.48f,w*.64f,h*.63f,w*.5f,h*.77f)
+                drawPath(p,Color(0xFFFF91A7),style=stroke)
+            }
+            "shield" -> {
+                p.moveTo(w*.5f,h*.17f); p.lineTo(w*.75f,h*.29f); p.lineTo(w*.70f,h*.61f); p.lineTo(w*.5f,h*.80f); p.lineTo(w*.30f,h*.61f); p.lineTo(w*.25f,h*.29f); p.close()
+                drawPath(p,blue,style=stroke); line(.5f,.30f,.5f,.65f,goldBright,sw*.8f)
+            }
+            "critical" -> {
+                p.moveTo(w*.5f,h*.15f); p.lineTo(w*.58f,h*.39f); p.lineTo(w*.82f,h*.5f); p.lineTo(w*.58f,h*.59f); p.lineTo(w*.5f,h*.84f); p.lineTo(w*.42f,h*.59f); p.lineTo(w*.18f,h*.5f); p.lineTo(w*.42f,h*.39f); p.close()
+                drawPath(p,Color(0xFFFFC46F),style=stroke)
+            }
+            "check" -> {
+                line(.25f,.52f,.43f,.70f,Jade,sw*1.7f); line(.43f,.70f,.77f,.29f,Jade,sw*1.7f)
+            }
+            "plus" -> {
+                line(.5f,.25f,.5f,.75f,goldBright,sw*1.5f); line(.25f,.5f,.75f,.5f,goldBright,sw*1.5f)
+            }
             "cultivation", "qi" -> {
                 p.moveTo(w*.5f,h*.78f); p.cubicTo(w*.18f,h*.62f,w*.28f,h*.28f,w*.5f,h*.20f)
                 p.cubicTo(w*.72f,h*.28f,w*.82f,h*.62f,w*.5f,h*.78f); p.close()

@@ -447,15 +447,15 @@ private fun CultivateApp() {
             }
 
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                HomeNavItem("Город", "⌂", 0) { selectedMenu = 0; selectedTownBuilding = "" }
-                HomeNavItem("Путь", "☯", 1) { selectedMenu = 1; selectedTownBuilding = "" }
-                HomeNavItem("Арена", "⚔", 2) { selectedMenu = 2; selectedTownBuilding = "" }
+                HomeNavItem("Город", "worlds", 0) { selectedMenu = 0; selectedTownBuilding = "" }
+                HomeNavItem("Путь", "cultivation", 1) { selectedMenu = 1; selectedTownBuilding = "" }
+                HomeNavItem("Арена", "arena", 2) { selectedMenu = 2; selectedTownBuilding = "" }
                 HomeNavItem("Персонаж", "character", 3) { selectedMenu = 3; selectedTownBuilding = "" }
-                HomeNavItem("Склад", "♢", 4) { selectedMenu = 4; selectedTownBuilding = "" }
+                HomeNavItem("Склад", "inventory", 4) { selectedMenu = 4; selectedTownBuilding = "" }
                 HomeNavItem("Навыки", "skills", 5) { selectedMenu = 5; selectedTownBuilding = "" }
-                HomeNavItem(if (stage < 7) "Кланы" else "Секты", "⚜", 6) { selectedMenu = 6; selectedTownBuilding = "" }
+                HomeNavItem(if (stage < 7) "Кланы" else "Секты", "clan", 6) { selectedMenu = 6; selectedTownBuilding = "" }
                 HomeNavItem("Питомцы", "pets", 7) { selectedMenu = 7; selectedTownBuilding = "" }
-                HomeNavItem("Обитель", "🏯", 8) { selectedMenu = 8; selectedTownBuilding = "" }
+                HomeNavItem("Обитель", "abode", 8) { selectedMenu = 8; selectedTownBuilding = "" }
             }
 
             if (selectedMenu == 0) {
@@ -463,26 +463,26 @@ private fun CultivateApp() {
                     TownScene(stage, storyChapter)
                     Text("Главная площадь освещена фонарями Ци. Каждое здание — отдельное место, где живут торговцы, мастера и искатели приключений.", color = Color.LightGray)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TownBuilding("Лавка", "Расходники и материалы", "🏮", Modifier.weight(1f)) { selectedTownBuilding = "shop" }
-                        TownBuilding("Аукцион", "Торги между искателями", "💎", Modifier.weight(1f)) { selectedTownBuilding = "auction" }
+                        TownBuilding("Лавка", "Расходники и материалы", "shop", Modifier.weight(1f)) { selectedTownBuilding = "shop" }
+                        TownBuilding("Аукцион", "Торги между искателями", "auction", Modifier.weight(1f)) { selectedTownBuilding = "auction" }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TownBuilding("Кузница", "Оружие и мастерство", "⚒️", Modifier.weight(1f)) { selectedTownBuilding = "forge" }
-                        TownBuilding("Доска заданий", "Поручения и награды", "📜", Modifier.weight(1f)) { selectedTownBuilding = "quests" }
+                        TownBuilding("Кузница", "Оружие и мастерство", "forge", Modifier.weight(1f)) { selectedTownBuilding = "forge" }
+                        TownBuilding("Доска заданий", "Поручения и награды", "quests", Modifier.weight(1f)) { selectedTownBuilding = "quests" }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TownBuilding("Павильон культивации", "Медитация и прорыв", "☯️", Modifier.weight(1f)) { selectedMenu = 1 }
-                        TownBuilding("Арена", "Испытания и добыча", "⚔️", Modifier.weight(1f)) { selectedMenu = 2 }
+                        TownBuilding("Павильон культивации", "Медитация и прорыв", "cultivation", Modifier.weight(1f)) { selectedMenu = 1 }
+                        TownBuilding("Арена", "Испытания и добыча", "arena", Modifier.weight(1f)) { selectedMenu = 2 }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TownBuilding("Зал навыков", "Изучение боевых искусств", "✨", Modifier.weight(1f)) { selectedMenu = 5 }
-                        TownBuilding(if (stage < 7) "Кланы" else "Секты", if (stage < 7) "Дома и союзы долин" else "Искусства и наставники", "🏯", Modifier.weight(1f)) { selectedMenu = 6 }
+                        TownBuilding("Зал навыков", "Изучение боевых искусств", "skills", Modifier.weight(1f)) { selectedMenu = 5 }
+                        TownBuilding(if (stage < 7) "Кланы" else "Секты", if (stage < 7) "Дома и союзы долин" else "Искусства и наставники", "clan", Modifier.weight(1f)) { selectedMenu = 6 }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TownBuilding("Зверинец", "Поиск и воспитание питомцев", "🐾", Modifier.weight(1f)) { selectedMenu = 7 }
-                        TownBuilding("Склад", "Экипировка и находки", "🎒", Modifier.weight(1f)) { selectedMenu = 4 }
+                        TownBuilding("Зверинец", "Поиск и воспитание питомцев", "pets", Modifier.weight(1f)) { selectedMenu = 7 }
+                        TownBuilding("Склад", "Экипировка и находки", "inventory", Modifier.weight(1f)) { selectedMenu = 4 }
                     }
-                    TownBuilding("Личная обитель", "Медитация · кузница · алхимия", "🏡", Modifier.fillMaxWidth()) { selectedMenu = 8; abodeSection = "sanctuary" }
+                    TownBuilding("Личная обитель", "Медитация · кузница · алхимия", "abode", Modifier.fillMaxWidth()) { selectedMenu = 8; abodeSection = "sanctuary" }
                 }
                 when (selectedTownBuilding) {
                     "shop" -> GameCard("Лавка Мэй", "Торговка материалов") {
@@ -959,7 +959,10 @@ private fun CultivateApp() {
                 Text("Каждый зверь меняет стиль боя. Опыт связи получает только активный питомец за победы. Развитие намеренно сложное: нужны опыт, эссенция зверя и ядра для ключевых рубежей.", color = Color.LightGray, fontSize = 12.sp)
                 PetCompanionArt()
                 Text("Эссенция: $petEssence · ядра зверя: $petCores · поиск редкого зверя: $petPity / 20 побед", color = Jade, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                Text("Активен: ${activePet.symbol} ${activePet.name} · уровень $petLevel / 30 · опыт связи $petXp · пробуждение $petAscension / 5", color = Gold)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    RpgIcon(activePet.portraitKey, Modifier.size(34.dp))
+                    Text("Активен: ${activePet.name} · уровень $petLevel / 30 · опыт связи $petXp · пробуждение $petAscension / 5", color = Gold)
+                }
                 Text("Бонусы: атака +$petAttack · защита +$petDefense · здоровье +${activePet.hp + petLevel * 3 + if (petSynergy) 20 else 0} · техника +$petSkill · крит +${activePet.critical + if (petSynergy) 2 else 0}% · лечение +${activePet.healing + if (petSynergy) 2 else 0}", color = Jade, fontSize = 11.sp)
                 Text(if (petSynergy) "Резонанс класса: активен · питомец усиливает твой путь" else "Резонанс класса: нет · выбери подходящий класс для полного раскрытия питомца", color = if (petSynergy) Gold else Color.Gray, fontSize = 10.sp)
                 Text("Особенность спутника: ${petCombatTrait(activePet.id)}", color = Color.LightGray, fontSize = 10.sp)
@@ -986,17 +989,16 @@ private fun CultivateApp() {
                 petCatalog.forEachIndexed { index, pet ->
                     val owned = pet.id in ownedPetIds.split("|")
                     val isActive = pet.id == activePetId
-                    Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("${pet.symbol} ${pet.name} · ${pet.role}" + if (isActive) " · активен" else "", color = if (owned) Gold else Color.Gray, fontWeight = FontWeight.Bold)
-                        Text(pet.description, color = Color.LightGray, fontSize = 11.sp)
-                        Text("Сильная сторона: ${pet.strength} · слабость: ${pet.weakness}", color = Jade, fontSize = 10.sp)
-                        Text("Подходит: ${pet.bestClass} · получение: ${pet.source}", color = Color.LightGray, fontSize = 10.sp)
-                        if (owned) {
-                            Text("Уровень ${petLevels[index]} · опыт ${petBondXp[index]} · пробуждение ${petAscensions[index]}/5", color = Jade, fontSize = 10.sp)
-                            OutlinedButton(onClick = { activePetId = pet.id; message = "${pet.name} теперь твой спутник." }, enabled = !isActive, modifier = Modifier.fillMaxWidth()) { Text(if (isActive) "Выбран" else "Выбрать питомца") }
-                        } else Text("Не приручён · ${pet.dropHint}", color = Color.Gray, fontSize = 10.sp)
-                    }
-                    Divider(color = Color(0xFF3B4B4F))
+                    PetCompanionCard(
+                        pet = pet,
+                        owned = owned,
+                        active = isActive,
+                        level = petLevels[index],
+                        bondXp = petBondXp[index],
+                        ascension = petAscensions[index],
+                        onSelect = { activePetId = pet.id; message = "${pet.name} теперь твой спутник." }
+                    )
+                }
                 }
             }
 
@@ -1147,6 +1149,78 @@ private fun HomeNavItem(title: String, symbol: String, target: Int, onNavigate: 
     ) {
         RpgIcon(symbol, Modifier.size(39.dp))
         Text(title, color = Color(0xFFF1E6D0), fontSize = 9.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    }
+}
+
+@Composable
+private fun PetCompanionCard(
+    pet: PetDefinition,
+    owned: Boolean,
+    active: Boolean,
+    level: Int,
+    bondXp: Int,
+    ascension: Int,
+    onSelect: () -> Unit
+) {
+    Surface(
+        color = when {
+            active -> Color(0xE52C4B51)
+            owned -> Color(0xD91B2C42)
+            else -> Color(0xB9162031)
+        },
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = if (active) 9.dp else 4.dp,
+        shadowElevation = if (active) 7.dp else 3.dp
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(9.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RpgIcon(pet.portraitKey, Modifier.size(76.dp))
+            Spacer(Modifier.width(9.dp))
+            Column(
+                Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(pet.name, color = if (owned) Gold else Color(0xFFB3BDCA), fontWeight = FontWeight.Black, fontSize = 13.sp)
+                    if (active) {
+                        Spacer(Modifier.width(6.dp))
+                        Text("СПУТНИК", color = Jade, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    }
+                }
+                Text(pet.role, color = Color(0xFFD7C49D), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                Text(pet.description, color = Color(0xFFD1DCEB), fontSize = 10.sp, maxLines = 2)
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ClassMetric("weapon", pet.attack.toString())
+                    ClassMetric("shield", pet.defense.toString())
+                    ClassMetric("health", pet.hp.toString())
+                    ClassMetric("skills", pet.skill.toString())
+                }
+                Text(
+                    if (owned) "Уровень $level · связь $bondXp XP · пробуждение $ascension/5"
+                    else "Поиск: ${pet.dropHint}",
+                    color = if (owned) Jade else Color(0xFF9DA9BA),
+                    fontSize = 9.sp
+                )
+                Text("Резонанс: ${pet.bestClass}", color = Color(0xFFC9B8E9), fontSize = 9.sp)
+            }
+            Spacer(Modifier.width(5.dp))
+            if (owned) {
+                Surface(
+                    modifier = Modifier.size(42.dp).clickable(enabled = !active, onClick = onSelect),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    color = if (active) Color(0xFF315C51) else Color(0xFF263B58),
+                    tonalElevation = 5.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        RpgIcon(if (active) "check" else "plus", Modifier.size(34.dp))
+                    }
+                }
+            } else {
+                RpgIcon("lock", Modifier.size(36.dp))
+            }
+        }
     }
 }
 
@@ -1310,6 +1384,57 @@ private fun RpgIcon(kind: String, modifier: Modifier = Modifier) {
             "skills", "fire" -> {
                 p.moveTo(w*.5f,h*.16f); p.cubicTo(w*.68f,h*.37f,w*.79f,h*.52f,w*.65f,h*.70f); p.cubicTo(w*.55f,h*.85f,w*.27f,h*.76f,w*.28f,h*.55f); p.cubicTo(w*.28f,h*.43f,w*.43f,h*.31f,w*.5f,h*.16f); drawPath(p,Color(0xFFFFB15D),style=stroke)
                 p.moveTo(w*.5f,h*.43f); p.cubicTo(w*.65f,h*.58f,w*.56f,h*.72f,w*.46f,h*.69f); drawPath(p,goldBright,style=stroke)
+            }
+            "pet_fox" -> {
+                val ears = Path().apply { moveTo(w*.25f,h*.44f); lineTo(w*.27f,h*.18f); lineTo(w*.45f,h*.34f); lineTo(w*.55f,h*.34f); lineTo(w*.73f,h*.18f); lineTo(w*.75f,h*.44f); cubicTo(w*.78f,h*.72f,w*.22f,h*.72f,w*.25f,h*.44f); close() }
+                drawPath(ears, Color(0xFFE2A15F)); drawPath(ears, goldBright, style=stroke)
+                p.moveTo(w*.39f,h*.52f); p.lineTo(w*.5f,h*.64f); p.lineTo(w*.61f,h*.52f); p.close(); drawPath(p,Color(0xFFFFE4C2))
+                circle(.40f,.48f,.035f,Color(0xFF1A2030),true); circle(.60f,.48f,.035f,Color(0xFF1A2030),true); circle(.5f,.61f,.025f,purple,true)
+            }
+            "pet_tortoise" -> {
+                drawOval(Color(0xFF5F9A80),Offset(w*.26f,h*.32f),Size(w*.48f,h*.42f))
+                drawOval(goldBright,Offset(w*.26f,h*.32f),Size(w*.48f,h*.42f),style=stroke)
+                drawCircle(Color(0xFF7FB7A0),unit*.12f,Offset(w*.76f,h*.52f))
+                for(x in listOf(.30f,.70f)) for(y in listOf(.36f,.68f)) drawRoundRect(Color(0xFF638E75),Offset(w*x,h*y),Size(unit*.14f,unit*.12f),cornerRadius=androidx.compose.ui.geometry.CornerRadius(unit*.04f))
+                line(.40f,.43f,.60f,.62f,goldBright,sw*.55f); line(.60f,.43f,.40f,.62f,goldBright,sw*.55f)
+                circle(.79f,.49f,.018f,Color(0xFF111827),true)
+            }
+            "pet_hawk" -> {
+                p.moveTo(w*.5f,h*.72f); p.cubicTo(w*.18f,h*.62f,w*.16f,h*.36f,w*.08f,h*.22f); p.cubicTo(w*.32f,h*.27f,w*.42f,h*.37f,w*.5f,h*.47f); p.cubicTo(w*.58f,h*.37f,w*.68f,h*.27f,w*.92f,h*.22f); p.cubicTo(w*.84f,h*.36f,w*.82f,h*.62f,w*.5f,h*.72f); p.close(); drawPath(p,blue,style=stroke)
+                line(.5f,.33f,.5f,.77f,goldBright,sw*.8f); line(.5f,.47f,.35f,.34f,goldBright,sw*.65f); line(.5f,.47f,.65f,.34f,goldBright,sw*.65f)
+                p.moveTo(w*.5f,h*.35f); p.lineTo(w*.62f,h*.43f); p.lineTo(w*.52f,h*.50f); p.close(); drawPath(p,Color(0xFFFFC46F))
+                circle(.47f,.38f,.018f,Color(0xFF101827),true)
+            }
+            "pet_wolf" -> {
+                p.moveTo(w*.27f,h*.42f); p.lineTo(w*.22f,h*.17f); p.lineTo(w*.44f,h*.32f); p.cubicTo(w*.5f,h*.28f,w*.56f,h*.28f,w*.62f,h*.32f); p.lineTo(w*.78f,h*.17f); p.lineTo(w*.73f,h*.43f); p.cubicTo(w*.80f,h*.67f,w*.65f,h*.78f,w*.5f,h*.78f); p.cubicTo(w*.35f,h*.78f,w*.20f,h*.67f,w*.27f,h*.42f); p.close(); drawPath(p,Color(0xFF8C9CB0),style=stroke)
+                circle(.40f,.48f,.035f,Color(0xFFFFC46F),true); circle(.60f,.48f,.035f,Color(0xFFFFC46F),true)
+                p.moveTo(w*.42f,h*.58f); p.lineTo(w*.5f,h*.68f); p.lineTo(w*.58f,h*.58f); p.close(); drawPath(p,Color(0xFF27354A),style=stroke)
+            }
+            "pet_deer" -> {
+                p.moveTo(w*.36f,h*.40f); p.cubicTo(w*.31f,h*.22f,w*.39f,h*.16f,w*.5f,h*.30f); p.cubicTo(w*.61f,h*.16f,w*.69f,h*.22f,w*.64f,h*.40f); p.cubicTo(w*.74f,h*.70f,w*.26f,h*.70f,w*.36f,h*.40f); p.close(); drawPath(p,Color(0xFFB98B65),style=stroke)
+                line(.39f,.36f,.25f,.16f,goldBright); line(.25f,.16f,.18f,.24f,goldBright); line(.25f,.16f,.30f,.09f,goldBright)
+                line(.61f,.36f,.75f,.16f,goldBright); line(.75f,.16f,.82f,.24f,goldBright); line(.75f,.16f,.70f,.09f,goldBright)
+                circle(.42f,.49f,.022f,Color(0xFF1B2231),true); circle(.58f,.49f,.022f,Color(0xFF1B2231),true)
+            }
+            "pet_ape" -> {
+                drawCircle(Color(0xFF9A6B52),unit*.28f,c)
+                drawCircle(Color(0xFFC48B62),unit*.19f,Offset(w*.5f,h*.53f))
+                drawCircle(Color(0xFFB97A58),unit*.09f,Offset(w*.22f,h*.48f)); drawCircle(Color(0xFFB97A58),unit*.09f,Offset(w*.78f,h*.48f))
+                drawCircle(Color(0xFF1A2030),unit*.025f,Offset(w*.42f,h*.44f)); drawCircle(Color(0xFF1A2030),unit*.025f,Offset(w*.58f,h*.44f))
+                line(.42f,.60f,.58f,.60f,goldBright,sw*.8f)
+            }
+            "pet_koi" -> {
+                drawOval(Color(0xFFE6A65D),Offset(w*.23f,h*.34f),Size(w*.48f,h*.32f))
+                p.moveTo(w*.68f,h*.50f); p.lineTo(w*.87f,h*.30f); p.lineTo(w*.87f,h*.70f); p.close(); drawPath(p,Color(0xFFE6A65D),style=stroke)
+                p.moveTo(w*.42f,h*.35f); p.lineTo(w*.55f,h*.22f); p.lineTo(w*.61f,h*.39f); p.close(); drawPath(p,blue,style=stroke)
+                p.moveTo(w*.42f,h*.65f); p.lineTo(w*.55f,h*.78f); p.lineTo(w*.61f,h*.61f); p.close(); drawPath(p,purple,style=stroke)
+                for(i in 0..3) circle(.34f+i*.07f,.45f,.018f,Color(0xFFFAE7C5),true)
+                circle(.30f,.46f,.02f,Color(0xFF1A2030),true)
+            }
+            "lock" -> {
+                p.moveTo(w*.29f,h*.47f); p.lineTo(w*.71f,h*.47f); p.lineTo(w*.71f,h*.78f); p.lineTo(w*.29f,h*.78f); p.close(); drawPath(p,goldBright,style=stroke)
+                p.moveTo(w*.36f,h*.47f); p.lineTo(w*.36f,h*.36f); p.cubicTo(w*.36f,h*.18f,w*.64f,h*.18f,w*.64f,h*.36f); p.lineTo(w*.64f,h*.47f); drawPath(p,blue,style=stroke)
+                circle(.5f,.61f,.035f,purple,true)
             }
             "pets", "fox", "deer" -> {
                 p.moveTo(w*.29f,h*.37f); p.lineTo(w*.25f,h*.17f); p.lineTo(w*.43f,h*.29f); p.cubicTo(w*.4767f,h*.2567f,w*.5233f,h*.2567f,w*.57f,h*.29f); p.lineTo(w*.75f,h*.17f); p.lineTo(w*.71f,h*.39f); p.cubicTo(w*.7967f,h*.5633f,w*.7133f,h*.6867f,w*.5f,h*.76f); p.cubicTo(w*.2867f,h*.6867f,w*.3633f,h*.5567f,w*.29f,h*.37f); drawPath(p,purple,style=stroke)
@@ -1565,7 +1690,7 @@ private fun TownBuilding(name: String, description: String, symbol: String, modi
                 drawCircle(Color(0xFFE5BD72).copy(alpha=.08f), size.minDimension*.48f, Offset(size.width*.5f,size.height*.18f))
             }
             Column(Modifier.fillMaxWidth().padding(horizontal=8.dp, vertical=9.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(symbol, fontSize = 31.sp)
+                RpgIcon(symbol, Modifier.size(42.dp))
                 Text(name, color = Gold, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 Text(description, color = Color(0xFFB5C9C0), fontSize = 9.sp, lineHeight = 12.sp)
             }
@@ -2034,19 +2159,19 @@ private val clanHpBonuses = listOf(25, 10, 20, 35, 5, 30, 15, 20)
 private val factionAlliance = listOf(0, 1, 0, 0, 1, 0, 1, 0)
 
 private data class PetDefinition(
-    val id: String, val name: String, val symbol: String, val role: String,
+    val id: String, val name: String, val portraitKey: String, val role: String,
     val description: String, val strength: String, val weakness: String,
     val bestClass: String, val source: String, val dropHint: String, val requiredBoss: Int,
     val attack: Int, val defense: Int, val hp: Int, val skill: Int, val critical: Int, val healing: Int
 )
 private val petCatalog = listOf(
-    PetDefinition("jade_fox", "Нефритовый лис", "🦊", "хитрый дуэлянт", "Усиливает техники и помогает наносить стабильный урон.", "техники и гибкость", "мало здоровья", "Мистик духов / Мечник", "начальный спутник", "выдаётся в начале пути", 1, 5, 1, 20, 5, 2, 1),
-    PetDefinition("stone_tortoise", "Каменная черепаха", "🐢", "страж", "Принимает часть натиска врага и укрепляет владельца.", "защита и здоровье", "низкий урон", "Закалённый воин", "стражи горного перевала", "добыча со стражей ранга 2+", 2, 1, 9, 90, 0, 0, 0),
-    PetDefinition("thunder_hawk", "Громовой ястреб", "🦅", "скоростной атакующий", "Бьёт стремительно и чаще наносит критические удары.", "атака и крит", "слабая защита", "Заклинатель стихий / Мечник", "грозовые стражи", "добыча со стражей ранга 4+", 4, 10, 0, 12, 3, 7, 0),
-    PetDefinition("ember_wolf", "Пепельный волк", "🐺", "охотник", "Разрывает цель сериями атак, но почти не помогает в обороне.", "сильный урон", "низкая выживаемость", "Мечник", "элитные стражи", "добыча со стражей ранга 6+", 6, 13, 1, 5, 2, 4, 0),
-    PetDefinition("moon_deer", "Лунный олень", "🦌", "целитель", "Возвращает владельцу здоровье и поддерживает долгие сражения.", "лечение и здоровье", "низкий урон", "Мистик духов / Закалённый воин", "редкая находка в саду духовных трав", "шанс 3% при сборе урожая", 99, 1, 4, 65, 2, 0, 8),
-    PetDefinition("iron_ape", "Железная обезьяна", "🐒", "боец передней линии", "Сочетает мощные удары с крепкой защитой.", "баланс атаки и защиты", "нет выраженного уклона в магию", "Закалённый воин", "стражи древней заставы", "добыча со стражей ранга 8+", 8, 8, 6, 45, 1, 1, 0),
-    PetDefinition("river_koi", "Карп тихой реки", "🐟", "духовный помощник", "Усиливает духовные техники и помогает восстанавливать силы.", "техника и лечение", "низкая физическая атака", "Мистик духов / Заклинатель стихий", "редкая встреча в роднике", "шанс 3% при сборе духовной воды", 99, 1, 3, 38, 8, 0, 5)
+    PetDefinition("jade_fox", "Нефритовый лис", "pet_fox", "хитрый дуэлянт", "Усиливает техники и помогает наносить стабильный урон.", "техники и гибкость", "мало здоровья", "Мистик духов / Мечник", "начальный спутник", "выдаётся в начале пути", 1, 5, 1, 20, 5, 2, 1),
+    PetDefinition("stone_tortoise", "Каменная черепаха", "pet_tortoise", "страж", "Принимает часть натиска врага и укрепляет владельца.", "защита и здоровье", "низкий урон", "Закалённый воин", "стражи горного перевала", "добыча со стражей ранга 2+", 2, 1, 9, 90, 0, 0, 0),
+    PetDefinition("thunder_hawk", "Громовой ястреб", "pet_hawk", "скоростной атакующий", "Бьёт стремительно и чаще наносит критические удары.", "атака и крит", "слабая защита", "Заклинатель стихий / Мечник", "грозовые стражи", "добыча со стражей ранга 4+", 4, 10, 0, 12, 3, 7, 0),
+    PetDefinition("ember_wolf", "Пепельный волк", "pet_wolf", "охотник", "Разрывает цель сериями атак, но почти не помогает в обороне.", "сильный урон", "низкая выживаемость", "Мечник", "элитные стражи", "добыча со стражей ранга 6+", 6, 13, 1, 5, 2, 4, 0),
+    PetDefinition("moon_deer", "Лунный олень", "pet_deer", "целитель", "Возвращает владельцу здоровье и поддерживает долгие сражения.", "лечение и здоровье", "низкий урон", "Мистик духов / Закалённый воин", "редкая находка в саду духовных трав", "шанс 3% при сборе урожая", 99, 1, 4, 65, 2, 0, 8),
+    PetDefinition("iron_ape", "Железная обезьяна", "pet_ape", "боец передней линии", "Сочетает мощные удары с крепкой защитой.", "баланс атаки и защиты", "нет выраженного уклона в магию", "Закалённый воин", "стражи древней заставы", "добыча со стражей ранга 8+", 8, 8, 6, 45, 1, 1, 0),
+    PetDefinition("river_koi", "Карп тихой реки", "pet_koi", "духовный помощник", "Усиливает духовные техники и помогает восстанавливать силы.", "техника и лечение", "низкая физическая атака", "Мистик духов / Заклинатель стихий", "редкая встреча в роднике", "шанс 3% при сборе духовной воды", 99, 1, 3, 38, 8, 0, 5)
 )
 
 private val worldEntries = listOf(

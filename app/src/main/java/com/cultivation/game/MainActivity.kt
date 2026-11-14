@@ -576,7 +576,7 @@ private fun CultivateApp() {
                         SkillTreeSection("Слияние ветвей", chosenClass, listOf(7,8), skillTreeLevels, skillPoints, selectedWeapon, activeSkillNode, stage.coerceAtMost(20),
                             onLearn = { node -> learnSkillNode(node) },
                             onSetActive = { node -> activeSkillNode = node })
-                        Text("Активный навык: ${skillDefinitions[chosenClass][activeSkillNode].name} · перезарядка: $activeSkillCooldown", color = Gold, fontSize = 12.sp)
+                        Text("Активный навык: ${skillDefinitions[chosenClass][activeSkillNode].name} · перезарядка: ${skillCooldowns[activeSkillNode]}", color = Gold, fontSize = 12.sp)
                     }
                     Text(if (rareSkill.isBlank()) "Редкое искусство: шанс выпадения за победу — 0,8%." else "Получено редкое искусство: $rareSkill", color = Gold)
                 }

@@ -812,53 +812,53 @@ private fun CultivateApp() {
             if (selectedMenu == 4) GameCard("Инвентарь", "Оружие: ${ownedWeapons.size} · броня и артефакты: ${ownedGear.size}") {
                 Text("Оружие, броня, шлемы, кольца и артефакты хранятся отдельно от надетых предметов. Каждый экземпляр получает собственный разброс характеристик.", color = Color.LightGray, fontSize = 12.sp)
                 ownedWeapons.sortedByDescending { weaponPowerScore(it) }.forEach { item ->
-                    Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("${item.name} · ${item.rarity.title}", color = weaponRarityColor(item.rarity), fontWeight = FontWeight.Bold)
-                        Text("${weaponNames[item.type]} · ${stageName(item.requiredStage)} · ступень ${item.requiredStage}", color = Color.LightGray, fontSize = 11.sp)
-                        Text("Рейтинг ${weaponPowerScore(item)} · атака +${item.attackBonus} · доп. урон +${item.bonusDamage} · защита +${item.defenseBonus} · лечение +${item.healOnHit}", color = Jade, fontSize = 11.sp)
-                        Text(item.effectDescription, color = Color.LightGray, fontSize = 11.sp)
-                        val powerDifference = weaponPowerScore(item) - weaponPowerScore(equippedWeapon)
-                        Text(
-                            when {
-                                encodeWeaponInstance(item) == encodeWeaponInstance(equippedWeapon) -> "Сейчас надето"
-                                powerDifference > 0 -> "Рейтинг на +$powerDifference выше текущего оружия"
-                                powerDifference < 0 -> "Рейтинг на ${-powerDifference} ниже текущего оружия"
-                                else -> "Рейтинг равен текущему оружию"
-                            },
-                            color = if (powerDifference > 0) Jade else Color.LightGray,
-                            fontSize = 11.sp
-                        )
-                        OutlinedButton(
-                            onClick = { equippedWeaponId = encodeWeaponInstance(item); selectedWeapon = item.type; message = "Экипировано: ${item.name}" },
-                            enabled = stage >= item.requiredStage,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(if (equippedWeaponId == encodeWeaponInstance(item)) "Надето" else if (stage < item.requiredStage) "Откроется на ступени ${item.requiredStage}" else "Экипировать")
-                        }
+                    val powerDifference = weaponPowerScore(item) - weaponPowerScore(equippedWeapon)
+                    val comparison = when {
+                        encodeWeaponInstance(item) == encodeWeaponInstance(equippedWeapon) -> "Сейчас надето"
+                        powerDifference > 0 -> "Рейтинг на +$powerDifference выше текущего оружия"
+                        powerDifference < 0 -> "Рейтинг на ${-powerDifference} ниже текущего оружия"
+                        else -> "Рейтинг равен текущему оружию"
                     }
+                    WeaponInventoryCard(
+                        item = item,
+                        weaponTypeName = weaponNames[item.type],
+                        iconKey = when (item.type) { 0 -> "weapon"; 1 -> "spear"; 2 -> "staff"; else -> "gauntlet" },
+                        score = weaponPowerScore(item),
+                        rarityColor = weaponRarityColor(item.rarity),
+                        comparison = comparison,
+                        comparisonPositive = powerDifference > 0,
+                        equipped = encodeWeaponInstance(item) == encodeWeaponInstance(equippedWeapon),
+                        canEquip = stage >= item.requiredStage,
+                        onEquip = { equippedWeaponId = encodeWeaponInstance(item); selectedWeapon = item.type; message = "Экипировано: ${item.name}" }
+                    )
                 }
                 Divider(color = Color(0xFF3B4B4F))
                 Text("Броня, шлемы, кольца и артефакты", color = Gold, fontWeight = FontWeight.Bold)
                 Text(activeSetBonus.description.ifBlank { "Комплектные бонусы: 2 предмета дают малый бонус, 4 предмета — полный." }, color = Jade, fontSize = 11.sp)
                 ownedGear.sortedByDescending { gearPowerScore(it) }.forEach { item ->
-                    Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("${item.name} · ${item.rarity.title}", color = weaponRarityColor(item.rarity), fontWeight = FontWeight.Bold)
-                        Text("${item.slot.title} · ${stageName(item.requiredStage)} · набор «${gearSetNames[item.setId] ?: item.setId}»", color = Color.LightGray, fontSize = 11.sp)
-                        Text("Рейтинг ${gearPowerScore(item)} · атака +${item.attackBonus} · защита +${item.defenseBonus} · здоровье +${item.hpBonus} · сила техник +${item.skillBonus}", color = Jade, fontSize = 11.sp)
-                        Text(item.effectDescription, color = Color.LightGray, fontSize = 11.sp)
-                        val currentSlotItem = equippedGear.firstOrNull { it.slot == item.slot }
-                        val comparison = if (currentSlotItem == null) "Слот свободен" else {
-                            val delta = gearPowerScore(item) - gearPowerScore(currentSlotItem)
-                            when { delta > 0 -> "Сильнее надетого предмета на $delta"; delta < 0 -> "Слабее надетого предмета на ${-delta}"; else -> "Рейтинг равен надетому предмету" }
-                        }
-                        Text(comparison, color = if (currentSlotItem == null || gearPowerScore(item) >= gearPowerScore(currentSlotItem)) Jade else Color.LightGray, fontSize = 11.sp)
-                        val equipped = equippedGearIds.getOrElse(item.slot.ordinal) { "" } == encodeGearInstance(item)
-                        OutlinedButton(
-                            onClick = { equippedGearIds[item.slot.ordinal] = encodeGearInstance(item); message = "Экипировано: ${item.name}" },
-                            enabled = stage >= item.requiredStage,
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text(if (equipped) "Надето" else if (stage < item.requiredStage) "Откроется на ступени ${item.requiredStage}" else "Надеть · ${item.slot.title}") }
+                    val currentSlotItem = equippedGear.firstOrNull { it.slot == item.slot }
+                    val comparison = if (currentSlotItem == null) "Слот свободен" else {
+                        val delta = gearPowerScore(item) - gearPowerScore(currentSlotItem)
+                        when { delta > 0 -> "Сильнее надетого предмета на $delta"; delta < 0 -> "Слабее надетого предмета на ${-delta}"; else -> "Рейтинг равен надетому предмету" }
                     }
+                    val equipped = equippedGearIds.getOrElse(item.slot.ordinal) { "" } == encodeGearInstance(item)
+                    GearInventoryCard(
+                        item = item,
+                        iconKey = when (item.slot) {
+                            GearSlot.HELMET -> "helmet"
+                            GearSlot.ARMOR -> "armor"
+                            GearSlot.RING -> "ring"
+                            GearSlot.ARTIFACT -> "artifact"
+                        },
+                        score = gearPowerScore(item),
+                        rarityColor = weaponRarityColor(item.rarity),
+                        setName = gearSetNames[item.setId] ?: item.setId,
+                        comparison = comparison,
+                        comparisonPositive = currentSlotItem == null || gearPowerScore(item) >= gearPowerScore(currentSlotItem),
+                        equipped = equipped,
+                        canEquip = stage >= item.requiredStage,
+                        onEquip = { equippedGearIds[item.slot.ordinal] = encodeGearInstance(item); message = "Экипировано: ${item.name}" }
+                    )
                 }
                 val nextWeaponStage = listOf(1, 4, 7, 10, 13, 16).firstOrNull { it > stage }
                 if (nextWeaponStage != null) {
@@ -1049,7 +1049,10 @@ private fun CinematicHomeScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                         Text("Странник Лунной Гавани", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         Text("${worldName(stage)} · ${stageName(stage)}", color = Color(0xFFE8D3A6), fontSize = 10.sp)
-                        Text("✦ Боевая мощь  ${combatPower.coerceAtLeast(0)}", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            RpgIcon("critical", Modifier.size(15.dp))
+                            Text("Боевая мощь  ${combatPower.coerceAtLeast(0)}", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -1148,6 +1151,131 @@ private fun HomeNavItem(title: String, symbol: String, target: Int, onNavigate: 
     ) {
         RpgIcon(symbol, Modifier.size(39.dp))
         Text(title, color = Color(0xFFF1E6D0), fontSize = 9.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    }
+}
+
+@Composable
+private fun InventoryActionButton(
+    label: String,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 36.dp).clickable(enabled = enabled, onClick = onClick),
+        shape = MaterialTheme.shapes.large,
+        color = when {
+            !enabled -> Color(0xFF293140)
+            selected -> Color(0xFF315C51)
+            else -> Color(0xFF2B4261)
+        },
+        tonalElevation = 4.dp
+    ) {
+        Row(
+            Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            RpgIcon(if (selected) "check" else if (enabled) "plus" else "lock", Modifier.size(24.dp))
+            Spacer(Modifier.width(5.dp))
+            Text(label, color = if (enabled) Color(0xFFFFE7B0) else Color(0xFF9DA9BA), fontSize = 9.sp, fontWeight = FontWeight.Black)
+        }
+    }
+}
+
+@Composable
+private fun WeaponInventoryCard(
+    item: WeaponDefinition,
+    weaponTypeName: String,
+    iconKey: String,
+    score: Int,
+    rarityColor: Color,
+    comparison: String,
+    comparisonPositive: Boolean,
+    equipped: Boolean,
+    canEquip: Boolean,
+    onEquip: () -> Unit
+) {
+    Surface(
+        color = if (equipped) Color(0xE52A4054) else Color(0xD918273C),
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = if (equipped) 8.dp else 3.dp,
+        shadowElevation = 4.dp
+    ) {
+        Row(Modifier.fillMaxWidth().padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
+            RpgIcon(iconKey, Modifier.size(70.dp))
+            Spacer(Modifier.width(9.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(item.name, color = rarityColor, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                Text("$weaponTypeName · ${stageName(item.requiredStage)} · ступень ${item.requiredStage}", color = Color(0xFFD1DCEB), fontSize = 9.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ClassMetric("weapon", "+${item.attackBonus}")
+                    ClassMetric("critical", "+${item.bonusDamage}")
+                    ClassMetric("shield", "+${item.defenseBonus}")
+                    ClassMetric("health", "+${item.healOnHit}")
+                }
+                Text("Рейтинг $score · ${item.rarity.title}", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text(item.effectDescription, color = Color(0xFFB8C6D8), fontSize = 9.sp, maxLines = 2)
+                Text(comparison, color = if (equipped || comparisonPositive) Jade else Color.LightGray, fontSize = 9.sp)
+            }
+            Spacer(Modifier.width(8.dp))
+            Box(Modifier.width(116.dp)) {
+                InventoryActionButton(
+                    label = when { equipped -> "НАДЕТО"; !canEquip -> "СТУПЕНЬ ${item.requiredStage}"; else -> "ЭКИПИРОВАТЬ" },
+                    selected = equipped,
+                    enabled = canEquip && !equipped,
+                    onClick = onEquip
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GearInventoryCard(
+    item: GearDefinition,
+    iconKey: String,
+    score: Int,
+    rarityColor: Color,
+    setName: String,
+    comparison: String,
+    comparisonPositive: Boolean,
+    equipped: Boolean,
+    canEquip: Boolean,
+    onEquip: () -> Unit
+) {
+    Surface(
+        color = if (equipped) Color(0xE52A4054) else Color(0xD918273C),
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = if (equipped) 8.dp else 3.dp,
+        shadowElevation = 4.dp
+    ) {
+        Row(Modifier.fillMaxWidth().padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
+            RpgIcon(iconKey, Modifier.size(70.dp))
+            Spacer(Modifier.width(9.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(item.name, color = rarityColor, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                Text("${item.slot.title} · ${stageName(item.requiredStage)} · набор «$setName»", color = Color(0xFFD1DCEB), fontSize = 9.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ClassMetric("weapon", "+${item.attackBonus}")
+                    ClassMetric("shield", "+${item.defenseBonus}")
+                    ClassMetric("health", "+${item.hpBonus}")
+                    ClassMetric("skills", "+${item.skillBonus}")
+                }
+                Text("Рейтинг $score · ${item.rarity.title}", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text(item.effectDescription, color = Color(0xFFB8C6D8), fontSize = 9.sp, maxLines = 2)
+                Text(comparison, color = if (equipped || comparisonPositive) Jade else Color.LightGray, fontSize = 9.sp)
+            }
+            Spacer(Modifier.width(8.dp))
+            Box(Modifier.width(116.dp)) {
+                InventoryActionButton(
+                    label = when { equipped -> "НАДЕТО"; !canEquip -> "СТУПЕНЬ ${item.requiredStage}"; else -> "НАДЕТЬ" },
+                    selected = equipped,
+                    enabled = canEquip && !equipped,
+                    onClick = onEquip
+                )
+            }
+        }
     }
 }
 
@@ -1316,6 +1444,38 @@ private fun RpgIcon(kind: String, modifier: Modifier = Modifier) {
             drawCircle(color, unit*r, Offset(w*x,h*y), style = if(fill) androidx.compose.ui.graphics.drawscope.Fill else stroke)
         }
         when (kind) {
+            "spear" -> {
+                line(.5f,.16f,.5f,.84f,goldBright,sw*1.2f)
+                p.moveTo(w*.5f,h*.13f); p.lineTo(w*.70f,h*.39f); p.lineTo(w*.5f,h*.33f); p.lineTo(w*.30f,h*.39f); p.close(); drawPath(p,blue,style=stroke)
+                line(.36f,.65f,.64f,.65f,purple,sw)
+            }
+            "staff" -> {
+                line(.5f,.28f,.5f,.83f,goldBright,sw*1.4f)
+                drawCircle(purple,unit*.17f,Offset(w*.5f,h*.25f),style=stroke)
+                drawCircle(blue,unit*.08f,Offset(w*.5f,h*.25f))
+                line(.36f,.75f,.64f,.75f,goldBright,sw)
+            }
+            "gauntlet" -> {
+                p.moveTo(w*.30f,h*.70f); p.lineTo(w*.25f,h*.48f); p.lineTo(w*.34f,h*.38f); p.lineTo(w*.40f,h*.18f); p.lineTo(w*.51f,h*.34f); p.lineTo(w*.60f,h*.20f); p.lineTo(w*.68f,h*.39f); p.lineTo(w*.76f,h*.46f); p.lineTo(w*.68f,h*.74f); p.close()
+                drawPath(p,blue,style=stroke); line(.35f,.57f,.65f,.57f,goldBright,sw)
+            }
+            "helmet" -> {
+                p.moveTo(w*.25f,h*.62f); p.lineTo(w*.25f,h*.43f); p.cubicTo(w*.25f,h*.16f,w*.75f,h*.16f,w*.75f,h*.43f); p.lineTo(w*.75f,h*.62f); p.lineTo(w*.62f,h*.62f); p.lineTo(w*.60f,h*.49f); p.lineTo(w*.40f,h*.49f); p.lineTo(w*.38f,h*.62f); p.close()
+                drawPath(p,blue,style=stroke); line(.25f,.64f,.75f,.64f,goldBright,sw*1.3f)
+            }
+            "armor" -> {
+                p.moveTo(w*.32f,h*.24f); p.lineTo(w*.43f,h*.17f); p.lineTo(w*.5f,h*.27f); p.lineTo(w*.57f,h*.17f); p.lineTo(w*.68f,h*.24f); p.lineTo(w*.78f,h*.39f); p.lineTo(w*.66f,h*.48f); p.lineTo(w*.63f,h*.78f); p.lineTo(w*.37f,h*.78f); p.lineTo(w*.34f,h*.48f); p.lineTo(w*.22f,h*.39f); p.close()
+                drawPath(p,blue,style=stroke); line(.5f,.28f,.5f,.73f,goldBright,sw*.8f)
+            }
+            "ring" -> {
+                drawCircle(goldBright,unit*.27f,c,style=stroke); drawCircle(blue,unit*.17f,c,style=stroke)
+                p.moveTo(w*.5f,h*.18f); p.lineTo(w*.62f,h*.34f); p.lineTo(w*.5f,h*.47f); p.lineTo(w*.38f,h*.34f); p.close(); drawPath(p,purple,style=stroke)
+            }
+            "artifact" -> {
+                p.moveTo(w*.5f,h*.16f); p.lineTo(w*.75f,h*.5f); p.lineTo(w*.5f,h*.84f); p.lineTo(w*.25f,h*.5f); p.close(); drawPath(p,purple,style=stroke)
+                drawCircle(blue,unit*.12f,c); drawCircle(goldBright,unit*.045f,c)
+                line(.5f,.16f,.5f,.84f,goldBright,sw*.55f); line(.25f,.5f,.75f,.5f,goldBright,sw*.55f)
+            }
             "blademaster" -> {
                 p.moveTo(w*.49f,h*.13f); p.lineTo(w*.64f,h*.54f); p.lineTo(w*.52f,h*.68f); p.lineTo(w*.36f,h*.54f); p.close()
                 drawPath(p, goldBright.copy(alpha=.92f))

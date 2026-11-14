@@ -3,6 +3,16 @@ package com.cultivation.game
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Path
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -340,6 +350,7 @@ private fun CultivateApp() {
 
             if (selectedMenu == 0) {
                 GameCard("Городок Лунной Гавани", "Тихая долина у подножия духовных гор · ступень $stage") {
+                    TownScene(stage, storyChapter)
                     Text("Главная площадь освещена фонарями Ци. Каждое здание — отдельное место, где живут торговцы, мастера и искатели приключений.", color = Color.LightGray)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TownBuilding("Лавка", "Расходники и материалы", "🏮", Modifier.weight(1f)) { selectedTownBuilding = "shop" }
@@ -443,6 +454,7 @@ private fun CultivateApp() {
 
             if (selectedMenu == 2) {
             GameCard("Арена испытаний", "Страж святилища · ранг $bossLevel") {
+                BattleScene(autoBattle, message)
                 Text("Твоё здоровье: ${playerHp.coerceAtMost(playerMaxHp)} / $playerMaxHp", color = Jade)
                 LinearProgressIndicator(progress = { (playerHp.toFloat() / playerMaxHp).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth(), color = Jade)
                 Text("Здоровье противника: $enemyHp / $enemyMaxHp", color = Color.LightGray)
@@ -688,6 +700,119 @@ private fun TechniqueRow(
             }
         }
     }
+}
+
+@Composable
+private fun TownScene(stage: Int, storyChapter: Int) {
+    val transition = rememberInfiniteTransition(label = "town-lanterns")
+    val pulse by transition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.95f,
+        animationSpec = infiniteRepeatable(tween(1500), repeatMode = RepeatMode.Reverse),
+        label = "lantern-glow"
+    )
+    Canvas(Modifier.fillMaxWidth().height(218.dp)) {
+        val w = size.width
+        val h = size.height
+        drawRect(brush = Brush.verticalGradient(listOf(Color(0xFF14263D), Color(0xFF294B51), Color(0xFF192E32))))
+        drawCircle(Color(0xFFFFE3AC).copy(alpha = 0.85f), 22f, Offset(w * 0.82f, h * 0.19f))
+        val farMountains = Path().apply {
+            moveTo(0f, h * 0.62f); lineTo(w * 0.16f, h * 0.24f); lineTo(w * 0.30f, h * 0.56f)
+            lineTo(w * 0.48f, h * 0.18f); lineTo(w * 0.69f, h * 0.58f); lineTo(w * 0.86f, h * 0.30f)
+            lineTo(w, h * 0.56f); lineTo(w, h); lineTo(0f, h); close()
+        }
+        drawPath(farMountains, Color(0xFF243C4A))
+        val nearMountains = Path().apply {
+            moveTo(0f, h * 0.70f); lineTo(w * 0.20f, h * 0.45f); lineTo(w * 0.38f, h * 0.72f)
+            lineTo(w * 0.63f, h * 0.42f); lineTo(w * 0.82f, h * 0.72f); lineTo(w, h * 0.50f)
+            lineTo(w, h); lineTo(0f, h); close()
+        }
+        drawPath(nearMountains, Color(0xFF1C353A))
+        drawRect(Color(0xFF29453D), Offset(0f, h * 0.70f), Size(w, h * 0.30f))
+        val road = Path().apply {
+            moveTo(w * 0.42f, h); cubicTo(w * 0.43f, h * 0.85f, w * 0.55f, h * 0.82f, w * 0.54f, h * 0.69f)
+            lineTo(w * 0.52f, h * 0.62f); lineTo(w * 0.60f, h * 0.62f); lineTo(w * 0.62f, h * 0.70f)
+            cubicTo(w * 0.68f, h * 0.85f, w * 0.61f, h * 0.92f, w * 0.60f, h)
+            close()
+        }
+        drawPath(road, Color(0xFF8B7658).copy(alpha = 0.72f))
+        fun house(cx: Float, cy: Float, scale: Float, roof: Color, wall: Color) {
+            val bw = 62f * scale
+            val bh = 45f * scale
+            drawRoundRect(wall, Offset(cx - bw / 2, cy), Size(bw, bh))
+            val roofPath = Path().apply {
+                moveTo(cx - bw * 0.65f, cy + 5f * scale)
+                lineTo(cx, cy - 28f * scale)
+                lineTo(cx + bw * 0.65f, cy + 5f * scale)
+                close()
+            }
+            drawPath(roofPath, roof)
+            drawRect(Color(0xFF4B332A), Offset(cx - 7f * scale, cy + 18f * scale), Size(14f * scale, 27f * scale))
+            drawRect(Color(0xFFFFD48C).copy(alpha = pulse), Offset(cx - 22f * scale, cy + 14f * scale), Size(9f * scale, 11f * scale))
+            drawRect(Color(0xFFFFD48C).copy(alpha = pulse), Offset(cx + 13f * scale, cy + 14f * scale), Size(9f * scale, 11f * scale))
+            drawCircle(Color(0xFFFFC66E).copy(alpha = pulse), 5f * scale, Offset(cx, cy - 24f * scale))
+        }
+        house(w * 0.18f, h * 0.59f, 0.92f, Color(0xFF9C5C45), Color(0xFFB98C66))
+        house(w * 0.48f, h * 0.48f, 1.16f, Color(0xFFB87942), Color(0xFFD0A06B))
+        house(w * 0.79f, h * 0.58f, 0.94f, Color(0xFF7C5C91), Color(0xFFB18A78))
+        // Lantern posts and tiny residents make the square feel inhabited.
+        listOf(0.08f, 0.34f, 0.69f, 0.93f).forEach { x ->
+            drawLine(Color(0xFF493A31), Offset(w * x, h * 0.68f), Offset(w * x, h * 0.88f), 4f)
+            drawRoundRect(Color(0xFFFFD38B).copy(alpha = pulse), Offset(w * x - 5f, h * 0.65f), Size(10f, 15f))
+            drawCircle(Color(0xFFFFD38B).copy(alpha = pulse * 0.18f), 15f, Offset(w * x, h * 0.72f))
+        }
+        fun villager(x: Float, y: Float, robe: Color) {
+            drawCircle(Color(0xFFE8C5A0), 5f, Offset(w * x, h * y))
+            drawRoundRect(robe, Offset(w * x - 6f, h * y + 5f), Size(12f, 20f))
+        }
+        villager(0.37f, 0.72f, Color(0xFF527C8B))
+        villager(0.72f, 0.76f, Color(0xFF9A647A))
+        villager(0.57f, 0.83f, Color(0xFFB58A52))
+        drawRoundRect(Color(0xFF101820).copy(alpha = 0.28f), Offset(0f, 0f), Size(w, h), cornerRadius = androidx.compose.ui.geometry.CornerRadius(14f, 14f))
+    }
+    Text(
+        if (storyChapter == 0) "Лунная Гавань · северные врата закрыты" else "Лунная Гавань · путь за северные врата открыт",
+        color = Gold, fontSize = 11.sp, fontWeight = FontWeight.Bold
+    )
+}
+
+@Composable
+private fun BattleScene(autoBattle: Boolean, actionText: String) {
+    val transition = rememberInfiniteTransition(label = "battle-effects")
+    val motion by transition.animateFloat(
+        initialValue = 0.18f,
+        targetValue = 0.82f,
+        animationSpec = infiniteRepeatable(tween(if (autoBattle) 650 else 1800), repeatMode = RepeatMode.Reverse),
+        label = "energy-motion"
+    )
+    val pulse by transition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(tween(900), repeatMode = RepeatMode.Reverse),
+        label = "battle-pulse"
+    )
+    Canvas(Modifier.fillMaxWidth().height(174.dp)) {
+        val w = size.width
+        val h = size.height
+        drawRect(brush = Brush.verticalGradient(listOf(Color(0xFF172A3C), Color(0xFF342C45), Color(0xFF17272D))))
+        drawCircle(Color(0xFFFFDDA4).copy(alpha = 0.72f), 18f, Offset(w * 0.82f, h * 0.20f))
+        drawRect(Color(0xFF243C36), Offset(0f, h * 0.78f), Size(w, h * 0.22f))
+        drawLine(Color(0xFF947B58), Offset(0f, h * 0.78f), Offset(w, h * 0.78f), 3f)
+        // Cultivator silhouette.
+        drawCircle(Color(0xFFE8C7A2), 10f, Offset(w * 0.20f, h * 0.43f))
+        drawRoundRect(Color(0xFF4B9B91), Offset(w * 0.16f, h * 0.50f), Size(w * 0.08f, h * 0.27f))
+        drawLine(Color(0xFFD6C7A8), Offset(w * 0.22f, h * 0.56f), Offset(w * 0.34f, h * 0.38f), 5f)
+        drawLine(Color(0xFFB9C9D4), Offset(w * 0.34f, h * 0.38f), Offset(w * 0.37f, h * 0.34f), 3f)
+        // Guardian silhouette.
+        drawCircle(Color(0xFFD1A58C), 16f, Offset(w * 0.80f, h * 0.40f))
+        drawRoundRect(Color(0xFF784C55), Offset(w * 0.72f, h * 0.51f), Size(w * 0.16f, h * 0.28f))
+        drawLine(Color(0xFFB86F67), Offset(w * 0.73f, h * 0.58f), Offset(w * 0.66f, h * 0.72f), 7f)
+        val orb = Offset(w * (0.34f + 0.32f * motion), h * (0.43f + 0.05f * motion))
+        drawCircle(Color(0xFF78E2D0).copy(alpha = pulse * 0.16f), 24f, orb)
+        drawCircle(if (autoBattle) Color(0xFF8DF2D8) else Color(0xFFE5BD72), 7f, orb)
+        drawLine(Color(0xFF8DF2D8).copy(alpha = pulse), Offset(w * 0.34f, h * 0.43f), orb, 2f)
+    }
+    Text(if (autoBattle) "Бой идёт · техники применяются автоматически" else actionText, color = if (autoBattle) Jade else Color.LightGray, fontSize = 11.sp)
 }
 
 @Composable

@@ -471,7 +471,14 @@ private fun CultivateApp() {
                 Button(onClick = { autoBattle = !autoBattle }, enabled = enemyHp > 0 && playerHp > 0, modifier = Modifier.fillMaxWidth()) {
                     Text(if (autoBattle) "Остановить автобой" else "Наблюдать за боем · авто")
                 }
-                Text("Ротация: " + rotationOrder.joinToString(" → ") { when(it) { 0 -> "Навык"; 1 -> "Техника"; else -> "Оружие" } }, color = Gold, fontSize = 11.sp)
+                Text("Ротация: " + rotationOrder.joinToString(" → ") { action ->
+                    when {
+                        action in 0..8 && chosenClass >= 0 -> skillDefinitions[chosenClass][action].name
+                        action == 9 -> "Техника"
+                        action == 10 -> "Оружие"
+                        else -> "Навык"
+                    }
+                }, color = Gold, fontSize = 11.sp)
                 Text("Перезарядка · выбранный навык ${skillCooldowns[activeSkillNode]} · техника $techniqueCooldown · оружие $weaponCooldown", color = Color.LightGray, fontSize = 11.sp)
 
                 if (playerHp <= 0) {
@@ -568,6 +575,12 @@ private fun CultivateApp() {
                         Text("${item.slot.title} · ${stageName(item.requiredStage)} · набор «${gearSetNames[item.setId] ?: item.setId}»", color = Color.LightGray, fontSize = 11.sp)
                         Text("Рейтинг ${gearPowerScore(item)} · атака +${item.attackBonus} · защита +${item.defenseBonus} · здоровье +${item.hpBonus} · сила техник +${item.skillBonus}", color = Jade, fontSize = 11.sp)
                         Text(item.effectDescription, color = Color.LightGray, fontSize = 11.sp)
+                        val currentSlotItem = equippedGear.firstOrNull { it.slot == item.slot }
+                        val comparison = if (currentSlotItem == null) "Слот свободен" else {
+                            val delta = gearPowerScore(item) - gearPowerScore(currentSlotItem)
+                            when { delta > 0 -> "Сильнее надетого предмета на $delta"; delta < 0 -> "Слабее надетого предмета на ${-delta}"; else -> "Рейтинг равен надетому предмету" }
+                        }
+                        Text(comparison, color = if (currentSlotItem == null || gearPowerScore(item) >= gearPowerScore(currentSlotItem)) Jade else Color.LightGray, fontSize = 11.sp)
                         val equipped = equippedGearIds.getOrElse(item.slot.ordinal) { "" } == encodeGearInstance(item)
                         OutlinedButton(
                             onClick = { equippedGearIds[item.slot.ordinal] = encodeGearInstance(item); message = "Экипировано: ${item.name}" },
@@ -771,7 +784,7 @@ private fun TownScene(stage: Int, storyChapter: Int) {
         drawRoundRect(Color(0xFF101820).copy(alpha = 0.28f), Offset(0f, 0f), Size(w, h), cornerRadius = androidx.compose.ui.geometry.CornerRadius(14f, 14f))
     }
     Text(
-        if (storyChapter == 0) "Лунная Гавань · северные врата закрыты" else "Лунная Гавань · путь за северные врата открыт",
+        if (storyChapter == 0) "Лунная Гавань · ступень $stage · северные врата закрыты" else "Лунная Гавань · ступень $stage · путь за северные врата открыт",
         color = Gold, fontSize = 11.sp, fontWeight = FontWeight.Bold
     )
 }

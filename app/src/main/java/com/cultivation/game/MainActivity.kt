@@ -449,13 +449,13 @@ private val weaponAttackBonus=listOf(8,10,7,9)
 private val weaponNodeOneBonus=listOf(3,5,2,4)
 private val weaponNodeTwoBonus=listOf(4,2,5,3)
 
-private enum class WeaponRarity(val title: String, val bonus: Int) {
-    COMMON("Обычное", 0),
-    UNCOMMON("Необычное", 3),
-    RARE("Редкое", 7),
-    EPIC("Эпическое", 12),
-    LEGENDARY("Легендарное", 18),
-    MYTHIC("Мифическое", 24)
+private enum class WeaponRarity(val title: String, val realmGapShare: Double, val rollSpread: Double) {
+    COMMON("Обычное", 0.00, 0.10),
+    UNCOMMON("Необычное", 0.16, 0.12),
+    RARE("Редкое", 0.34, 0.15),
+    EPIC("Эпическое", 0.58, 0.18),
+    LEGENDARY("Легендарное", 0.88, 0.23),
+    MYTHIC("Мифическое", 1.08, 0.28)
 }
 
 private data class WeaponDefinition(
@@ -474,7 +474,11 @@ private data class WeaponDefinition(
 private fun weapon(
     id: String, name: String, type: Int, rarity: WeaponRarity, requiredStage: Int,
     realmBase: Int, defense: Int = 0, extraDamage: Int = 0, healing: Int = 0, effect: String
-) = WeaponDefinition(id, name, type, rarity, requiredStage, realmBase + rarity.bonus, defense, extraDamage, healing, effect)
+): WeaponDefinition {
+    val nextRealmBase = when (requiredStage) { 1 -> 36; 4 -> 100; 7 -> 230; 10 -> 520; 13 -> 1150; else -> 2600 }
+    val rarityPower = ((nextRealmBase - realmBase).coerceAtLeast(0) * rarity.realmGapShare).toInt()
+    return WeaponDefinition(id, name, type, rarity, requiredStage, realmBase + rarityPower, defense, extraDamage, healing, effect)
+}
 
 private val weaponCatalog = listOf(
     weapon("tempered_wood_blade", "Тренировочный клинок", 0, WeaponRarity.COMMON, 1, 4, effect = "Надёжное оружие начинающего культиватора"),
@@ -529,8 +533,27 @@ private fun weaponRarityColor(rarity: WeaponRarity): Color = when (rarity) {
     WeaponRarity.MYTHIC -> Color(0xFFFF718B)
 }
 
+private fun encodeWeaponInstance(item: WeaponDefinition): String =
+    listOf(item.id, item.attackBonus, item.defenseBonus, item.bonusDamage, item.healOnHit).joinToString("~")
+
+private fun resolveWeaponInstance(encoded: String): WeaponDefinition? {
+    val parts = encoded.split("~")
+    val base = weaponCatalog.firstOrNull { it.id == parts.firstOrNull() } ?: return null
+    if (parts.size < 5) return base
+    return base.copy(
+        attackBonus = parts[1].toIntOrNull() ?: base.attackBonus,
+        defenseBonus = parts[2].toIntOrNull() ?: base.defenseBonus,
+        bonusDamage = parts[3].toIntOrNull() ?: base.bonusDamage,
+        healOnHit = parts[4].toIntOrNull() ?: base.healOnHit
+    )
+}
+
+private fun weaponPowerScore(item: WeaponDefinition): Int =
+    item.attackBonus + item.bonusDamage + item.defenseBonus * 2 + item.healOnHit * 2
+
 private fun rollWeaponDrop(stage: Int, ownedIds: List<String>): WeaponDefinition? {
-    val available = weaponCatalog.filter { it.requiredStage <= stage && it.id !in ownedIds }
+    val alreadyOwned = ownedIds.map { it.substringBefore("~") }.toSet()
+    val available = weaponCatalog.filter { it.requiredStage <= stage && it.id !in alreadyOwned }
     if (available.isEmpty()) return null
     val roll = Random.nextInt(1000)
     val rarity = when {
@@ -542,7 +565,14 @@ private fun rollWeaponDrop(stage: Int, ownedIds: List<String>): WeaponDefinition
         else -> WeaponRarity.MYTHIC
     }
     val sameRarity = available.filter { it.rarity == rarity }
-    return (sameRarity.ifEmpty { available }).random()
+    val base = (sameRarity.ifEmpty { available }).random()
+    val spread = base.rarity.rollSpread
+    return base.copy(
+        attackBonus = (base.attackBonus * Random.nextDouble(1.0 - spread, 1.0 + spread)).toInt().coerceAtLeast(1),
+        defenseBonus = (base.defenseBonus * Random.nextDouble(0.85, 1.25)).toInt().coerceAtLeast(0),
+        bonusDamage = (base.bonusDamage * Random.nextDouble(0.85, 1.35)).toInt().coerceAtLeast(0),
+        healOnHit = (base.healOnHit * Random.nextDouble(0.85, 1.30)).toInt().coerceAtLeast(0)
+    )
 }
 
 private val skillDefinitions=listOf(

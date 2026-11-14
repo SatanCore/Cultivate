@@ -676,20 +676,15 @@ private fun CultivateApp() {
             }
 
             if (selectedMenu == 1) {
-            GameCard("Культивация", "Ступень $stage · ${stageName(stage)}") {
                 val breakthroughCost = cultivationQiCost(stage)
                 val requiredBossRank = stage + 1
-                Text(
-                    "Путь рассчитан на недели, а не часы: пассивное накопление работает и вне игры до 8 часов. Для прорыва нужно $breakthroughCost Ци и победа над стражем ранга $requiredBossRank.",
-                    color = Color.LightGray
-                )
-                LinearProgressIndicator(
-                    progress = { (qi.toFloat() / breakthroughCost.coerceAtLeast(1)).coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Jade
-                )
-                Button(
-                    onClick = {
+                CultivationPanel(
+                    stage = stage,
+                    qi = qi,
+                    cost = breakthroughCost,
+                    bossRank = requiredBossRank,
+                    bossLevel = bossLevel,
+                    onBreakthrough = {
                         if (qi >= breakthroughCost && bossLevel >= requiredBossRank) {
                             qi -= breakthroughCost
                             val oldWorld = worldName(stage)
@@ -706,19 +701,60 @@ private fun CultivateApp() {
                         } else {
                             message = "Недостаточно Ци. Продолжай медитировать и выполняй ежедневные поручения."
                         }
-                    },
-                    enabled = qi >= breakthroughCost && bossLevel >= requiredBossRank,
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Совершить прорыв · $breakthroughCost Ци") }
-            }
-                GameCard("Ежедневный путь", "Занятия, которые поддерживают темп долгой культивации") {
-                    Text("Победы сегодня: $dailyWins / 3 · сад собран: ${if (dailyGardenCollected) "да" else "нет"} · медитация: ${if (dailyMeditated) "завершена" else "не выполнена"}", color = Color.LightGray, fontSize = 12.sp)
+                    }
+                )
+                GameCard("Ежедневный путь", "Испытания, сад духов и медитация") {
                     val battleClaimed = dailyClaims and 1 != 0
-                    Button(onClick = { if (dailyWins >= 3 && !battleClaimed) { qi += 60; stones += 100; dailyClaims = dailyClaims or 1; message = "Ежедневное испытание завершено: +60 Ци и 100 камней." } }, enabled = dailyWins >= 3 && !battleClaimed, modifier = Modifier.fillMaxWidth()) { Text(if (battleClaimed) "Испытание стражей · получено" else "Победить 3 раза · 60 Ци + 100 камней") }
+                    DailyTaskCard(
+                        title = "Испытание стражей",
+                        detail = "Победы сегодня: $dailyWins / 3",
+                        reward = "+60 Ци · +100 камней",
+                        iconKey = "arena",
+                        claimed = battleClaimed,
+                        available = dailyWins >= 3 && !battleClaimed,
+                        onClaim = {
+                            if (dailyWins >= 3 && !battleClaimed) {
+                                qi += 60
+                                stones += 100
+                                dailyClaims = dailyClaims or 1
+                                message = "Ежедневное испытание завершено: +60 Ци и 100 камней."
+                            }
+                        }
+                    )
                     val gardenClaimed = dailyClaims and 2 != 0
-                    Button(onClick = { if (dailyGardenCollected && !gardenClaimed) { qi += 45; spiritHerbs += 2; dailyClaims = dailyClaims or 2; message = "За заботу о саде получено 45 Ци и 2 травы." } }, enabled = dailyGardenCollected && !gardenClaimed, modifier = Modifier.fillMaxWidth()) { Text(if (gardenClaimed) "Урожай дня · получено" else "Собрать сад · 45 Ци + 2 травы") }
+                    DailyTaskCard(
+                        title = "Сад духовных трав",
+                        detail = if (dailyGardenCollected) "Урожай собран" else "Урожай ещё не готов",
+                        reward = "+45 Ци · +2 травы",
+                        iconKey = "garden",
+                        claimed = gardenClaimed,
+                        available = dailyGardenCollected && !gardenClaimed,
+                        onClaim = {
+                            if (dailyGardenCollected && !gardenClaimed) {
+                                qi += 45
+                                spiritHerbs += 2
+                                dailyClaims = dailyClaims or 2
+                                message = "За заботу о саде получено 45 Ци и 2 травы."
+                            }
+                        }
+                    )
                     val meditationClaimed = dailyClaims and 4 != 0
-                    Button(onClick = { if (dailyMeditated && !meditationClaimed) { qi += 20; stones += 50; dailyClaims = dailyClaims or 4; message = "За ежедневную медитацию получено 20 Ци и 50 камней." } }, enabled = dailyMeditated && !meditationClaimed, modifier = Modifier.fillMaxWidth()) { Text(if (meditationClaimed) "Медитация дня · получено" else "Завершить медитацию · 20 Ци + 50 камней") }
+                    DailyTaskCard(
+                        title = "Медитация у источника",
+                        detail = if (dailyMeditated) "Практика завершена" else "Сосредоточься на дыхании Ци",
+                        reward = "+20 Ци · +50 камней",
+                        iconKey = "cultivation",
+                        claimed = meditationClaimed,
+                        available = dailyMeditated && !meditationClaimed,
+                        onClaim = {
+                            if (dailyMeditated && !meditationClaimed) {
+                                qi += 20
+                                stones += 50
+                                dailyClaims = dailyClaims or 4
+                                message = "За ежедневную медитацию получено 20 Ци и 50 камней."
+                            }
+                        }
+                    )
                 }
             }
 
@@ -1155,6 +1191,108 @@ private fun HomeNavItem(title: String, symbol: String, target: Int, onNavigate: 
 }
 
 @Composable
+private fun CultivationPanel(
+    stage: Int,
+    qi: Int,
+    cost: Int,
+    bossRank: Int,
+    bossLevel: Int,
+    onBreakthrough: () -> Unit
+) {
+    val progress = (qi.toFloat() / cost.coerceAtLeast(1)).coerceIn(0f, 1f)
+    val transition = rememberInfiniteTransition(label = "cultivation-core")
+    val pulse by transition.animateFloat(.78f, 1.08f, infiniteRepeatable(tween(1800), RepeatMode.Reverse), label = "core-pulse")
+    Surface(
+        color = Color(0xE7192A42),
+        shape = MaterialTheme.shapes.extraLarge,
+        tonalElevation = 10.dp,
+        shadowElevation = 8.dp
+    ) {
+        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(126.dp), contentAlignment = Alignment.Center) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        val c = Offset(size.width * .5f, size.height * .5f)
+                        drawCircle(Brush.radialGradient(listOf(Color(0x6685D9C4), Color(0x001D3550))), size.minDimension * .48f * pulse, c)
+                        drawCircle(Color(0xFFE5BD72).copy(alpha = .42f), size.minDimension * .43f, c, style = androidx.compose.ui.graphics.drawscope.Stroke(size.minDimension * .018f))
+                        drawCircle(Color(0xFF85D9C4).copy(alpha = .55f), size.minDimension * .34f, c, style = androidx.compose.ui.graphics.drawscope.Stroke(size.minDimension * .012f))
+                        for (i in 0..7) {
+                            val angle = i * (Math.PI / 4.0)
+                            val x = c.x + kotlin.math.cos(angle).toFloat() * size.minDimension * .39f
+                            val y = c.y + kotlin.math.sin(angle).toFloat() * size.minDimension * .39f
+                            drawCircle(Color(0xFFFFE5A5).copy(alpha = .5f * pulse), size.minDimension * .018f, Offset(x, y))
+                        }
+                    }
+                    RpgIcon("lotus", Modifier.size(102.dp))
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("СЕРДЦЕ КУЛЬТИВАЦИИ", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text("Ступень $stage", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                    Text(stageName(stage), color = Jade, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Накоплено Ци · $qi / $cost", color = Color(0xFFE3EAF3), fontSize = 10.sp)
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.fillMaxWidth().height(7.dp),
+                        color = Jade,
+                        trackColor = Color(0xFF34445A)
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        RpgIcon("tower", Modifier.size(22.dp))
+                        Text("Страж $bossLevel / $bossRank", color = if (bossLevel >= bossRank) Jade else Color(0xFFFFC978), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            InventoryActionButton(
+                label = if (qi < cost) "НАКОПИТЬ ЕЩЁ ${cost - qi} ЦИ" else if (bossLevel < bossRank) "ОДОЛЕТЬ СТРАЖА · РАНГ $bossRank" else "СОВЕРШИТЬ ПРОРЫВ",
+                selected = false,
+                enabled = qi >= cost && bossLevel >= bossRank,
+                onClick = onBreakthrough
+            )
+        }
+    }
+}
+
+@Composable
+private fun DailyTaskCard(
+    title: String,
+    detail: String,
+    reward: String,
+    iconKey: String,
+    claimed: Boolean,
+    available: Boolean,
+    onClaim: () -> Unit
+) {
+    Surface(
+        color = if (claimed) Color(0xCC1F403B) else Color(0xCC1B2D45),
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = 4.dp
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RpgIcon(iconKey, Modifier.size(48.dp))
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title, color = if (claimed) Jade else Gold, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                Text(detail, color = Color(0xFFD1DCEB), fontSize = 9.sp)
+                Text(reward, color = Color(0xFF9BDCC5), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.width(8.dp))
+            Box(Modifier.width(124.dp)) {
+                InventoryActionButton(
+                    label = if (claimed) "ПОЛУЧЕНО" else if (available) "ЗАБРАТЬ" else "В ПРОЦЕССЕ",
+                    selected = claimed,
+                    enabled = available,
+                    onClick = onClaim
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun InventoryActionButton(
     label: String,
     selected: Boolean,
@@ -1444,6 +1582,11 @@ private fun RpgIcon(kind: String, modifier: Modifier = Modifier) {
             drawCircle(color, unit*r, Offset(w*x,h*y), style = if(fill) androidx.compose.ui.graphics.drawscope.Fill else stroke)
         }
         when (kind) {
+            "garden" -> {
+                p.moveTo(w*.5f,h*.77f); p.cubicTo(w*.18f,h*.58f,w*.28f,h*.31f,w*.5f,h*.43f); p.cubicTo(w*.72f,h*.31f,w*.82f,h*.58f,w*.5f,h*.77f); drawPath(p,Color(0xFF85C99C),style=stroke)
+                line(.5f,.76f,.5f,.32f,goldBright,sw*.7f); line(.5f,.58f,.34f,.46f,goldBright,sw*.55f); line(.5f,.58f,.66f,.46f,goldBright,sw*.55f)
+                circle(.5f,.28f,.055f,Color(0xFFFFD98C),true)
+            }
             "ice" -> {
                 line(.5f,.20f,.5f,.80f,blue,sw)
                 line(.24f,.34f,.76f,.66f,blue,sw)

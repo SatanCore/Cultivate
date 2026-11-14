@@ -3,6 +3,7 @@ package com.cultivation.game
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
@@ -68,6 +69,13 @@ private fun CultivateApp() {
     } }
     var selectedWeapon by remember { mutableIntStateOf(prefs.getInt("weapon_type",0).coerceIn(0,3)) }
     var selectedMenu by remember { mutableIntStateOf(0) }
+    var selectedTownBuilding by remember { mutableStateOf("") }
+    var questClaimed by remember { mutableStateOf(prefs.getBoolean("town_quest_claimed", false)) }
+    var storyChapter by remember { mutableIntStateOf(prefs.getInt("town_story_chapter", 0).coerceIn(0, 3)) }
+    val skillMaterials = remember { mutableStateListOf<Int>().apply {
+        val saved = (prefs.getString("skill_materials", "0,0,0,0,0,0") ?: "0,0,0,0,0,0").split(",").mapNotNull { it.toIntOrNull() }
+        repeat(6) { add(saved.getOrElse(it) { 0 }.coerceAtLeast(0)) }
+    } }
     var equippedWeaponId by remember { mutableStateOf(prefs.getString("equipped_weapon_id", "tempered_wood_blade") ?: "tempered_wood_blade") }
     var ownedWeaponIds by remember { mutableStateOf(prefs.getString("owned_weapon_ids", "tempered_wood_blade") ?: "tempered_wood_blade") }
     val ownedWeaponList = remember(ownedWeaponIds) { ownedWeaponIds.split("|").filter { it.isNotBlank() }.distinct() }
@@ -116,7 +124,7 @@ private fun CultivateApp() {
         }
     }
 
-    LaunchedEffect(qi, stones, stage, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds) {
+    LaunchedEffect(qi, stones, stage, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, questClaimed, storyChapter, skillMaterials.toList()) {
         prefs.edit()
             .putInt("qi", qi)
             .putInt("stones", stones)
@@ -139,6 +147,9 @@ private fun CultivateApp() {
             .putString("equipped_weapon_id", equippedWeaponId)
             .putString("owned_weapon_ids", ownedWeaponIds)
             .putInt("active_skill_node", activeSkillNode)
+            .putBoolean("town_quest_claimed", questClaimed)
+            .putInt("town_story_chapter", storyChapter)
+            .putString("skill_materials", skillMaterials.joinToString(","))
             .also { editor -> skillTreeLevels.forEachIndexed { index, level -> editor.putInt("skill_tree_${index/9}_${index%9}", level) } }
             .putLong("last_seen", System.currentTimeMillis())
             .apply()
@@ -169,13 +180,86 @@ private fun CultivateApp() {
             }
 
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("Путь", "Арена", "Персонаж", "Инвентарь", "Навыки", "Секты", "Спутник").forEachIndexed { index, label ->
-                    if (selectedMenu == index) Button(onClick = { selectedMenu = index }) { Text(label) }
-                    else OutlinedButton(onClick = { selectedMenu = index }) { Text(label) }
+                listOf("Город", "Путь", "Арена", "Персонаж", "Инвентарь", "Навыки", "Секты", "Спутник").forEachIndexed { index, label ->
+                    if (selectedMenu == index) Button(onClick = { selectedMenu = index; selectedTownBuilding = "" }) { Text(label) }
+                    else OutlinedButton(onClick = { selectedMenu = index; selectedTownBuilding = "" }) { Text(label) }
                 }
             }
 
             if (selectedMenu == 0) {
+                GameCard("Городок Лунной Гавани", "Тихая долина у подножия духовных гор · ступень $stage") {
+                    Text("Главная площадь освещена фонарями Ци. Каждое здание — отдельное место, где живут торговцы, мастера и искатели приключений.", color = Color.LightGray)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TownBuilding("Лавка", "Расходники и материалы", "🏮", Modifier.weight(1f)) { selectedTownBuilding = "shop" }
+                        TownBuilding("Аукцион", "Торги между искателями", "💎", Modifier.weight(1f)) { selectedTownBuilding = "auction" }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TownBuilding("Кузница", "Оружие и мастерство", "⚒️", Modifier.weight(1f)) { selectedTownBuilding = "forge" }
+                        TownBuilding("Доска заданий", "Поручения и награды", "📜", Modifier.weight(1f)) { selectedTownBuilding = "quests" }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TownBuilding("Павильон культивации", "Медитация и прорыв", "☯️", Modifier.weight(1f)) { selectedMenu = 1 }
+                        TownBuilding("Арена", "Испытания и добыча", "⚔️", Modifier.weight(1f)) { selectedMenu = 2 }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TownBuilding("Зал навыков", "Изучение боевых искусств", "✨", Modifier.weight(1f)) { selectedMenu = 5 }
+                        TownBuilding("Секта", "Альянсы и наставники", "🏯", Modifier.weight(1f)) { selectedMenu = 6 }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TownBuilding("Дом спутника", "Уход за духовным лисом", "🦊", Modifier.weight(1f)) { selectedMenu = 7 }
+                        TownBuilding("Склад", "Экипировка и находки", "🎒", Modifier.weight(1f)) { selectedMenu = 4 }
+                    }
+                }
+                when (selectedTownBuilding) {
+                    "shop" -> GameCard("Лавка Мэй", "Торговка материалов") {
+                        Text("Мэй продаёт простые осколки духа для развития техник выше 20-го уровня.", color = Color.LightGray)
+                        Text("Осколок духа: 200 камней · в наличии: ${skillMaterials[0]}", color = Jade)
+                        Button(onClick = { if (stones >= 200) { stones -= 200; skillMaterials[0]++; message = "Куплен осколок духа." } else message = "Не хватает камней духа." }, enabled = stones >= 200, modifier = Modifier.fillMaxWidth()) { Text("Купить осколок · 200") }
+                        OutlinedButton(onClick = { selectedTownBuilding = "" }) { Text("Назад на площадь") }
+                    }
+                    "auction" -> GameCard("Аукционный павильон", "Предложения странствующих культиваторов") {
+                        val listings = weaponCatalog.filter { it.requiredStage <= stage }.sortedByDescending { weaponPowerScore(it) }.take(4)
+                        listings.forEach { listing ->
+                            val price = 250 + weaponPowerScore(listing) * 18
+                            Text("${listing.name} · ${listing.rarity.title}", color = weaponRarityColor(listing.rarity), fontWeight = FontWeight.Bold)
+                            Text("Рейтинг ${weaponPowerScore(listing)} · цена $price камней", color = Color.LightGray, fontSize = 11.sp)
+                            OutlinedButton(onClick = {
+                                if (stones >= price) { stones -= price; ownedWeaponIds = (ownedWeaponList + encodeWeaponInstance(listing)).joinToString("|"); message = "На аукционе приобретено: ${listing.name}." }
+                                else message = "Недостаточно камней для ставки."
+                            }, enabled = stones >= price, modifier = Modifier.fillMaxWidth()) { Text("Купить лот · $price") }
+                        }
+                        OutlinedButton(onClick = { selectedTownBuilding = "" }) { Text("Назад на площадь") }
+                    }
+                    "forge" -> GameCard("Кузница Чэня", "Мастерская оружейника") {
+                        Text("Чэнь изучает найденное оружие и помогает подготовить его к бою. Выбери предмет в инвентаре, чтобы сравнить характеристики и экипировать его.", color = Color.LightGray)
+                        Button(onClick = { selectedMenu = 4; selectedTownBuilding = "" }, modifier = Modifier.fillMaxWidth()) { Text("Открыть склад оружия") }
+                        OutlinedButton(onClick = { selectedTownBuilding = "" }) { Text("Назад на площадь") }
+                    }
+                    "quests" -> GameCard("Доска поручений", "Старейшина Ли ждёт помощи") {
+                        Text("Старейшина Ли: «Страж святилища снова тревожит долину. Одолей его хотя бы один раз и принеси весть о победе».", color = Color.LightGray)
+                        Text("Поручение: победить стража · прогресс ${wins.coerceAtMost(1)}/1", color = Jade)
+                        LinearProgressIndicator(progress = { if (wins > 0) 1f else 0f }, modifier = Modifier.fillMaxWidth(), color = Jade)
+                        Button(onClick = {
+                            if (wins > 0 && !questClaimed) { stones += 180; skillMaterials[0] += 2; questClaimed = true; storyChapter = 1; message = "Поручение выполнено! Получено 180 камней и 2 осколка духа." }
+                            else if (questClaimed) message = "Старейшина уже наградил тебя. Скоро появится новое поручение."
+                            else message = "Сначала одолей стража на арене."
+                        }, enabled = wins > 0 && !questClaimed, modifier = Modifier.fillMaxWidth()) { Text(if (questClaimed) "Поручение выполнено" else "Получить награду") }
+                        OutlinedButton(onClick = { selectedTownBuilding = "" }) { Text("Назад на площадь") }
+                    }
+                }
+                GameCard("Жители Лунной Гавани", "Люди, у которых начинается твоя история") {
+                    Text("Старейшина Ли · наставник долины", color = Gold, fontWeight = FontWeight.Bold)
+                    Text(if (storyChapter == 0) "«Докажи, что способен защитить этот город. Тогда я расскажу, почему древние врата вновь подают знаки»." else "«Ты помог нашей долине. За северными воротами пробуждается древний путь — это только начало твоего странствия».", color = Color.LightGray)
+                    OutlinedButton(onClick = { message = if (storyChapter == 0) "Старейшина Ли: начни с поручения на доске заданий." else "Старейшина Ли: северные врата откроются в следующей главе."; selectedTownBuilding = "quests" }, modifier = Modifier.fillMaxWidth()) { Text("Поговорить со старейшиной") }
+                    Text("Мэй · торговка · Чэнь · кузнец · Юнь · посыльный событий", color = Jade, fontSize = 12.sp)
+                }
+                GameCard("Событие долины", "Ярмарка духовных огней") {
+                    Text("Сегодня на площади проходит небольшая ярмарка. Забери разовый подарок для путника.", color = Color.LightGray)
+                    Button(onClick = { if (prefs.getBoolean("lantern_event_claimed", false)) message = "Подарок ярмарки уже получен." else { stones += 75; prefs.edit().putBoolean("lantern_event_claimed", true).apply(); message = "За участие в ярмарке получено 75 камней духа." } }, modifier = Modifier.fillMaxWidth()) { Text("Получить подарок события · 75 камней") }
+                }
+            }
+
+            if (selectedMenu == 1) {
             GameCard("Культивация", "Ступень $stage · ${stageName(stage)}") {
                 val breakthroughCost = stage * 35
                 Text(
@@ -205,7 +289,7 @@ private fun CultivateApp() {
 
             }
 
-            if (selectedMenu == 1) {
+            if (selectedMenu == 2) {
             GameCard("Арена испытаний", "Страж святилища · ранг $bossLevel") {
                 Text("Твоё здоровье: ${playerHp.coerceAtMost(playerMaxHp)} / $playerMaxHp", color = Jade)
                 LinearProgressIndicator(progress = { (playerHp.toFloat() / playerMaxHp).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth(), color = Jade)
@@ -285,7 +369,7 @@ private fun CultivateApp() {
 
             }
 
-            if (selectedMenu == 2) GameCard("Персонаж", if (chosenClass < 0) "Выбери свой путь культивации" else classNames[chosenClass]) {
+            if (selectedMenu == 3) GameCard("Персонаж", if (chosenClass < 0) "Выбери свой путь культивации" else classNames[chosenClass]) {
                 Text("Характеристики и экипировка находятся здесь. Коллекция предметов — в отдельном инвентаре.", color = Color.LightGray)
                 classNames.forEachIndexed { i, n ->
                     val profile = classCombatProfiles[i]
@@ -311,7 +395,7 @@ private fun CultivateApp() {
                 Text("Для смены экипировки перейди в «Инвентарь» и выбери предмет.", color = Color.LightGray, fontSize = 11.sp)
             }
 
-            if (selectedMenu == 3) GameCard("Инвентарь", "Оружие · найдено предметов: ${ownedWeapons.size}") {
+            if (selectedMenu == 4) GameCard("Инвентарь", "Оружие · найдено предметов: ${ownedWeapons.size}") {
                 Text("Предметы здесь хранятся отдельно от экипировки. Каждый выпавший экземпляр получает собственный разброс характеристик.", color = Color.LightGray, fontSize = 12.sp)
                 ownedWeapons.sortedByDescending { weaponPowerScore(it) }.forEach { item ->
                     Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -346,7 +430,7 @@ private fun CultivateApp() {
                 }
             }
 
-            if (selectedMenu == 4) {
+            if (selectedMenu == 5) {
                 GameCard("Боевые техники", "Выбранная техника: $activeTechniqueName · мастерство $activeTechniqueLevel") {
                     Text("Техника усиливает каждый удар на арене. Развивай её за камни духа.", color = Color.LightGray)
                     TechniqueRow("Меч рассекающей Ци", "Сильный прямой удар", selectedTechnique == 0, swordLevel, techniqueUpgradeCost(swordLevel), stones,
@@ -390,7 +474,7 @@ private fun CultivateApp() {
                 }
             }
 
-            if (selectedMenu == 5) GameCard("Секты и альянсы", "Праведный и Злой пути") {
+            if (selectedMenu == 6) GameCard("Секты и альянсы", "Праведный и Злой пути") {
                 listOf("Праведный альянс", "Злой альянс").forEachIndexed { index, label ->
                     OutlinedButton(onClick = { chosenAlliance = index; if (chosenSect >= 0 && sectAlliance[chosenSect] != index) chosenSect = -1; message = "Выбран $label" }, modifier = Modifier.fillMaxWidth()) { Text(label + if (chosenAlliance == index) " · выбран" else "") }
                 }
@@ -405,7 +489,7 @@ private fun CultivateApp() {
                 }
             }
 
-            if (selectedMenu == 6) GameCard("Духовный спутник", "Нефритовый лис · уровень $petLevel") {
+            if (selectedMenu == 7) GameCard("Духовный спутник", "Нефритовый лис · уровень $petLevel") {
                 Text("Спутник усиливает атаки на арене. Следующий уровень стоит ${petLevel * 60} камней духа.", color = Color.LightGray)
                 Button(
                     onClick = {
@@ -447,6 +531,17 @@ private fun TechniqueRow(
 }
 
 @Composable
+@Composable
+private fun TownBuilding(name: String, description: String, symbol: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(modifier, color = Color(0xFF263C3B), shape = MaterialTheme.shapes.large, border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.55f))) {
+        Column(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(symbol, fontSize = 28.sp)
+            Text(name, color = Gold, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Text(description, color = Jade, fontSize = 10.sp)
+        }
+    }
+}
+
 private fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
     Surface(modifier, color = Panel, shape = MaterialTheme.shapes.large) {
         Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {

@@ -1194,12 +1194,12 @@ private fun RpgIcon(kind: String, modifier: Modifier = Modifier) {
                 p.moveTo(w*.5f,h*.43f); p.cubicTo(w*.65f,h*.58f,w*.56f,h*.72f,w*.46f,h*.69f); drawPath(p,goldBright,style=stroke)
             }
             "pets", "fox", "deer" -> {
-                p.moveTo(w*.29f,h*.37f); p.lineTo(w*.25f,h*.17f); p.lineTo(w*.43f,h*.29f); p.quadraticTo(w*.5f,h*.24f,w*.57f,h*.29f); p.lineTo(w*.75f,h*.17f); p.lineTo(w*.71f,h*.39f); p.quadraticTo(w*.82f,h*.65f,w*.5f,h*.76f); p.quadraticTo(w*.18f,h*.65f,w*.29f,h*.37f); drawPath(p,purple,style=stroke)
+                p.moveTo(w*.29f,h*.37f); p.lineTo(w*.25f,h*.17f); p.lineTo(w*.43f,h*.29f); p.cubicTo(w*.4767f,h*.2567f,w*.5233f,h*.2567f,w*.57f,h*.29f); p.lineTo(w*.75f,h*.17f); p.lineTo(w*.71f,h*.39f); p.cubicTo(w*.7967f,h*.5633f,w*.7133f,h*.6867f,w*.5f,h*.76f); p.cubicTo(w*.2867f,h*.6867f,w*.3633f,h*.5567f,w*.29f,h*.37f); drawPath(p,purple,style=stroke)
                 circle(.41f,.49f,.025f,goldBright,true); circle(.59f,.49f,.025f,goldBright,true)
             }
             "inventory", "chest" -> {
                 p.moveTo(w*.24f,h*.39f); p.lineTo(w*.76f,h*.39f); p.lineTo(w*.73f,h*.74f); p.lineTo(w*.27f,h*.74f); p.close(); drawPath(p,goldBright,style=stroke)
-                p.moveTo(w*.24f,h*.39f); p.quadraticTo(w*.5f,h*.17f,w*.76f,h*.39f); drawPath(p,blue,style=stroke)
+                p.moveTo(w*.24f,h*.39f); p.cubicTo(w*.4133f,h*.2433f,w*.5867f,h*.2433f,w*.76f,h*.39f); drawPath(p,blue,style=stroke)
                 line(.5f,.4f,.5f,.72f); circle(.5f,.54f,.04f,blue)
             }
             "worlds", "portal" -> {
@@ -1215,8 +1215,8 @@ private fun RpgIcon(kind: String, modifier: Modifier = Modifier) {
                 line(.27f,.45f,.73f,.45f); line(.32f,.47f,.32f,.72f); line(.68f,.47f,.68f,.72f); line(.25f,.75f,.75f,.75f,blue)
             }
             "alchemy", "cauldron" -> {
-                p.moveTo(w*.25f,h*.42f); p.quadraticTo(w*.5f,h*.33f,w*.75f,h*.42f); p.lineTo(w*.68f,h*.69f); p.quadraticTo(w*.5f,h*.83f,w*.32f,h*.69f); p.close(); drawPath(p,goldBright,style=stroke)
-                p.moveTo(w*.42f,h*.32f); p.quadraticTo(w*.31f,h*.17f,w*.45f,h*.13f); p.moveTo(w*.57f,h*.32f); p.quadraticTo(w*.69f,h*.17f,w*.56f,h*.11f); drawPath(p,purple,style=stroke)
+                p.moveTo(w*.25f,h*.42f); p.cubicTo(w*.4167f,h*.36f,w*.5833f,h*.36f,w*.75f,h*.42f); p.lineTo(w*.68f,h*.69f); p.cubicTo(w*.56f,h*.7833f,w*.44f,h*.7833f,w*.32f,h*.69f); p.close(); drawPath(p,goldBright,style=stroke)
+                p.moveTo(w*.42f,h*.32f); p.cubicTo(w*.3467f,h*.22f,w*.4267f,h*.1567f,w*.45f,h*.13f); p.moveTo(w*.57f,h*.32f); p.cubicTo(w*.65f,h*.22f,w*.6033f,h*.15f,w*.56f,h*.11f); drawPath(p,purple,style=stroke)
             }
             "forge", "anvil" -> {
                 p.moveTo(w*.24f,h*.42f); p.lineTo(w*.76f,h*.42f); p.lineTo(w*.64f,h*.56f); p.lineTo(w*.57f,h*.76f); p.lineTo(w*.4f,h*.76f); p.lineTo(w*.36f,h*.56f); p.close(); drawPath(p,goldBright,style=stroke)
@@ -1228,7 +1228,7 @@ private fun RpgIcon(kind: String, modifier: Modifier = Modifier) {
             }
             "auction", "scales" -> {
                 line(.5f,.22f,.5f,.75f); line(.3f,.35f,.7f,.35f); line(.34f,.35f,.24f,.58f); line(.34f,.35f,.44f,.58f); line(.66f,.35f,.56f,.58f); line(.66f,.35f,.76f,.58f); line(.33f,.75f,.67f,.75f)
-                p.moveTo(w*.17f,h*.59f); p.quadraticTo(w*.34f,h*.71f,w*.51f,h*.59f); p.moveTo(w*.49f,h*.59f); p.quadraticTo(w*.66f,h*.71f,w*.83f,h*.59f); drawPath(p,goldBright,style=stroke)
+                p.moveTo(w*.17f,h*.59f); p.cubicTo(w*.2833f,h*.67f,w*.3967f,h*.67f,w*.51f,h*.59f); p.moveTo(w*.49f,h*.59f); p.cubicTo(w*.6033f,h*.67f,w*.7167f,h*.67f,w*.83f,h*.59f); drawPath(p,goldBright,style=stroke)
             }
             "quests", "scroll" -> {
                 p.moveTo(w*.31f,h*.2f); p.lineTo(w*.68f,h*.2f); p.lineTo(w*.68f,h*.75f); p.lineTo(w*.31f,h*.75f); p.close(); drawPath(p,goldBright,style=stroke)
@@ -1236,7 +1236,7 @@ private fun RpgIcon(kind: String, modifier: Modifier = Modifier) {
             }
             "shop" -> {
                 p.moveTo(w*.25f,h*.4f); p.lineTo(w*.75f,h*.4f); p.lineTo(w*.69f,h*.75f); p.lineTo(w*.31f,h*.75f); p.close(); drawPath(p,goldBright,style=stroke)
-                p.moveTo(w*.35f,h*.4f); p.quadraticTo(w*.35f,h*.18f,w*.5f,h*.18f); p.quadraticTo(w*.65f,h*.18f,w*.65f,h*.4f); drawPath(p,blue,style=stroke)
+                p.moveTo(w*.35f,h*.4f); p.cubicTo(w*.35f,h*.2533f,w*.4f,h*.18f,w*.5f,h*.18f); p.cubicTo(w*.6f,h*.18f,w*.65f,h*.2533f,w*.65f,h*.4f); drawPath(p,blue,style=stroke)
             }
             "tower" -> {
                 line(.5f,.18f,.5f,.79f); line(.31f,.34f,.69f,.34f); line(.36f,.52f,.64f,.52f); line(.27f,.77f,.73f,.77f)

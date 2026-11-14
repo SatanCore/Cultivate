@@ -50,6 +50,10 @@ private fun CultivateApp() {
     var bossLevel by remember { mutableIntStateOf(prefs.getInt("boss_level", 1).coerceAtLeast(1)) }
     var enemyHp by remember { mutableIntStateOf(prefs.getInt("enemy", 100).coerceAtLeast(0)) }
     var wins by remember { mutableIntStateOf(prefs.getInt("wins", 0).coerceAtLeast(0)) }
+    var selectedTechnique by remember { mutableIntStateOf(prefs.getInt("selected_technique", 0).coerceIn(0, 2)) }
+    var swordLevel by remember { mutableIntStateOf(prefs.getInt("tech_sword", 1).coerceAtLeast(1)) }
+    var lotusLevel by remember { mutableIntStateOf(prefs.getInt("tech_lotus", 1).coerceAtLeast(1)) }
+    var foxLevel by remember { mutableIntStateOf(prefs.getInt("tech_fox", 1).coerceAtLeast(1)) }
     var message by remember {
         mutableStateOf(
             if (restoredQi > 0) "За время отсутствия восстановлено $restoredQi Ци. Путь продолжается!"
@@ -58,6 +62,17 @@ private fun CultivateApp() {
     }
 
     val enemyMaxHp = bossMaxHp(bossLevel)
+    val activeTechniqueLevel = when (selectedTechnique) {
+        0 -> swordLevel
+        1 -> lotusLevel
+        else -> foxLevel
+    }
+    val activeTechniqueName = techniqueName(selectedTechnique)
+    val techniqueDamage = when (selectedTechnique) {
+        0 -> 18 + swordLevel * 12
+        1 -> 10 + lotusLevel * 8
+        else -> 14 + foxLevel * 10
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -66,7 +81,7 @@ private fun CultivateApp() {
         }
     }
 
-    LaunchedEffect(qi, stones, stage, petLevel, bossLevel, enemyHp, wins) {
+    LaunchedEffect(qi, stones, stage, petLevel, bossLevel, enemyHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel) {
         prefs.edit()
             .putInt("qi", qi)
             .putInt("stones", stones)
@@ -75,6 +90,10 @@ private fun CultivateApp() {
             .putInt("boss_level", bossLevel)
             .putInt("enemy", enemyHp)
             .putInt("wins", wins)
+            .putInt("selected_technique", selectedTechnique)
+            .putInt("tech_sword", swordLevel)
+            .putInt("tech_lotus", lotusLevel)
+            .putInt("tech_fox", foxLevel)
             .putLong("last_seen", System.currentTimeMillis())
             .apply()
     }
@@ -141,7 +160,7 @@ private fun CultivateApp() {
                         if (enemyHp <= 0) {
                             message = "Страж повержен. Начни следующий бой."
                         } else {
-                            val damage = 22 + stage * 3 + petLevel * 2
+                            val damage = 22 + stage * 3 + petLevel * 2 + techniqueDamage
                             enemyHp = (enemyHp - damage).coerceAtLeast(0)
                             if (enemyHp == 0) {
                                 val reward = 80 + bossLevel * 15 + stage * 5
@@ -149,7 +168,7 @@ private fun CultivateApp() {
                                 wins++
                                 message = "Победа! Получено $reward камней духа. Следующий страж будет сильнее."
                             } else {
-                                message = "Техника Ци нанесла $damage урона."
+                                message = "$activeTechniqueName нанесла $damage урона."
                             }
                         }
                     },
@@ -170,6 +189,32 @@ private fun CultivateApp() {
                     enabled = enemyHp <= 0,
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Вызвать следующего стража") }
+            }
+
+            GameCard("Боевые техники", "Выбранная техника: $activeTechniqueName · мастерство $activeTechniqueLevel") {
+                Text("Техника усиливает каждый удар на арене. Выбери стиль боя и развивай его за камни духа.", color = Color.LightGray)
+                TechniqueRow("Меч рассекающей Ци", "Сильный прямой удар", selectedTechnique == 0, swordLevel, techniqueUpgradeCost(swordLevel), stones) {
+                    selectedTechnique = 0
+                } {
+                    val cost = techniqueUpgradeCost(swordLevel)
+                    if (stones >= cost) { stones -= cost; swordLevel++; message = "Мастерство меча повышено до $swordLevel." }
+                    else message = "Не хватает камней духа для улучшения."
+                }
+                TechniqueRow("Нефритовый лотос", "Устойчивая техника духовной энергии", selectedTechnique == 1, lotusLevel, techniqueUpgradeCost(lotusLevel), stones) {
+                    selectedTechnique = 1
+                } {
+                    val cost = techniqueUpgradeCost(lotusLevel)
+                    if (stones >= cost) { stones -= cost; lotusLevel++; message = "Мастерство лотоса повышено до $lotusLevel." }
+                    else message = "Не хватает камней духа для улучшения."
+                }
+                TechniqueRow("Коготь лиса", "Быстрая атака в союзе со спутником", selectedTechnique == 2, foxLevel, techniqueUpgradeCost(foxLevel), stones) {
+                    selectedTechnique = 2
+                } {
+                    val cost = techniqueUpgradeCost(foxLevel)
+                    if (stones >= cost) { stones -= cost; foxLevel++; message = "Мастерство когтя лиса повышено до $foxLevel." }
+                    else message = "Не хватает камней духа для улучшения."
+                }
+                Text("Дополнительный урон выбранной техники: +$techniqueDamage", color = Gold, fontWeight = FontWeight.Bold)
             }
 
             GameCard("Духовный спутник", "Нефритовый лис · уровень $petLevel") {
@@ -199,6 +244,29 @@ private fun CultivateApp() {
 }
 
 @Composable
+private fun TechniqueRow(
+    name: String,
+    description: String,
+    selected: Boolean,
+    level: Int,
+    cost: Int,
+    stones: Int,
+    onSelect: () -> Unit,
+    onUpgrade: () -> Unit
+) {
+    Surface(color = if (selected) Color(0xFF29463F) else Color(0xFF24333B), shape = MaterialTheme.shapes.large) {
+        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(name + if (selected) " · выбрана" else "", color = Gold, fontWeight = FontWeight.Bold)
+            Text("$description · уровень $level", color = Color.LightGray, fontSize = 12.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onSelect, modifier = Modifier.weight(1f)) { Text("Выбрать") }
+                Button(onClick = onUpgrade, enabled = stones >= cost, modifier = Modifier.weight(1f)) { Text("Улучшить · $cost") }
+            }
+        }
+    }
+}
+
+@Composable
 private fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
     Surface(modifier, color = Panel, shape = MaterialTheme.shapes.large) {
         Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -220,6 +288,14 @@ private fun GameCard(title: String, subtitle: String, content: @Composable Colum
             content()
         }
     }
+}
+
+private fun techniqueUpgradeCost(level: Int): Int = level * 100
+
+private fun techniqueName(index: Int): String = when (index) {
+    0 -> "Меч рассекающей Ци"
+    1 -> "Нефритовый лотос"
+    else -> "Коготь лиса"
 }
 
 private fun bossMaxHp(level: Int): Int = 100 + (level - 1) * 35

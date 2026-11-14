@@ -871,15 +871,15 @@ private fun CultivateApp() {
                 GameCard("Боевые техники", "Выбранная техника: $activeTechniqueName · мастерство $activeTechniqueLevel") {
                     Text("Уровни 1–20 повышаются за камни духа. Начиная с 21-го уровня нужны материалы; каждые пять уровней открывается следующий, более редкий ресурс. На 50-м уровне техника получает дополнительный эффект +20%.", color = Color.LightGray)
                     Text("Материалы: " + skillMaterialNames.indices.joinToString(" · ") { "${skillMaterialNames[it]}: ${skillMaterials[it]}" }, color = Jade, fontSize = 11.sp)
-                    TechniqueRow("Меч рассекающей Ци", "Сильный прямой удар", selectedTechnique == 0, swordLevel, techniqueUpgradeCost(swordLevel), stones,
+                    TechniqueRow("Меч рассекающей Ци", "Сильный прямой удар", "weapon", selectedTechnique == 0, swordLevel, techniqueUpgradeCost(swordLevel), stones,
                         onSelect = { selectedTechnique = 0 },
                         onUpgrade = { upgradeTechnique(swordLevel) { swordLevel = it } }
                     )
-                    TechniqueRow("Нефритовый лотос", "Устойчивая техника духовной энергии", selectedTechnique == 1, lotusLevel, techniqueUpgradeCost(lotusLevel), stones,
+                    TechniqueRow("Нефритовый лотос", "Устойчивая техника духовной энергии", "lotus", selectedTechnique == 1, lotusLevel, techniqueUpgradeCost(lotusLevel), stones,
                         onSelect = { selectedTechnique = 1 },
                         onUpgrade = { upgradeTechnique(lotusLevel) { lotusLevel = it } }
                     )
-                    TechniqueRow("Коготь лиса", "Быстрая атака в союзе со спутником", selectedTechnique == 2, foxLevel, techniqueUpgradeCost(foxLevel), stones,
+                    TechniqueRow("Коготь лиса", "Быстрая атака в союзе со спутником", "pet_fox", selectedTechnique == 2, foxLevel, techniqueUpgradeCost(foxLevel), stones,
                         onSelect = { selectedTechnique = 2 },
                         onUpgrade = { upgradeTechnique(foxLevel) { foxLevel = it } }
                     )
@@ -1444,6 +1444,25 @@ private fun RpgIcon(kind: String, modifier: Modifier = Modifier) {
             drawCircle(color, unit*r, Offset(w*x,h*y), style = if(fill) androidx.compose.ui.graphics.drawscope.Fill else stroke)
         }
         when (kind) {
+            "ice" -> {
+                line(.5f,.20f,.5f,.80f,blue,sw)
+                line(.24f,.34f,.76f,.66f,blue,sw)
+                line(.24f,.66f,.76f,.34f,blue,sw)
+                line(.5f,.20f,.40f,.31f,blue,sw*.7f); line(.5f,.20f,.60f,.31f,blue,sw*.7f)
+                line(.5f,.80f,.40f,.69f,blue,sw*.7f); line(.5f,.80f,.60f,.69f,blue,sw*.7f)
+                line(.24f,.34f,.38f,.35f,blue,sw*.7f); line(.24f,.34f,.30f,.47f,blue,sw*.7f)
+                line(.76f,.66f,.62f,.65f,blue,sw*.7f); line(.76f,.66f,.70f,.53f,blue,sw*.7f)
+                circle(.5f,.5f,.035f,goldBright,true)
+            }
+            "lightning" -> {
+                p.moveTo(w*.57f,h*.14f); p.lineTo(w*.30f,h*.54f); p.lineTo(w*.48f,h*.54f); p.lineTo(w*.39f,h*.84f); p.lineTo(w*.72f,h*.42f); p.lineTo(w*.53f,h*.42f); p.close()
+                drawPath(p,Color(0xFFFFD36F),style=stroke)
+            }
+            "lotus" -> {
+                p.moveTo(w*.5f,h*.75f); p.cubicTo(w*.18f,h*.55f,w*.25f,h*.32f,w*.5f,h*.43f); p.cubicTo(w*.75f,h*.32f,w*.82f,h*.55f,w*.5f,h*.75f); drawPath(p,Color(0xFF83CDB6),style=stroke)
+                p.moveTo(w*.5f,h*.70f); p.cubicTo(w*.30f,h*.50f,w*.42f,h*.23f,w*.5f,h*.18f); p.cubicTo(w*.58f,h*.23f,w*.70f,h*.50f,w*.5f,h*.70f); drawPath(p,purple,style=stroke)
+                line(.22f,.78f,.78f,.78f,goldBright,sw*.8f)
+            }
             "spear" -> {
                 line(.5f,.16f,.5f,.84f,goldBright,sw*1.2f)
                 p.moveTo(w*.5f,h*.13f); p.lineTo(w*.70f,h*.39f); p.lineTo(w*.5f,h*.33f); p.lineTo(w*.30f,h*.39f); p.close(); drawPath(p,blue,style=stroke)
@@ -1656,6 +1675,7 @@ private fun RpgIcon(kind: String, modifier: Modifier = Modifier) {
 private fun TechniqueRow(
     name: String,
     description: String,
+    iconKey: String,
     selected: Boolean,
     level: Int,
     cost: Int,
@@ -1663,15 +1683,40 @@ private fun TechniqueRow(
     onSelect: () -> Unit,
     onUpgrade: () -> Unit
 ) {
-    Surface(color = if (selected) Color(0xFF29463F) else Color(0xFF24333B), shape = MaterialTheme.shapes.large) {
-        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(name + if (selected) " · выбрана" else "", color = Gold, fontWeight = FontWeight.Bold)
-            Text("$description · уровень $level / 50", color = Color.LightGray, fontSize = 12.sp)
-            if (level == 20) Text("Достигнут рубеж: дальше нужны редкие материалы.", color = Gold, fontSize = 11.sp)
-            if (level >= 50) Text("Предел достигнут · дополнительный эффект +20% к урону", color = Jade, fontSize = 11.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onSelect, modifier = Modifier.weight(1f)) { Text("Выбрать") }
-                Button(onClick = onUpgrade, enabled = stones >= cost && level < 50, modifier = Modifier.weight(1f)) { Text(if(level >= 50) "Максимум" else if(level >= 20) "Улучшить · ресурс" else "Улучшить · $cost") }
+    Surface(
+        color = if (selected) Color(0xFF29463F) else Color(0xFF24333B),
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = if (selected) 7.dp else 3.dp
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RpgIcon(iconKey, Modifier.size(58.dp))
+            Spacer(Modifier.width(9.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(name, color = if (selected) Gold else Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text("$description · уровень $level / 50", color = Color.LightGray, fontSize = 10.sp)
+                if (level == 20) Text("Рубеж достигнут · дальше нужны редкие материалы", color = Gold, fontSize = 9.sp)
+                if (level >= 50) Text("Предел · дополнительный эффект +20% к урону", color = Jade, fontSize = 9.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Box(Modifier.weight(1f)) {
+                        InventoryActionButton(
+                            label = if (selected) "ВЫБРАНА" else "ВЫБРАТЬ",
+                            selected = selected,
+                            enabled = !selected,
+                            onClick = onSelect
+                        )
+                    }
+                    Box(Modifier.weight(1f)) {
+                        InventoryActionButton(
+                            label = when { level >= 50 -> "МАКСИМУМ"; level >= 20 -> "УЛУЧШИТЬ · РЕСУРС"; else -> "УЛУЧШИТЬ · $cost" },
+                            selected = false,
+                            enabled = stones >= cost && level < 50,
+                            onClick = onUpgrade
+                        )
+                    }
+                }
             }
         }
     }
@@ -2222,27 +2267,87 @@ private fun weaponSkillDescription(ci:Int,node:Int,w:Int):String {
  return weapon+" меняет навык: "+effects[w]+"."
 }
 @Composable
-private fun SkillTreeSection(title:String,classIndex:Int,nodes:List<Int>,levels:List<Int>,points:Int,weapon:Int,activeNode:Int,characterLevel:Int,onLearn:(Int)->Unit,onSetActive:(Int)->Unit){
- if(title.isNotBlank()) Text(title,color=Gold,fontWeight=FontWeight.Bold)
- nodes.forEach { node ->
-  val ix=classIndex*9+node
-  val learned=levels[ix]==1
-  val requiredLevel = when(node) { 0 -> 1; 1,4 -> 3; 2,5 -> 6; 3,6 -> 9; 7 -> 13; 8 -> 18; else -> 1 }
-  val unlocked = skillNodeUnlocked(classIndex,node,levels,characterLevel)
-  val def=skillDefinitions[classIndex][node]
-  val desc=if(node==1||node==4) weaponSkillDescription(classIndex,node,weapon) else def.description
-  Surface(color=if(learned) Color(0xFF29463F) else Color(0xFF24333B),shape=MaterialTheme.shapes.large){
-   Column(Modifier.fillMaxWidth().padding(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
-    Text((node+1).toString()+". "+def.name,color=Gold,fontWeight=FontWeight.Bold,fontSize=12.sp)
-    Text(if(def.active)"АКТИВНЫЙ НАВЫК" else "ПАССИВНЫЙ НАВЫК",color=Jade,fontSize=10.sp)
-    Text(desc,color=Color.LightGray,fontSize=11.sp)
-    if(!learned) Text("Требуемый уровень персонажа: $requiredLevel" + if(!unlocked && characterLevel < requiredLevel) " · сейчас $characterLevel" else "",color=Color(0xFFFFC978),fontSize=10.sp)
-    if(!learned) Button(onClick={onLearn(node)},enabled=unlocked&&points>0,modifier=Modifier.fillMaxWidth()){Text(if(characterLevel < requiredLevel) "Откроется на уровне $requiredLevel" else if(!unlocked) "Сначала изучи связанные навыки" else "Изучить · 1 очко")}
-    else if(def.active) OutlinedButton(onClick={onSetActive(node)},modifier=Modifier.fillMaxWidth()){Text(if(activeNode==node)"Назначен активным" else "Назначить активным")}
-    else Text("Изучено",color=Jade,fontSize=10.sp)
-   }
-  }
- }
+private fun SkillTreeSection(
+    title: String,
+    classIndex: Int,
+    nodes: List<Int>,
+    levels: List<Int>,
+    points: Int,
+    weapon: Int,
+    activeNode: Int,
+    characterLevel: Int,
+    onLearn: (Int) -> Unit,
+    onSetActive: (Int) -> Unit
+) {
+    if (title.isNotBlank()) Text(title, color = Gold, fontWeight = FontWeight.Bold)
+    val iconSets = listOf(
+        listOf("weapon", "critical", "shield", "arena", "spear", "skills", "health", "artifact", "portal"),
+        listOf("armor", "shield", "health", "gauntlet", "helmet", "critical", "shield", "artifact", "tower"),
+        listOf("fire", "ice", "lightning", "staff", "fire", "ice", "lightning", "portal", "artifact"),
+        listOf("spiritmystic", "health", "pets", "artifact", "lotus", "shield", "skills", "lotus", "portal")
+    )
+    nodes.forEach { node ->
+        val ix = classIndex * 9 + node
+        val learned = levels[ix] == 1
+        val requiredLevel = when (node) { 0 -> 1; 1, 4 -> 3; 2, 5 -> 6; 3, 6 -> 9; 7 -> 13; 8 -> 18; else -> 1 }
+        val unlocked = skillNodeUnlocked(classIndex, node, levels, characterLevel)
+        val def = skillDefinitions[classIndex][node]
+        val desc = if (node == 1 || node == 4) weaponSkillDescription(classIndex, node, weapon) else def.description
+        val iconKey = iconSets[classIndex.coerceIn(0, 3)][node]
+        Surface(
+            color = when {
+                learned && activeNode == node && def.active -> Color(0xFF315C51)
+                learned -> Color(0xFF29463F)
+                unlocked && points > 0 -> Color(0xFF263B58)
+                else -> Color(0xFF202D3E)
+            },
+            shape = MaterialTheme.shapes.large,
+            tonalElevation = if (learned) 7.dp else 3.dp,
+            shadowElevation = 3.dp
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RpgIcon(iconKey, Modifier.size(48.dp))
+                Spacer(Modifier.width(7.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(def.name, color = if (learned) Gold else Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    Text(if (def.active) "АКТИВНОЕ ИСКУССТВО" else "ПАССИВНОЕ ИСКУССТВО", color = Jade, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    Text(desc, color = Color(0xFFD0D9E5), fontSize = 9.sp, maxLines = 2)
+                    if (!learned) {
+                        Text(
+                            "Открывается на уровне $requiredLevel" + if (characterLevel < requiredLevel) " · сейчас $characterLevel" else "",
+                            color = Color(0xFFFFC978),
+                            fontSize = 8.sp
+                        )
+                        InventoryActionButton(
+                            label = when {
+                                characterLevel < requiredLevel -> "УРОВЕНЬ $requiredLevel"
+                                !unlocked -> "ИЗУЧИ СВЯЗАННЫЙ УЗЕЛ"
+                                else -> "ИЗУЧИТЬ · 1 ОЧКО"
+                            },
+                            selected = false,
+                            enabled = unlocked && points > 0,
+                            onClick = { onLearn(node) }
+                        )
+                    } else if (def.active) {
+                        InventoryActionButton(
+                            label = if (activeNode == node) "НАЗНАЧЕН АКТИВНЫМ" else "НАЗНАЧИТЬ АКТИВНЫМ",
+                            selected = activeNode == node,
+                            enabled = activeNode != node,
+                            onClick = { onSetActive(node) }
+                        )
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            RpgIcon("check", Modifier.size(16.dp))
+                            Text("ИЗУЧЕНО", color = Jade, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 private val rareArts = listOf("Рассекающий небеса", "Драконий пронзающий удар", "Гром девяти небес", "Печать вечной души")

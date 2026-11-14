@@ -84,6 +84,7 @@ private fun CultivateApp() {
     var gardenReadyAt by remember { mutableLongStateOf(prefs.getLong("abode_garden_ready", 0L)) }
     var springReadyAt by remember { mutableLongStateOf(prefs.getLong("abode_spring_ready", 0L)) }
     var abodeSection by remember { mutableStateOf("sanctuary") }
+    var selectedWorldIndex by remember { mutableIntStateOf(0) }
     var ownedPetIds by remember { mutableStateOf(prefs.getString("owned_pet_ids", "jade_fox") ?: "jade_fox") }
     var activePetId by remember { mutableStateOf(prefs.getString("active_pet_id", "jade_fox") ?: "jade_fox") }
     val petLevels = remember { mutableStateListOf<Int>().apply { petCatalog.forEachIndexed { index, pet -> add(prefs.getInt("pet_level_${pet.id}", if (index == 0) prefs.getInt("pet", 1) else 1).coerceIn(1, 30)) } } }
@@ -652,16 +653,40 @@ private fun CultivateApp() {
                             Text("Урожайность растёт вместе с уровнем обители.", color = Color.LightGray, fontSize = 11.sp)
                         }
                         "worlds" -> {
-                            Text("Путь через четыре мира", color = Gold, fontWeight = FontWeight.Bold)
+                            Text("Четыре мира Дао", color = Gold, fontWeight = FontWeight.Bold)
+                            Text("Каждая ступень открывает новую область культивации. Коснись иллюстрации, чтобы рассмотреть мир.", color = Color(0xFFC6D2E2), fontSize = 11.sp)
                             worldEntries.forEachIndexed { index, entry ->
                                 val unlocked = stage >= entry.second
-                                Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text("${index + 1}. ${entry.first}", color = if (unlocked) Jade else Gold, fontWeight = FontWeight.Bold)
-                                    Text(entry.third, color = Color.LightGray, fontSize = 11.sp)
-                                    Text(if (unlocked) "Доступен · текущая ступень $stage" else "Запечатан · требуется ступень ${entry.second}", color = if (unlocked) Jade else Color.Gray, fontSize = 10.sp)
+                                WorldIllustratedCard(
+                                    index = index,
+                                    title = entry.first,
+                                    description = entry.third,
+                                    requiredStage = entry.second,
+                                    currentStage = stage,
+                                    unlocked = unlocked,
+                                    selected = selectedWorldIndex == index,
+                                    onClick = {
+                                        selectedWorldIndex = index
+                                        message = if (unlocked) "Ты созерцаешь земли: ${entry.first}." else "Путь запечатан. Для входа нужна ступень ${entry.second}."
+                                    }
+                                )
+                            }
+                            val selectedEntry = worldEntries[selectedWorldIndex]
+                            val selectedUnlocked = stage >= selectedEntry.second
+                            Surface(
+                                color = Color(0xD9182941),
+                                shape = MaterialTheme.shapes.large,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, if (selectedUnlocked) Jade.copy(alpha = .65f) else Gold.copy(alpha = .45f))
+                            ) {
+                                Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    RpgIcon(if (selectedUnlocked) "portal" else "worlds", Modifier.size(36.dp))
+                                    Spacer(Modifier.width(9.dp))
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Text(if (selectedUnlocked) "Область доступна для исследования" else "Печать ещё не разрушена", color = if (selectedUnlocked) Jade else Gold, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Text(if (selectedUnlocked) "Текущая ступень: $stage" else "Требуется ступень ${selectedEntry.second}", color = Color(0xFFD1DCEB), fontSize = 10.sp)
+                                    }
                                 }
                             }
-                            Text("Сейчас ты лишь начинаешь путь. За пределами смертных земель существуют целые цивилизации, законы Дао и испытания, о которых жители Лунной Гавани даже не подозревают.", color = Gold, fontSize = 12.sp)
                         }
                     }
                 }
@@ -2045,6 +2070,229 @@ private fun PetCompanionArt() {
             drawRect(brush = Brush.verticalGradient(0f to Color.Transparent, .7f to Color.Transparent, 1f to Color(0x99101820)))
         }
         Text("ДУХОВНЫЕ СПУТНИКИ", Modifier.align(Alignment.BottomStart).padding(10.dp), color = Color(0xFFE8D6AD), fontSize = 10.sp, fontWeight = FontWeight.Black)
+    }
+}
+
+@Composable
+private fun WorldIllustratedCard(
+    index: Int,
+    title: String,
+    description: String,
+    requiredStage: Int,
+    currentStage: Int,
+    unlocked: Boolean,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val transition = rememberInfiniteTransition(label = "world-card-$index")
+    val pulse by transition.animateFloat(.82f, 1.04f, infiniteRepeatable(tween(1900 + index * 170), RepeatMode.Reverse), label = "world-glow-$index")
+    Surface(
+        modifier = Modifier.fillMaxWidth().height(164.dp).clickable(onClick = onClick),
+        color = Color(0xFF111C30),
+        shape = MaterialTheme.shapes.extraLarge,
+        border = androidx.compose.foundation.BorderStroke(
+            if (selected) 2.dp else 1.dp,
+            when { selected && unlocked -> Jade.copy(alpha = pulse); selected -> Gold.copy(alpha = pulse); unlocked -> Color(0xFF6C9DAB).copy(alpha = .55f); else -> Color(0xFF7E718E).copy(alpha = .45f) }
+        ),
+        tonalElevation = if (selected) 10.dp else 4.dp,
+        shadowElevation = if (selected) 9.dp else 4.dp
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            WorldLandscapeArt(index, Modifier.fillMaxSize())
+            Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(
+                0f to Color(0xC9091222),
+                .48f to Color(0x3310182B),
+                1f to Color(0xB9091222)
+            )))
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
+                0f to Color(0x3310182B),
+                .52f to Color.Transparent,
+                1f to Color(0xE6091220)
+            )))
+            Column(
+                Modifier.fillMaxSize().padding(horizontal = 13.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("МИР ${index + 1}  ·  СТУПЕНЬ ${requiredStage}", color = Color(0xFFE8D5A7), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                    }
+                    Surface(
+                        color = if (unlocked) Color(0xCC173F3A) else Color(0xCC382C3B),
+                        shape = MaterialTheme.shapes.extraLarge
+                    ) {
+                        Text(
+                            if (unlocked) "ОТКРЫТ" else "ЗАПЕЧАТАН",
+                            Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                            color = if (unlocked) Color(0xFFA7F0D1) else Color(0xFFE4C8A0),
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(description, color = Color(0xFFE0E6F0), fontSize = 9.sp, lineHeight = 12.sp, maxLines = 2)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f).height(3.dp).background(Color(0x668FA3B8), MaterialTheme.shapes.small)) {
+                            Box(Modifier.fillMaxHeight().fillMaxWidth(if (unlocked) 1f else (currentStage.toFloat() / requiredStage).coerceIn(.05f, .95f)).background(if (unlocked) Jade else Gold, MaterialTheme.shapes.small))
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (unlocked) "ДОСТУПЕН" else "НУЖНО $requiredStage", color = if (unlocked) Jade else Color(0xFFE8C88F), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WorldLandscapeArt(index: Int, modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+        val w = size.width
+        val h = size.height
+        val palettes = when (index) {
+            0 -> listOf(Color(0xFF142C3B), Color(0xFF38616A), Color(0xFFB8794E), Color(0xFF172E39))
+            1 -> listOf(Color(0xFF102A4C), Color(0xFF286B82), Color(0xFF80C8C1), Color(0xFF152C49))
+            2 -> listOf(Color(0xFF211D4D), Color(0xFF584A83), Color(0xFFC2A5E8), Color(0xFF211B42))
+            else -> listOf(Color(0xFF090F2B), Color(0xFF31245F), Color(0xFF9D5BD0), Color(0xFF100D28))
+        }
+        drawRect(brush = Brush.verticalGradient(listOf(palettes[0], palettes[1], palettes[3])))
+        fun point(x: Float, y: Float) = Offset(w * x, h * y)
+        fun polygon(points: List<Pair<Float, Float>>, color: Color) {
+            val path = Path()
+            path.moveTo(w * points.first().first, h * points.first().second)
+            points.drop(1).forEach { path.lineTo(w * it.first, h * it.second) }
+            path.close()
+            drawPath(path, color)
+        }
+        fun ridge(y: Float, height: Float, shift: Float, color: Color) {
+            polygon(
+                listOf(
+                    0f to 1f, 0f to y + height * .38f,
+                    .13f to y + height * .10f,
+                    .25f to y + height * .52f,
+                    .39f to y,
+                    .52f to y + height * .43f,
+                    .69f to y + height * .06f,
+                    .82f to y + height * .48f,
+                    1f to y + height * .12f,
+                    1f to 1f
+                ).map { (x, yy) -> (x + shift).coerceIn(0f, 1f) to yy },
+                color
+            )
+        }
+        val sun = when (index) {
+            0 -> Color(0xFFFFC77D)
+            1 -> Color(0xFF9BE7E2)
+            2 -> Color(0xFFE3C7FF)
+            else -> Color(0xFFC18AFF)
+        }
+        val orbCenter = when (index) {
+            0 -> point(.78f, .27f)
+            1 -> point(.76f, .23f)
+            2 -> point(.79f, .25f)
+            else -> point(.75f, .28f)
+        }
+        drawCircle(brush = Brush.radialGradient(listOf(sun.copy(alpha = .55f), sun.copy(alpha = .12f), Color.Transparent), center = orbCenter, radius = h * .48f), radius = h * .48f, center = orbCenter)
+        drawCircle(sun.copy(alpha = .92f), radius = h * if (index == 3) .12f else .16f, center = orbCenter)
+        if (index == 0 || index == 2) {
+            drawCircle(Color.White.copy(alpha = .18f), h * .135f, orbCenter + Offset(-h * .025f, -h * .025f), style = androidx.compose.ui.graphics.drawscope.Stroke(h * .006f))
+        }
+        for (i in 0..38) {
+            val x = ((i * 37) % 101) / 100f
+            val y = ((i * 19) % 55) / 100f
+            val alpha = if (index == 0) .18f else .45f
+            drawCircle(Color.White.copy(alpha = alpha), if (i % 6 == 0) 1.6f else 0.8f, point(x, y))
+        }
+        ridge(.34f, .34f, -.02f, palettes[2].copy(alpha = .30f))
+        ridge(.46f, .34f, .03f, palettes[3].copy(alpha = .78f))
+        ridge(.58f, .29f, -.01f, Color(0xFF101B2B).copy(alpha = .92f))
+        when (index) {
+            0 -> {
+                // Mortal lands: river valley, pine silhouettes and a distant sect pagoda.
+                val river = Path().apply {
+                    moveTo(w * .34f, h); cubicTo(w * .46f, h * .82f, w * .40f, h * .72f, w * .57f, h * .64f)
+                    cubicTo(w * .67f, h * .59f, w * .76f, h * .63f, w, h * .52f)
+                    lineTo(w, h * .70f); cubicTo(w * .74f, h * .80f, w * .55f, h * .81f, w * .46f, h); close()
+                }
+                drawPath(river, Brush.verticalGradient(listOf(Color(0xFFB8B7A1), Color(0xFF397B86), Color(0xFF173C50))))
+                fun pagoda(cx: Float, base: Float, scale: Float, tint: Color) {
+                    for (level in 0..2) {
+                        val y = base - level * scale * .16f
+                        drawRect(tint, Offset(w * (cx - scale * .09f), h * (y - scale * .13f)), Size(w * scale * .18f, h * scale * .13f))
+                        val roof = Path().apply {
+                            moveTo(w * (cx - scale * .16f), h * (y - scale * .13f))
+                            lineTo(w * cx, h * (y - scale * .21f))
+                            lineTo(w * (cx + scale * .16f), h * (y - scale * .13f))
+                            lineTo(w * cx, h * (y - scale * .10f)); close()
+                        }
+                        drawPath(roof, Color(0xFFD9A76D))
+                    }
+                }
+                pagoda(.47f, .69f, .52f, Color(0xFF172638))
+                for (i in 0..5) {
+                    val x = .06f + i * .17f
+                    drawLine(Color(0xFF142A2C), point(x, .75f), point(x - .02f, .43f), h * .012f)
+                    drawCircle(Color(0xFF254E43), h * .09f, point(x, .48f))
+                    drawCircle(Color(0xFF416A52).copy(alpha = .8f), h * .06f, point(x + .035f, .51f))
+                }
+                for (i in 0..12) drawCircle(Color(0xFFFFB7C7).copy(alpha = .65f), h * .012f, point((i * .083f) % 1f, .36f + (i % 4) * .07f))
+            }
+            1 -> {
+                // Spiritual lands: luminous falls, crystal growth and ancient cedar forms.
+                for (i in 0..3) {
+                    val x = .18f + i * .22f
+                    drawRoundRect(Color(0xFF8BE6E1).copy(alpha = .55f), Offset(w * x, h * (.49f + (i % 2) * .05f)), Size(w * .025f, h * .43f), h * .012f)
+                    drawLine(Color.White.copy(alpha = .55f), point(x + .012f, .52f), point(x + .012f, .85f), h * .003f)
+                }
+                for (i in 0..6) {
+                    val x = .08f + i * .14f
+                    polygon(listOf(x to .73f, (x + .09f) to .47f, (x + .18f) to .73f), Color(0xFF123D48))
+                    polygon(listOf((x + .04f) to .62f, (x + .09f) to .39f, (x + .14f) to .62f), Color(0xFF1D5C5E))
+                }
+                polygon(listOf(.68f to .75f, .76f to .43f, .84f to .75f), Color(0xFF9CE6D8).copy(alpha = .9f))
+                polygon(listOf(.72f to .70f, .76f to .52f, .80f to .70f), Color(0xFFE5FFF1).copy(alpha = .8f))
+                drawRect(Color(0xFF153D56).copy(alpha = .35f), Offset(0f, h * .84f), Size(w, h * .16f))
+            }
+            2 -> {
+                // Immortal realm: floating sanctuaries, cloud bridges and a celestial palace.
+                for (i in 0..3) {
+                    val x = .12f + i * .24f
+                    val y = .36f + (i % 2) * .10f
+                    polygon(listOf((x - .08f) to y, x to (y - .10f), (x + .08f) to y, (x + .04f) to (y + .07f), (x - .04f) to (y + .07f)), Color(0xFF2D315D))
+                    drawLine(Color(0xFFBBA4E9).copy(alpha = .7f), point(x, y + .06f), point(x + .02f, .84f), h * .008f)
+                }
+                for (i in 0..2) {
+                    val x = .55f + i * .12f
+                    drawRoundRect(Color(0xFF211D3E), Offset(w * x, h * .43f), Size(w * .055f, h * .24f), h * .012f)
+                    polygon(listOf((x - .025f) to .44f, (x + .027f) to .33f, (x + .08f) to .44f, (x + .027f) to .40f), Color(0xFFE0C5F6))
+                }
+                drawOval(Color(0xFFB9D5FF).copy(alpha = .12f), Offset(w * .10f, h * .58f), Size(w * .82f, h * .18f))
+                drawOval(Color(0xFFE3C5FF).copy(alpha = .16f), Offset(w * .25f, h * .67f), Size(w * .72f, h * .13f))
+            }
+            else -> {
+                // Chaos realm: fractured floating stone, a violet rift and unstable energy.
+                for (i in 0..7) {
+                    val x = .08f + i * .12f
+                    val y = .42f + (i % 3) * .07f
+                    polygon(listOf(x to y, (x + .035f) to (y - .12f), (x + .09f) to (y - .02f), (x + .06f) to (y + .10f)), Color(0xFF17152F))
+                    drawLine(Color(0xFFC38AFF).copy(alpha = .55f), point(x + .045f, y + .01f), point(x + .08f, .92f), h * .004f)
+                }
+                val portal = point(.72f, .59f)
+                drawCircle(brush = Brush.radialGradient(listOf(Color(0xFFD8A0FF).copy(alpha = .72f), Color(0xFF8E47DB).copy(alpha = .28f), Color.Transparent), center = portal, radius = h * .40f), radius = h * .40f, center = portal)
+                for (i in 0..3) {
+                    drawCircle(Color(0xFFD3A0FF).copy(alpha = .8f - i * .13f), h * (.18f - i * .025f), portal, style = androidx.compose.ui.graphics.drawscope.Stroke(h * .009f))
+                }
+                val spiral = Path().apply {
+                    moveTo(w * .72f, h * .42f)
+                    cubicTo(w * .91f, h * .40f, w * .86f, h * .71f, w * .68f, h * .69f)
+                    cubicTo(w * .55f, h * .66f, w * .62f, h * .50f, w * .74f, h * .53f)
+                }
+                drawPath(spiral, Color(0xFFE8C4FF), style = androidx.compose.ui.graphics.drawscope.Stroke(h * .012f))
+            }
+        }
+        drawRect(brush = Brush.verticalGradient(0f to Color.Transparent, .70f to Color.Transparent, 1f to Color(0xCC07111F)))
     }
 }
 

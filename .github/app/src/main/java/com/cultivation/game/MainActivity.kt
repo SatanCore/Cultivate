@@ -10,9 +10,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,474 +35,357 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            XianxiaAppTheme {
-                MainGameEngine()
+            MaterialTheme(colorScheme = darkColorScheme(background = Color(0xFF07090E))) {
+                CultivationApp()
             }
         }
     }
 }
 
-@Composable
-fun XianxiaAppTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = darkColorScheme(
-            background = Color(0xFF07090E),
-            surface = Color(0xFF111420),
-            primary = Color(0xFFFFD700),
-            secondary = Color(0xFF00E5FF)
-        ),
-        content = content
-    )
-}
+// ================= 1. МОДЕЛИ И СИСТЕМЫ =================
+enum class MortalWorld(val title: String) { MORTAL("Мир Смертных"), SPIRITUAL("Духовный Мир"), IMMORTAL("Небесный Мир") }
 
-// ==========================================
-// 1. КОСМОЛОГИЯ, КЛАССЫ И МОДЕЛИ
-// ==========================================
-
-enum class CultivatorClass(val title: String, val desc: String, val atkMod: Double, val defMod: Double, val hpMod: Double, val critMod: Double) {
-    SWORD_SAINT("Бессмертный Мечник", "Пронзающие техники, высокий крит и летающие мечи", 1.5, 0.9, 1.0, 0.25),
-    BODY_REFINER("Закалка Тела", "Непоколебимая защита, гигантский запас ОЗ и щиты", 0.9, 1.6, 1.8, 0.05),
-    SPIRIT_WARLOCK("Духовный Маг", "Манипуляция стихиями, барьеры и взрывной урон", 1.6, 0.8, 0.9, 0.15),
-    BLOOD_LORD("Кровавый Лорд", "Темный вампиризм Дао и поглощение жизненных сил", 1.2, 1.1, 1.2, 0.12)
-}
-
-enum class MortalWorld(val title: String) {
-    MORTAL("Мир Смертных"),
-    SPIRITUAL("Духовный Мир"),
-    IMMORTAL("Небесный Мир")
-}
-
-enum class CultivationRealm(val title: String, val world: MortalWorld, val mult: Double, val tribulationBolts: Int) {
+enum class CultivationRealm(val title: String, val world: MortalWorld, val mult: Double, val strikes: Int) {
     QI_CONDENSATION("Конденсация Ци", MortalWorld.MORTAL, 1.0, 3),
-    FOUNDATION("Возведение Основания", MortalWorld.MORTAL, 3.5, 4),
+    FOUNDATION("Основание Дао", MortalWorld.MORTAL, 3.5, 4),
     CORE_FORMATION("Золотое Ядро", MortalWorld.MORTAL, 12.0, 5),
     NASCENT_SOUL("Зарождение Души", MortalWorld.SPIRITUAL, 45.0, 6),
     SOUL_TRANSFORM("Трансформация Духа", MortalWorld.SPIRITUAL, 180.0, 7),
-    VOID_REFINING("Очищение Пустоты", MortalWorld.SPIRITUAL, 800.0, 8),
-    MAHAYANA("Великая Колесница", MortalWorld.IMMORTAL, 3500.0, 9),
-    ASCENSION("Истинный Бессмертный", MortalWorld.IMMORTAL, 15000.0, 12)
+    ASCENSION("Истинный Бессмертный", MortalWorld.IMMORTAL, 2500.0, 9)
 }
 
-enum class ItemRarity(val title: String, val color: Color, val powerMultiplier: Double) {
-    COMMON("Обычный", Color(0xFF9E9E9E), 1.0),
-    SPIRITUAL("Духовный", Color(0xFF4CAF50), 2.5),
-    EARTH("Земной", Color(0xFF2196F3), 6.0),
-    HEAVEN("Небесный", Color(0xFFAB47BC), 16.0),
-    IMMORTAL("Бессмертный", Color(0xFFFFB300), 45.0)
-}
+enum class EquipSlot(val title: String) { WEAPON("Оружие"), ARMOR("Доспех"), RING("Кольцо"), BOOTS("Сапоги"), ARTIFACT("Артефакт"), PET("Питомец") }
 
-enum class EquipmentSlot(val title: String) {
-    WEAPON("Оружие"),
-    ARMOR("Мантия"),
-    RING("Кольцо Духа"),
-    BOOTS("Сапоги Ветра"),
-    ARTIFACT("Артефакт"),
-    PET("Зверь-Спутник")
-}
+data class Item(val id: String, val name: String, val slot: EquipSlot, val power: Long, val color: Color, var enhance: Int = 0)
+data class BotUser(val name: String, val realm: CultivationRealm, var power: Long, val vip: Int, val color: Color)
+data class BossTarget(val name: String, val hp: Long, val rewardStones: Long, val rewardName: String, val color: Color)
 
-data class Equipment(
-    val id: String,
-    val name: String,
-    val slot: EquipmentSlot,
-    val rarity: ItemRarity,
-    val bonusAtk: Long,
-    val bonusDef: Long,
-    val bonusHp: Long,
-    var enhanceLevel: Int = 0
-)
+class GameEngine {
+    var name by mutableStateOf("Хаос_Дао")
+    var realmIndex by mutableIntStateOf(0)
+    var stage by mutableIntStateOf(1)
+    var qi by mutableLongStateOf(0L)
+    var reqQi by mutableLongStateOf(80L)
 
-data class BossEntity(
-    val id: String,
-    val name: String,
-    val title: String,
-    val hp: Long,
-    val atk: Long,
-    val rewardStones: Long,
-    val dropRarity: ItemRarity
-)
-
-data class BotOpponent(
-    val id: String,
-    val name: String,
-    val realm: CultivationRealm,
-    val stage: Int,
-    var combatPower: Long,
-    val vip: Int,
-    val avatarColor: Color,
-    val title: String
-)
-
-// ==========================================
-// 2. ГЛАВНОЕ СОСТОЯНИЕ ИГРЫ
-// ==========================================
-
-class GameState {
-    var heroName by mutableStateOf("Хаос_Дао")
-    var heroClass by mutableStateOf(CultivatorClass.SWORD_SAINT)
-    var currentRealmIndex by mutableIntStateOf(0)
-    var currentStage by mutableIntStateOf(1) // 1 - 9 стадии
-    var currentQi by mutableLongStateOf(0L)
-    var requiredQi by mutableLongStateOf(100L)
-
-    // Валюта и ресурсы
-    var spiritStones by mutableLongStateOf(25000L)
-    var gachaSummonScrolls by mutableIntStateOf(20)
-    var celestialJade by mutableLongStateOf(100L)
-    var vipPoints by mutableIntStateOf(250)
+    var stones by mutableLongStateOf(20000L)
+    var scrolls by mutableIntStateOf(15)
     var vipLevel by mutableIntStateOf(2)
+    var righteous by mutableLongStateOf(100L)
+    var demonic by mutableLongStateOf(50L)
 
-    // Дао-полярность: Праведность vs Демонизм
-    var righteousPoints by mutableLongStateOf(150L)
-    var demonicPoints by mutableLongStateOf(80L)
+    val equipped = mutableStateMapOf<EquipSlot, Item>()
+    val inventory = mutableStateListOf<Item>()
+    val ladderBots = mutableStateListOf<BotUser>()
 
-    // Экипировка
-    val equippedItems = mutableStateMapOf<EquipmentSlot, Equipment>()
-    val inventory = mutableStateListOf<Equipment>()
-
-    // Боты и Рейтинг
-    val ladderBots = mutableStateListOf<BotOpponent>()
-
-    // Инициализация стартовой экипировки и ботов
     init {
-        equippedItems[EquipmentSlot.WEAPON] = Equipment("start_w", "Меч Зеленой Стали", EquipmentSlot.WEAPON, ItemRarity.COMMON, 50, 0, 100, 1)
-        equippedItems[EquipmentSlot.ARMOR] = Equipment("start_a", "Одеяние Ученика", EquipmentSlot.ARMOR, ItemRarity.COMMON, 0, 30, 250, 0)
+        equipped[EquipSlot.WEAPON] = Item("w1", "Меч Зеленой Стали", EquipSlot.WEAPON, 80L, Color(0xFF4CAF50), 1)
+        equipped[EquipSlot.ARMOR] = Item("a1", "Мантия Ученика", EquipSlot.ARMOR, 50L, Color(0xFF9E9E9E), 0)
 
-        // Заполняем агрессивных ботов
-        val botTitles = listOf("Патриарх", "Старейшина Пика", "Мечник Клана", "Демонический Бог", "Бессмертный Владыка")
-        val botNames = listOf("Бай Сяо", "Ван Линь", "Ли Цие", "Гу Чэнь", "Су Мин", "Хань Ли", "Е Фань")
+        val names = listOf("Патриарх Бай", "Владыка Ван", "Мечник Линь", "Демон Су", "Старейшина Гу", "Адепт Е")
         val realms = CultivationRealm.values()
-
-        for (i in 1..25) {
-            val isWhale = i <= 5
-            val r = if (isWhale) realms[minOf(realms.size - 1, 4 + i % 3)] else realms[maxOf(0, (25 - i) / 5)]
-            ladderBots.add(
-                BotOpponent(
-                    id = "bot_$i",
-                    name = "${botTitles.random()} ${botNames.random()}",
-                    realm = r,
-                    stage = Random.nextInt(1, 10),
-                    combatPower = (r.mult * 3000 * (1.0 + (25 - i) * 0.15)).toLong() + (if (isWhale) 100000L else 0L),
-                    vip = if (isWhale) Random.nextInt(10, 16) else Random.nextInt(1, 5),
-                    avatarColor = if (isWhale) Color(0xFFFF5252) else Color(0xFF64B5F6),
-                    title = if (isWhale) "🔥 ТОП ДОНАТЕР" else "Соперник Дао"
-                )
-            )
+        for (i in 1..20) {
+            val isWhale = i <= 4
+            val r = if (isWhale) realms[minOf(realms.size - 1, 3 + i % 3)] else realms[maxOf(0, (20 - i) / 4)]
+            ladderBots.add(BotUser("${names.random()} #$i", r, (r.mult * 2500 * (1.0 + (20 - i) * 0.1)).toLong(), if (isWhale) 12 else 2, if (isWhale) Color(0xFFFF5252) else Color(0xFF64B5F6)))
         }
-        ladderBots.sortByDescending { it.combatPower }
+        ladderBots.sortByDescending { it.power }
     }
-
-    // Расчет боевых характеристик героя
-    val totalAttack: Long
-        get() {
-            val base = 40.0 * (currentRealmIndex + 1) * currentStage * heroClass.atkMod
-            val equip = equippedItems.values.sumOf { (it.bonusAtk * it.rarity.powerMultiplier * (1.0 + it.enhanceLevel * 0.2)).toLong() }
-            val vipBonus = vipLevel * 150L
-            return (base + equip + vipBonus).toLong()
-        }
-
-    val totalDefense: Long
-        get() {
-            val base = 25.0 * (currentRealmIndex + 1) * currentStage * heroClass.defMod
-            val equip = equippedItems.values.sumOf { (it.bonusDef * it.rarity.powerMultiplier * (1.0 + it.enhanceLevel * 0.2)).toLong() }
-            return (base + equip).toLong()
-        }
-
-    val totalHp: Long
-        get() {
-            val base = 300.0 * (currentRealmIndex + 1) * currentStage * heroClass.hpMod
-            val equip = equippedItems.values.sumOf { (it.bonusHp * it.rarity.powerMultiplier * (1.0 + it.enhanceLevel * 0.2)).toLong() }
-            return (base + equip).toLong()
-        }
 
     val combatPower: Long
         get() {
-            val currentRealm = CultivationRealm.values()[currentRealmIndex]
-            val raw = (totalAttack * 4.0) + (totalDefense * 2.5) + (totalHp * 0.8)
-            val realmMod = currentRealm.mult * (1.0 + currentStage * 0.12)
-            val cosmeticBonus = 5000L
-            return (raw * realmMod + cosmeticBonus).toLong()
+            val r = CultivationRealm.values()[realmIndex]
+            val equipPwr = equipped.values.sumOf { (it.power * (1.0 + it.enhance * 0.25)).toLong() }
+            return ((200L * (realmIndex + 1) * stage + equipPwr + vipLevel * 500L) * r.mult).toLong()
         }
 
-    fun addQi(amount: Long) {
-        currentQi += amount
-    }
-
-    fun canBreakthrough(): Boolean = currentQi >= requiredQi
-
-    fun advanceStage() {
-        if (currentStage < 9) {
-            currentStage++
-            currentQi = 0L
-            requiredQi = (requiredQi * 1.6).toLong()
-        } else if (currentRealmIndex < CultivationRealm.values().size - 1) {
-            currentRealmIndex++
-            currentStage = 1
-            currentQi = 0L
-            requiredQi = (requiredQi * 2.5).toLong()
+    fun advanceBreakthrough() {
+        if (stage < 9) {
+            stage++
+            qi = 0L
+            reqQi = (reqQi * 1.6).toLong()
+        } else if (realmIndex < CultivationRealm.values().size - 1) {
+            realmIndex++
+            stage = 1
+            qi = 0L
+            reqQi = (reqQi * 2.4).toLong()
         }
     }
 }
 
-// ==========================================
-// 3. ОСНОВНОЙ КОМПОНЕНТ ЭКРАНА
-// ==========================================
-
+// ================= 2. КОРНЕВОЙ ЭКРАН С НАВИГАЦИЕЙ =================
 @Composable
-fun MainGameEngine() {
-    val state = remember { GameState() }
-    var activeTab by remember { mutableIntStateOf(0) }
-    var showTribulationDialog by remember { mutableStateOf(false) }
+fun CultivationApp() {
+    val state = remember { GameEngine() }
+    var tab by remember { mutableIntStateOf(0) }
+    var tribulationOpen by remember { mutableStateOf(false) }
 
-    // Фоновый цикл медитации: приток Ци каждую секунду
     LaunchedEffect(Unit) {
         while (true) {
             delay(1000)
-            val baseGain = 15L * (state.currentRealmIndex + 1) * (1 + state.vipLevel / 2)
-            state.addQi(baseGain)
-
-            // Раз в 8 секунд боты немного увеличивают БМ
-            if (Random.nextDouble() < 0.25) {
-                val luckyBot = state.ladderBots.random()
-                luckyBot.combatPower += Random.nextLong(200, 1500)
-                state.ladderBots.sortByDescending { it.combatPower }
+            state.qi += 10L * (state.realmIndex + 1) * (1 + state.vipLevel / 3)
+            if (Random.nextDouble() < 0.2) {
+                state.ladderBots.random().power += Random.nextLong(100L, 800L)
+                state.ladderBots.sortByDescending { it.power }
             }
         }
     }
 
     Scaffold(
-        topBar = { TopCultivationHeader(state) },
-        bottomBar = {
-            NavigationBar(containerColor = Color(0xFF0D101A)) {
-                val navItems = listOf(
-                    "Обитель" to "☯️",
-                    "Герой" to "🥋",
-                    "Арена" to "⚔️",
-                    "Боссы" to "👹",
-                    "Гача" to "🔮",
-                    "Донат" to "💎"
-                )
-                navItems.forEachIndexed { idx, item ->
-                    NavigationBarItem(
-                        selected = activeTab == idx,
-                        onClick = { activeTab = idx },
-                        label = { Text(item.first, fontSize = 9.sp, fontWeight = if (activeTab == idx) FontWeight.Bold else FontWeight.Normal) },
-                        icon = { Text(item.second, fontSize = 16.sp) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color(0xFFFFD700),
-                            selectedTextColor = Color(0xFFFFD700),
-                            unselectedTextColor = Color.Gray,
-                            indicatorColor = Color(0xFF1E2438)
-                        )
-                    )
-                }
-            }
-        }
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFF07090E))
-                .padding(padding)
-        ) {
-            when (activeTab) {
-                0 -> SanctuaryScreen(state, onTriggerTribulation = { showTribulationDialog = true })
-                1 -> CharacterInventoryScreen(state)
-                2 -> LiveArenaScreen(state)
-                3 -> BossForgeScreen(state)
-                4 -> MultiBannerGachaScreen(state)
-                5 -> FreeWhaleStoreScreen(state)
-            }
-
-            if (showTribulationDialog) {
-                TribulationModal(state, onDismiss = { showTribulationDialog = false })
-            }
-        }
-    }
-}
-
-// ==========================================
-// 4. ВЕРХНЯЯ СТАТУСНАЯ ПАНЕЛЬ ХАРАКТЕРИСТИК
-// ==========================================
-
-@Composable
-fun TopCultivationHeader(state: GameState) {
-    val currentRealm = CultivationRealm.values()[state.currentRealmIndex]
-
-    Surface(
-        color = Color(0xFF0F1320),
-        tonalElevation = 6.dp,
-        modifier = Modifier.fillMaxWidth().border(0.5.dp, Color(0xFF232B40))
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(Brush.radialGradient(listOf(Color(0xFFFFD700), Color(0xFF4A148C))))
-                            .border(1.5.dp, Color(0xFFFFD700), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("仙", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
+        topBar = {
+            Surface(color = Color(0xFF0F1320), modifier = Modifier.fillMaxWidth().border(0.5.dp, Color(0xFF232B40))) {
+                Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(state.heroName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(state.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Badge(containerColor = Color(0xFFD50000)) {
-                                Text("VIP ${state.vipLevel}", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                            }
+                            Badge(containerColor = Color(0xFFD50000)) { Text("VIP ${state.vipLevel}", color = Color.White, fontSize = 9.sp) }
                         }
-                        Text("${currentRealm.title} • Стадия ${state.currentStage}", color = Color(0xFFFFD700), fontSize = 11.sp)
+                        val r = CultivationRealm.values()[state.realmIndex]
+                        Text("${r.title} • Стадия ${state.stage} [${r.world.title}]", color = Color(0xFFFFD700), fontSize = 11.sp)
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("БОЕВАЯ МОЩЬ", color = Color.Gray, fontSize = 9.sp)
+                        Text("${state.combatPower}", color = Color(0xFF00E676), fontWeight = FontWeight.Black, fontSize = 16.sp)
                     }
                 }
-
-                // Боевая мощь
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("БОЕВАЯ МОЩЬ", color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        "${state.combatPower}",
-                        color = Color(0xFF00E676),
-                        fontWeight = FontWeight.Black,
-                        fontSize = 17.sp
+            }
+        },
+        bottomBar = {
+            NavigationBar(containerColor = Color(0xFF0C0E16)) {
+                listOf("Обитель" to "☯️", "Герой" to "🥋", "Арена" to "⚔️", "Боссы" to "👹", "Гача" to "🔮", "Донат" to "💎").forEachIndexed { idx, item ->
+                    NavigationBarItem(
+                        selected = tab == idx,
+                        onClick = { tab = idx },
+                        label = { Text(item.first, fontSize = 9.sp) },
+                        icon = { Text(item.second, fontSize = 15.sp) },
+                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color(0xFFFFD700), selectedTextColor = Color(0xFFFFD700), indicatorColor = Color(0xFF1E2438))
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // Панель ресурсов: Камни, Свитки, Нефрит
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                ResourceBadge(icon = "💎", value = "${state.spiritStones}", label = "Камни")
-                ResourceBadge(icon = "📜", value = "${state.gachaSummonScrolls}", label = "Свитки")
-                ResourceBadge(icon = "🏮", value = currentRealm.world.title, label = "Мир")
+        }
+    ) { p ->
+        Box(modifier = Modifier.fillMaxSize().background(Color(0xFF07090E)).padding(p)) {
+            when (tab) {
+                0 -> SanctuaryScreen(state) { tribulationOpen = true }
+                1 -> CharacterScreen(state)
+                2 -> ArenaScreen(state)
+                3 -> BossScreen(state)
+                4 -> GachaScreen(state)
+                5 -> StoreScreen(state)
+            }
+            if (tribulationOpen) {
+                TribulationModal(state) { tribulationOpen = false }
             }
         }
     }
 }
 
+// ================= 3. ЭКРАНЫ ИГРЫ =================
+
+// 1. Обитель и Багуа на Canvas
 @Composable
-fun ResourceBadge(icon: String, value: String, label: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .background(Color(0xFF151A2C), RoundedCornerShape(4.dp))
-            .padding(horizontal = 8.dp, vertical = 2.dp)
-    ) {
-        Text(icon, fontSize = 11.sp)
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(value, color = Color.LightGray, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-    }
-}
+fun SanctuaryScreen(state: GameEngine, onBreak: () -> Unit) {
+    val transition = rememberInfiniteTransition()
+    val rot by transition.animateFloat(0f, 360f, infiniteRepeatable(tween(18000, easing = LinearEasing)))
+    val pulse by transition.animateFloat(0.96f, 1.04f, infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse))
 
-// ==========================================
-// 5. ЭКРАН 1: ОБИТЕЛЬ (ИНТЕРАКТИВНОЕ БАГУА)
-// ==========================================
+    Column(modifier = Modifier.fillMaxSize().padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("ТАИНСТВО МЕДИТАЦИИ ДАО", color = Color(0xFFFFD700), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text("Камни: ${state.stones} 💎 | Свитки: ${state.scrolls} 📜", color = Color.Gray, fontSize = 11.sp)
+        Spacer(modifier = Modifier.height(16.dp))
 
-@Composable
-fun SanctuaryScreen(state: GameState, onTriggerTribulation: () -> Unit) {
-    val infiniteTransition = rememberInfiniteTransition()
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(animation = tween(20000, easing = LinearEasing), repeatMode = RepeatMode.Restart)
-    )
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.95f,
-        targetValue = 1.05f,
-        animationSpec = infiniteRepeatable(animation = tween(2000, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse)
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            "ТАИНСТВО МЕДИТАЦИИ ДАО",
-            color = Color(0xFFFFD700),
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
-            letterSpacing = 1.sp
-        )
-        Text(
-            "Класс: ${state.heroClass.title} • Приток: +${15 * (state.currentRealmIndex + 1)} Ци/сек",
-            color = Color.LightGray,
-            fontSize = 11.sp
-        )
+        Box(modifier = Modifier.size(200.dp).clickable { state.qi += 15L * (state.realmIndex + 1) }, contentAlignment = Alignment.Center) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val c = Offset(size.width / 2, size.height / 2)
+                val rad = (size.minDimension / 2) * pulse
+                drawCircle(Brush.sweepGradient(listOf(Color(0xFF00E5FF), Color(0xFFFFD700), Color(0xFF00E5FF))), radius = rad, style = Stroke(3.dp.toPx()))
+                for (i in 0 until 8) {
+                    val a = Math.toRadians((rot + i * 45).toDouble())
+                    drawLine(Color(0xFFFFD700), Offset((c.x + rad * 0.7f * cos(a)).toFloat(), (c.y + rad * 0.7f * sin(a)).toFloat()), Offset((c.x + rad * 0.88f * cos(a)).toFloat(), (c.y + rad * 0.88f * sin(a)).toFloat()), 2.dp.toPx())
+                }
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("🧘", fontSize = 42.sp)
+                Text("Клик = +Ци", color = Color.Cyan, fontSize = 10.sp)
+            }
+        }
 
         Spacer(modifier = Modifier.height(20.dp))
+        val prg = (state.qi.toFloat() / state.reqQi.toFloat()).coerceIn(0f, 1f)
+        Text("Ци: ${state.qi} / ${state.reqQi}", color = Color.White, fontSize = 11.sp)
+        LinearProgressIndicator(progress = { prg }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), color = Color(0xFF00E5FF))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Графический холст (Canvas): Вращающаяся печать Багуа и сгустки энергии Ци
-        Box(
-            modifier = Modifier
-                .size(230.dp)
-                .clickable {
-                    state.addQi(10L * (state.currentRealmIndex + 1))
-                },
-            contentAlignment = Alignment.Center
+        Button(
+            onClick = onBreak,
+            enabled = state.qi >= state.reqQi,
+            modifier = Modifier.fillMaxWidth().height(46.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4AF37), disabledContainerColor = Color(0xFF1E2434))
         ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val center = Offset(size.width / 2, size.height / 2)
-                val radius = (size.minDimension / 2) * pulseScale
+            Text(if (state.qi >= state.reqQi) "⚡ НАЧАТЬ НЕБЕСНЫЙ ПРОРЫВ" else "НАКАПЛИВАЙТЕ ЦИ ДЛЯ ПРОРЫВА", color = if (state.qi >= state.reqQi) Color.Black else Color.Gray, fontWeight = FontWeight.Bold)
+        }
+    }
+}
 
-                // Внешний круг барьера
-                drawCircle(
-                    brush = Brush.sweepGradient(listOf(Color(0xFF00E5FF), Color(0xFFFFD700), Color(0xFFD500F9), Color(0xFF00E5FF))),
-                    radius = radius,
-                    style = Stroke(width = 3.dp.toPx())
-                )
+// 2. Небесная скорбь (Диалог молний)
+@Composable
+fun TribulationModal(state: GameEngine, onDismiss: () -> Unit) {
+    var step by remember { mutableIntStateOf(0) }
+    val maxStep = CultivationRealm.values()[state.realmIndex].strikes
+    var log by remember { mutableStateOf("Небесные молнии готовы обрушиться на вас!") }
+    var ended by remember { mutableStateOf(false) }
 
-                // Вращающиеся кольца печати Дао
-                drawCircle(
-                    color = Color(0xFF263238),
-                    radius = radius * 0.82f,
-                    style = Stroke(width = 1.5.dp.toPx())
-                )
-
-                // Рисуем лучи и триграммы
-                val count = 8
-                for (i in 0 until count) {
-                    val angle = Math.toRadians((rotation + i * (360f / count)).toDouble())
-                    val start = Offset(
-                        (center.x + (radius * 0.65f) * cos(angle)).toFloat(),
-                        (center.y + (radius * 0.65f) * sin(angle)).toFloat()
-                    )
-                    val end = Offset(
-                        (center.x + (radius * 0.82f) * cos(angle)).toFloat(),
-                        (center.y + (radius * 0.82f) * sin(angle)).toFloat()
-                    )
-                    drawLine(color = Color(0xFFFFD700), start = start, end = end, strokeWidth = 2.dp.toPx())
-                }
-
-                // Внутреннее свечение ауры героя
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(Color(0xFFFFD700).copy(alpha = 0.35f), Color.Transparent),
-                        center = center,
-                        radius = radius * 0.6f
-                    )
-                )
-            }
-
-            // Иконка медитирующего мастера в центре
+    AlertDialog(
+        onDismissRequest = { if (ended) onDismiss() },
+        containerColor = Color(0xFF101322),
+        title = { Text("⚡ СКОРБЬ НЕБЕС", color = Color(0xFFFFD700), fontSize = 15.sp, fontWeight = FontWeight.Bold) },
+        text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("🧘", fontSize = 48.sp)
-                Text("Нажмите для Ци", color = Color(0xFF80D8FF), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Box(modifier = Modifier.fillMaxWidth().height(100.dp).background(Color(0xFF070810), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        if (step > 0) {
+                            val path = Path().apply {
+                                moveTo(size.width / 2, 0f)
+                                lineTo(size.width * 0.46f, size.height * 0.4f)
+                                lineTo(size.width * 0.54f, size.height * 0.7f)
+                                lineTo(size.width / 2, size.height)
+                            }
+                            drawPath(path, Color(0xFF00E5FF), style = Stroke(3.dp.toPx()))
+                        }
+                    }
+                    Text(if (ended) "ПРОРЫВ ЗАВЕРШЕН!" else "Разряд $step из $maxStep", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(log, color = Color.LightGray, fontSize = 11.sp, textAlign = TextAlign.Center)
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                if (!ended) {
+                    step++
+                    log = "Молния №$step отражена золотым куполом!"
+                    if (step >= maxStep) {
+                        state.advanceBreakthrough()
+                        ended = true
+                        log = "Успех! Ступень прорвана!"
+                    }
+                } else onDismiss()
+            }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4AF37))) {
+                Text(if (ended) "Принять Дао" else "Отразить Удар", color = Color.Black, fontWeight = FontWeight.Bold)
             }
         }
+    )
+}
 
-        Spacer(modifier = Modifier.height(24.dp))
+// 3. Персонаж и Инвентарь
+@Composable
+fun CharacterScreen(state: GameEngine) {
+    Column(modifier = Modifier.fillMaxSize().padding(14.dp)) {
+        Text("СНАРЯЖЕНИЕ КУЛЬТИВАТОРА", color = Color(0xFFFFD700), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Шкала накопления Ци к следующему прорыву
-        val progress = (state.currentQi.toFloat() / state.req
+        EquipSlot.values().toList().chunked(3).forEach { row ->
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { slot ->
+                    val itm = state.equipped[slot]
+                    Box(modifier = Modifier.weight(1f).height(65.dp).background(Color(0xFF141826), RoundedCornerShape(6.dp)).border(1.dp, itm?.color ?: Color(0xFF263238), RoundedCornerShape(6.dp)).clickable {
+                        itm?.let { if (state.stones >= 500) { state.stones -= 500; it.enhance++ } }
+                    }.padding(4.dp), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(slot.title, color = Color.Gray, fontSize = 9.sp)
+                            Text(itm?.name ?: "Пусто", color = itm?.color ?: Color.DarkGray, fontSize = 10.sp, maxLines = 1, fontWeight = FontWeight.Bold)
+                            if (itm != null) Text("+${itm.enhance} (Тап: 500💎)", color = Color(0xFFFFD700), fontSize = 8.sp)
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+        Text("ПРОСТРАНСТВЕННЫЙ МЕШОК (${state.inventory.size}):", color = Color.LightGray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(state.inventory) { itm ->
+                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF121624))) {
+                    Row(modifier = Modifier.padding(8.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text(itm.name, color = itm.color, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            Text("Мощь: +${itm.power} | Слот: ${itm.slot.title}", color = Color.Gray, fontSize = 9.sp)
+                        }
+                        Button(onClick = {
+                            val old = state.equipped[itm.slot]
+                            state.equipped[itm.slot] = itm
+                            state.inventory.remove(itm)
+                            old?.let { state.inventory.add(it) }
+                        }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)) { Text("Надеть", fontSize = 10.sp) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// 4. Арена с визуальной дуэлью
+@Composable
+fun ArenaScreen(state: GameEngine) {
+    var duelingBot by remember { mutableStateOf<BotUser?>(null) }
+    var resultText by remember { mutableStateOf("Бросьте вызов сильнейшим культиваторам!") }
+
+    val trans = rememberInfiniteTransition()
+    val swordX by trans.animateFloat(-1f, 1f, infiniteRepeatable(tween(700, easing = LinearEasing), RepeatMode.Reverse))
+
+    Column(modifier = Modifier.fillMaxSize().padding(14.dp)) {
+        Text("РЕЙТИНГ АРЕНЫ МИРА", color = Color(0xFFFFD700), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text(resultText, color = Color.White, fontSize = 11.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (duelingBot != null) {
+            Box(modifier = Modifier.fillMaxWidth().height(120.dp).background(Color(0xFF131726), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val cy = size.height / 2
+                    drawCircle(Color(0xFF00E5FF), 18.dp.toPx(), Offset(size.width * 0.2f, cy))
+                    drawCircle(duelingBot!!.color, 18.dp.toPx(), Offset(size.width * 0.8f, cy))
+                    val sx = (size.width * 0.5f) + (size.width * 0.28f) * swordX
+                    drawLine(Color(0xFFFFD700), Offset(sx - 10f, cy), Offset(sx + 10f, cy), 3.dp.toPx())
+                }
+                Text("⚔️ ДУЭЛЬ ⚔️", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(state.ladderBots) { bot ->
+                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF101422))) {
+                    Row(modifier = Modifier.padding(10.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text("${bot.name} [VIP ${bot.vip}]", color = bot.color, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            Text("БМ: ${bot.power} • ${bot.realm.title}", color = Color.Gray, fontSize = 9.sp)
+                        }
+                        Button(onClick = {
+                            duelingBot = bot
+                            resultText = if (state.combatPower >= bot.power) "🏆 Вы сокрушили ${bot.name}!" else "💀 ${bot.name} отразил вашу атаку!"
+                        }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828)), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)) {
+                            Text("Вызов", fontSize = 10.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// 5. Охота на Боссов
+@Composable
+fun BossScreen(state: GameEngine) {
+    val bosses = remember {
+        listOf(
+            BossTarget("Древний Змей Бездны", 5000L, 2000L, "Змеиный Клинок", Color(0xFF4CAF50)),
+            BossTarget("Огненный Цилинь", 35000L, 8000L, "Панцирь Цилиня", Color(0xFF2196F3)),
+            BossTarget("Черный Дракон Пустоты", 200000L, 35000L, "Кольцо Бездны", Color(0xFFAB47BC)),
+            BossTarget("Владыка Небес", 1500000L, 150000L, "Небесный Артефакт", Color(0xFFFFB300))
+        )
+    }
+    var bossLog by remember { mutableStateOf("Охотьтесь на чудовищ ради камней и лута!") }
+
+    Column(modifier = Modifier.fillMaxSize().padding(14.dp)) {
+        Text("ОХОТ

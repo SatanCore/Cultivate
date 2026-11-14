@@ -193,28 +193,19 @@ private fun CultivateApp() {
 
             GameCard("Боевые техники", "Выбранная техника: $activeTechniqueName · мастерство $activeTechniqueLevel") {
                 Text("Техника усиливает каждый удар на арене. Выбери стиль боя и развивай его за камни духа.", color = Color.LightGray)
-                TechniqueRow("Меч рассекающей Ци", "Сильный прямой удар", selectedTechnique == 0, swordLevel, techniqueUpgradeCost(swordLevel), stones) {
-                    selectedTechnique = 0
-                } {
-                    val cost = techniqueUpgradeCost(swordLevel)
-                    if (stones >= cost) { stones -= cost; swordLevel++; message = "Мастерство меча повышено до $swordLevel." }
-                    else message = "Не хватает камней духа для улучшения."
-                }
-                TechniqueRow("Нефритовый лотос", "Устойчивая техника духовной энергии", selectedTechnique == 1, lotusLevel, techniqueUpgradeCost(lotusLevel), stones) {
-                    selectedTechnique = 1
-                } {
-                    val cost = techniqueUpgradeCost(lotusLevel)
-                    if (stones >= cost) { stones -= cost; lotusLevel++; message = "Мастерство лотоса повышено до $lotusLevel." }
-                    else message = "Не хватает камней духа для улучшения."
-                }
-                TechniqueRow("Коготь лиса", "Быстрая атака в союзе со спутником", selectedTechnique == 2, foxLevel, techniqueUpgradeCost(foxLevel), stones) {
-                    selectedTechnique = 2
-                } {
-                    val cost = techniqueUpgradeCost(foxLevel)
-                    if (stones >= cost) { stones -= cost; foxLevel++; message = "Мастерство когтя лиса повышено до $foxLevel." }
-                    else message = "Не хватает камней духа для улучшения."
-                }
-                Text("Дополнительный урон выбранной техники: +$techniqueDamage", color = Gold, fontWeight = FontWeight.Bold)
+                TechniqueRow("Меч рассекающей Ци", "Сильный прямой удар", selectedTechnique == 0, swordLevel, techniqueUpgradeCost(swordLevel), stones,
+    onSelect = { selectedTechnique = 0 },
+    onUpgrade = { val cost = techniqueUpgradeCost(swordLevel); if (stones >= cost) { stones -= cost; swordLevel++; message = "Мастерство меча повышено до $swordLevel." } else message = "Не хватает камней духа для улучшения." }
+)
+TechniqueRow("Нефритовый лотос", "Устойчивая техника духовной энергии", selectedTechnique == 1, lotusLevel, techniqueUpgradeCost(lotusLevel), stones,
+    onSelect = { selectedTechnique = 1 },
+    onUpgrade = { val cost = techniqueUpgradeCost(lotusLevel); if (stones >= cost) { stones -= cost; lotusLevel++; message = "Мастерство лотоса повышено до $lotusLevel." } else message = "Не хватает камней духа для улучшения." }
+)
+TechniqueRow("Коготь лиса", "Быстрая атака в союзе со спутником", selectedTechnique == 2, foxLevel, techniqueUpgradeCost(foxLevel), stones,
+    onSelect = { selectedTechnique = 2 },
+    onUpgrade = { val cost = techniqueUpgradeCost(foxLevel); if (stones >= cost) { stones -= cost; foxLevel++; message = "Мастерство когтя лиса повышено до $foxLevel." } else message = "Не хватает камней духа для улучшения." }
+)
+                                Text("Дополнительный урон выбранной техники: +$techniqueDamage", color = Gold, fontWeight = FontWeight.Bold)
             }
 
             GameCard("Духовный спутник", "Нефритовый лис · уровень $petLevel") {

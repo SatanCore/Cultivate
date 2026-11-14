@@ -1,4 +1,5 @@
 package com.cultivation.game
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -11,16 +12,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
 
 private val Ink = Color(0xFF101820)
 private val Panel = Color(0xFF1B2A32)
 private val Gold = Color(0xFFE5BD72)
 private val Jade = Color(0xFF78C6A3)
+private const val QI_INTERVAL_SECONDS = 5L
+private const val OFFLINE_CAP_SECONDS = 8L * 60L * 60L
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,63 +36,164 @@ class MainActivity : ComponentActivity() {
 private fun CultivateApp() {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("cultivate_save", 0) }
-    var qi by remember { mutableIntStateOf(prefs.getInt("qi", 0)) }
-    var stones by remember { mutableIntStateOf(prefs.getInt("stones", 120)) }
-    var stage by remember { mutableIntStateOf(prefs.getInt("stage", 1)) }
-    var petLevel by remember { mutableIntStateOf(prefs.getInt("pet", 1)) }
-    var enemyHp by remember { mutableIntStateOf(prefs.getInt("enemy", 100)) }
-    var wins by remember { mutableIntStateOf(prefs.getInt("wins", 0)) }
-    var message by remember { mutableStateOf("Сосредоточься. Путь бессмертного начинается с одного вдоха.") }
+    val now = remember { System.currentTimeMillis() }
+    val previousVisit = remember { prefs.getLong("last_seen", now) }
+    val offlineSeconds = ((now - previousVisit) / 1000L).coerceIn(0L, OFFLINE_CAP_SECONDS)
+    val restoredQi = (offlineSeconds / QI_INTERVAL_SECONDS).toInt()
 
-    LaunchedEffect(Unit) { while (true) { delay(5000); qi = (qi + 1).coerceAtMost(9999) } }
-    LaunchedEffect(qi, stones, stage, petLevel, enemyHp, wins) {
-        prefs.edit().putInt("qi", qi).putInt("stones", stones).putInt("stage", stage)
-            .putInt("pet", petLevel).putInt("enemy", enemyHp).putInt("wins", wins).apply()
+    var qi by remember {
+        mutableIntStateOf((prefs.getInt("qi", 0) + restoredQi).coerceAtMost(9999))
+    }
+    var stones by remember { mutableIntStateOf(prefs.getInt("stones", 120)) }
+    var stage by remember { mutableIntStateOf(prefs.getInt("stage", 1).coerceAtLeast(1)) }
+    var petLevel by remember { mutableIntStateOf(prefs.getInt("pet", 1).coerceAtLeast(1)) }
+    var bossLevel by remember { mutableIntStateOf(prefs.getInt("boss_level", 1).coerceAtLeast(1)) }
+    var enemyHp by remember { mutableIntStateOf(prefs.getInt("enemy", 100).coerceAtLeast(0)) }
+    var wins by remember { mutableIntStateOf(prefs.getInt("wins", 0).coerceAtLeast(0)) }
+    var message by remember {
+        mutableStateOf(
+            if (restoredQi > 0) "За время отсутствия восстановлено $restoredQi Ци. Путь продолжается!"
+            else "Сосредоточься. Путь бессмертного начинается с одного вдоха."
+        )
     }
 
-    MaterialTheme(colorScheme = darkColorScheme(primary = Gold, secondary = Jade, background = Ink, surface = Panel, onBackground = Color(0xFFF0E8D8), onSurface = Color(0xFFF0E8D8))) {
-        Column(Modifier.fillMaxSize().background(Ink).verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    val enemyMaxHp = bossMaxHp(bossLevel)
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(QI_INTERVAL_SECONDS * 1000L)
+            qi = (qi + 1).coerceAtMost(9999)
+        }
+    }
+
+    LaunchedEffect(qi, stones, stage, petLevel, bossLevel, enemyHp, wins) {
+        prefs.edit()
+            .putInt("qi", qi)
+            .putInt("stones", stones)
+            .putInt("stage", stage)
+            .putInt("pet", petLevel)
+            .putInt("boss_level", bossLevel)
+            .putInt("enemy", enemyHp)
+            .putInt("wins", wins)
+            .putLong("last_seen", System.currentTimeMillis())
+            .apply()
+    }
+
+    MaterialTheme(
+        colorScheme = darkColorScheme(
+            primary = Gold,
+            secondary = Jade,
+            background = Ink,
+            surface = Panel,
+            onBackground = Color(0xFFF0E8D8),
+            onSurface = Color(0xFFF0E8D8)
+        )
+    ) {
+        Column(
+            Modifier.fillMaxSize().background(Ink).verticalScroll(rememberScrollState()).padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
             Text("ПУТЬ БЕССМЕРТНОГО", color = Gold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             Text("Cultivate", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
             Text("Тихая сила рождается внутри.", color = Jade)
+
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatCard("Ци", qi.toString(), Modifier.weight(1f))
                 StatCard("Камни духа", stones.toString(), Modifier.weight(1f))
                 StatCard("Победы", wins.toString(), Modifier.weight(1f))
             }
-            GameCard("Культивация", "Ступень $stage · " + stageName(stage)) {
-                Text("Ци накапливается со временем. Для прорыва требуется ${stage * 35} Ци.", color = Color.LightGray)
-                LinearProgressIndicator(progress = { (qi.toFloat() / (stage * 35).coerceAtLeast(1)).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth(), color = Jade)
-                Button(onClick = {
-                    val cost = stage * 35
-                    if (qi >= cost) { qi -= cost; stage++; stones += 25; message = "Прорыв свершился! Ты достиг ступени $stage." }
-                    else message = "Недостаточно Ци. Продолжай медитировать."
-                }, modifier = Modifier.fillMaxWidth()) { Text("Совершить прорыв") }
+
+            GameCard("Культивация", "Ступень $stage · ${stageName(stage)}") {
+                val breakthroughCost = stage * 35
+                Text(
+                    "Ци накапливается даже в твоё отсутствие — до 8 часов. Для прорыва требуется $breakthroughCost Ци.",
+                    color = Color.LightGray
+                )
+                LinearProgressIndicator(
+                    progress = { (qi.toFloat() / breakthroughCost.coerceAtLeast(1)).coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Jade
+                )
+                Button(
+                    onClick = {
+                        if (qi >= breakthroughCost) {
+                            qi -= breakthroughCost
+                            stage++
+                            stones += 25
+                            message = "Прорыв свершился! Ты достиг ступени $stage."
+                        } else {
+                            message = "Недостаточно Ци. Продолжай медитировать."
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Совершить прорыв") }
             }
-            GameCard("Арена испытаний", "Страж древнего святилища") {
-                Text("Здоровье противника: $enemyHp / 100", color = Color.LightGray)
-                LinearProgressIndicator(progress = { enemyHp / 100f }, modifier = Modifier.fillMaxWidth(), color = Color(0xFFD77A68))
-                Button(onClick = {
-                    if (enemyHp <= 0) message = "Страж уже повержен. Начни следующий бой."
-                    else {
-                        val damage = 22 + stage * 3
-                        enemyHp = (enemyHp - damage).coerceAtLeast(0)
-                        if (enemyHp == 0) { stones += 80 + stage * 10; wins++; message = "Победа! Получено ${80 + stage * 10} камней духа." }
-                        else message = "Техника Ци нанесла $damage урона."
-                    }
-                }, modifier = Modifier.fillMaxWidth()) { Text("Удар потоком Ци") }
-                OutlinedButton(onClick = { enemyHp = 100; message = "Новый страж вступает на арену." }, modifier = Modifier.fillMaxWidth()) { Text("Новый противник") }
+
+            GameCard("Арена испытаний", "Страж святилища · ранг $bossLevel") {
+                Text("Здоровье противника: $enemyHp / $enemyMaxHp", color = Color.LightGray)
+                LinearProgressIndicator(
+                    progress = { (enemyHp.toFloat() / enemyMaxHp).coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFFD77A68)
+                )
+                Button(
+                    onClick = {
+                        if (enemyHp <= 0) {
+                            message = "Страж повержен. Начни следующий бой."
+                        } else {
+                            val damage = 22 + stage * 3 + petLevel * 2
+                            enemyHp = (enemyHp - damage).coerceAtLeast(0)
+                            if (enemyHp == 0) {
+                                val reward = 80 + bossLevel * 15 + stage * 5
+                                stones += reward
+                                wins++
+                                message = "Победа! Получено $reward камней духа. Следующий страж будет сильнее."
+                            } else {
+                                message = "Техника Ци нанесла $damage урона."
+                            }
+                        }
+                    },
+                    enabled = enemyHp > 0,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Удар потоком Ци") }
+
+                Button(
+                    onClick = {
+                        if (enemyHp <= 0) {
+                            bossLevel++
+                            enemyHp = bossMaxHp(bossLevel)
+                            message = "На арену вышел страж ранга $bossLevel. Будь осторожен!"
+                        } else {
+                            message = "Сначала одолей текущего стража."
+                        }
+                    },
+                    enabled = enemyHp <= 0,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Вызвать следующего стража") }
             }
+
             GameCard("Духовный спутник", "Нефритовый лис · уровень $petLevel") {
-                Text("Следующий уровень стоит ${petLevel * 60} камней духа.", color = Color.LightGray)
-                Button(onClick = {
-                    val cost = petLevel * 60
-                    if (stones >= cost) { stones -= cost; petLevel++; message = "Нефритовый лис достиг $petLevel уровня." }
-                    else message = "Не хватает камней духа."
-                }, modifier = Modifier.fillMaxWidth()) { Text("Улучшить спутника") }
+                Text(
+                    "Спутник усиливает атаки на арене. Следующий уровень стоит ${petLevel * 60} камней духа.",
+                    color = Color.LightGray
+                )
+                Button(
+                    onClick = {
+                        val cost = petLevel * 60
+                        if (stones >= cost) {
+                            stones -= cost
+                            petLevel++
+                            message = "Нефритовый лис достиг $petLevel уровня. Сила атак увеличена!"
+                        } else {
+                            message = "Не хватает камней духа."
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Улучшить спутника") }
             }
+
             Text(message, color = Gold, fontSize = 14.sp)
-            Text("Сохранение выполняется автоматически на этом устройстве.", color = Color.Gray, fontSize = 11.sp)
+            Text("Прогресс сохраняется автоматически на этом устройстве.", color = Color.Gray, fontSize = 11.sp)
         }
     }
 }
@@ -103,16 +207,23 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
         }
     }
 }
+
 @Composable
 private fun GameCard(title: String, subtitle: String, content: @Composable ColumnScope.() -> Unit) {
     Surface(color = Panel, shape = MaterialTheme.shapes.extraLarge) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             Text(title, color = Gold, fontSize = 19.sp, fontWeight = FontWeight.Bold)
             Text(subtitle, color = Jade, fontSize = 13.sp)
             content()
         }
     }
 }
+
+private fun bossMaxHp(level: Int): Int = 100 + (level - 1) * 35
+
 private fun stageName(stage: Int): String = when {
     stage < 4 -> "Закалка тела"
     stage < 7 -> "Сбор Ци"

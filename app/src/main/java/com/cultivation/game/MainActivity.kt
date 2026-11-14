@@ -172,10 +172,11 @@ private fun CultivateApp() {
     val factionAttack = if (stage < 7 && chosenSect >= 0) clanAttackBonuses[factionIndex] else 0
     val factionDefense = if (stage < 7 && chosenSect >= 0) clanDefenseBonuses[factionIndex] else 0
     val factionHp = if (stage < 7 && chosenSect >= 0) clanHpBonuses[factionIndex] else 0
-    val petAttack = activePet.attack + petLevel / 3 + petAscension * 3
-    val petDefense = activePet.defense + petLevel / 4 + petAscension * 2
-    val petSkill = activePet.skill + petAscension * 2
-    val playerMaxHp = 500 + stage * 30 + classProfile.bonusHp + gearHpTotal + bodyPillBonus + activePet.hp + petLevel * 3 + factionHp
+    val petSynergy = petClassSynergy(activePet.id, chosenClass)
+    val petAttack = activePet.attack + petLevel / 3 + petAscension * 3 + if (petSynergy) 4 else 0
+    val petDefense = activePet.defense + petLevel / 4 + petAscension * 2 + if (petSynergy) 3 else 0
+    val petSkill = activePet.skill + petAscension * 2 + if (petSynergy) 4 else 0
+    val playerMaxHp = 500 + stage * 30 + classProfile.bonusHp + gearHpTotal + bodyPillBonus + activePet.hp + petLevel * 3 + factionHp + if (petSynergy) 20 else 0
     val defensiveNodes = listOf(listOf(3,4,7), listOf(2,4,7), listOf(5,7), listOf(3,5,7))
     val defensiveSkillCount = if(chosenClass < 0) 0 else defensiveNodes[chosenClass].count { skillTreeLevels[chosenClass*9+it] == 1 }
     val passiveSkillCount = if(chosenClass < 0) 0 else (0..8).count { skillTreeLevels[chosenClass*9+it] == 1 && !skillDefinitions[chosenClass][it].active && it !in defensiveNodes[chosenClass] }
@@ -235,14 +236,14 @@ private fun CultivateApp() {
             else -> techniqueDamage / 2
         }
         val rawDamage = 22 + stage * 3 + classBonus + actionBonus
-        val critical = Random.nextInt(100) < (classProfile.criticalChance + activePet.critical).coerceAtMost(75)
+        val critical = Random.nextInt(100) < (classProfile.criticalChance + activePet.critical + if (petSynergy) 2 else 0).coerceAtMost(75)
         val damage = if (critical) (rawDamage * 1.5).toInt() else rawDamage
         enemyHp = (enemyHp - damage).coerceAtLeast(0)
         for (i in 0..8) skillCooldowns[i] = nextSkillCooldowns[i]
         if (action != null && action in 0..8) skillCooldowns[action] = 4
         techniqueCooldown = if (action == 9) 3 else techniqueCd
         weaponCooldown = if (action == 10) 6 else weaponCd
-        val weaponHealing = equippedWeapon.healOnHit + activePet.healing + if (chosenClass == 3) classProfile.healingBonus else 0
+        val weaponHealing = equippedWeapon.healOnHit + activePet.healing + (if (chosenClass == 3) classProfile.healingBonus else 0) + if (petSynergy) 2 else 0
         if (weaponHealing > 0) playerHp = (playerHp + weaponHealing).coerceAtMost(playerMaxHp)
         if (enemyHp > 0) {
             var incoming = (12 + bossLevel * 3 - classDefense).coerceAtLeast(2)
@@ -535,8 +536,8 @@ private fun CultivateApp() {
                 val abodeUpgradeCost = abodeLevel * 100
                 val oreUpgradeCost = (abodeLevel - 1).coerceAtLeast(0)
                 val nowMillis = System.currentTimeMillis()
-                val gardenMinutes = ((gardenReadyAt - nowMillis).coerceAtLeast(0L) / 60000L)
-                val springMinutes = ((springReadyAt - nowMillis).coerceAtLeast(0L) / 60000L)
+                val gardenRemaining = formatRemainingTime(gardenReadyAt - nowMillis)
+                val springRemaining = formatRemainingTime(springReadyAt - nowMillis)
                 GameCard("Личная обитель", "Уровень $abodeLevel · $currentWorld · тихое место для роста") {
                     AbodeScene(abodeLevel, currentWorld)
                     Text("Небольшой двор в стороне от Лунной Гавани. Здесь ты можешь укрыться от суеты, собирать Ци и постепенно превращать скромное убежище в настоящую резиденцию культиватора.", color = Color.LightGray)
@@ -593,18 +594,18 @@ private fun CultivateApp() {
                             Text("Алхимия Смертного мира не творит чудес: простые травы и вода из родника превращаются в пилюли, помогающие пережить путь и ускорить накопление Ци.", color = Color.LightGray, fontSize = 12.sp)
                             Text("Ранг алхимии: $alchemyRank / 5 · готовых пилюль Ци: $qiPills · пилюль закалки: $bodyPills", color = Jade)
                             Button(onClick = {
-                                if (spiritHerbs >= 3 && spiritWater >= 1) { spiritHerbs -= 3; spiritWater--; qiPills++; message = "Создана пилюля сбора Ци." }
-                                else message = "Нужно 3 духовные травы и 1 порция духовной воды."
-                            }, enabled = spiritHerbs >= 3 && spiritWater >= 1, modifier = Modifier.fillMaxWidth()) { Text("Сварить пилюлю Ци · 3 травы + 1 вода") }
+                                if (spiritHerbs >= 6 && spiritWater >= 2) { spiritHerbs -= 6; spiritWater -= 2; qiPills++; message = "Создана пилюля сбора Ци." }
+                                else message = "Нужно 6 духовных трав и 2 порции духовной воды."
+                            }, enabled = spiritHerbs >= 3 && spiritWater >= 1, modifier = Modifier.fillMaxWidth()) { Text("Сварить пилюлю Ци · 6 трав + 2 воды") }
                             Button(onClick = {
                                 if (spiritHerbs >= 5 && spiritWater >= 2) { spiritHerbs -= 5; spiritWater -= 2; bodyPills++; message = "Создана пилюля крепкого тела." }
                                 else message = "Нужно 5 духовных трав и 2 порции духовной воды."
                             }, enabled = spiritHerbs >= 5 && spiritWater >= 2, modifier = Modifier.fillMaxWidth()) { Text("Сварить пилюлю закалки · 5 трав + 2 вода") }
                             OutlinedButton(onClick = {
-                                val qiPower = 80 + alchemyRank * 10
+                                val qiPower = 25 + alchemyRank * 5
                                 if (qiPills > 0) { qiPills--; qi = (qi + qiPower).coerceAtMost(9999); message = "Пилюля растворилась, даровав $qiPower Ци." }
                                 else message = "В запасе нет пилюль сбора Ци."
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Принять пилюлю Ци · +${80 + alchemyRank * 10}") }
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Принять пилюлю Ци · +${25 + alchemyRank * 5}") }
                             OutlinedButton(onClick = {
                                 val bodyPower = 15 + alchemyRank * 2
                                 if (bodyPills > 0) { bodyPills--; bodyPillBonus += bodyPower; playerHp = (playerHp + bodyPower).coerceAtMost(playerMaxHp + bodyPower); message = "Тело укреплено навсегда: максимальное здоровье +$bodyPower." }
@@ -617,10 +618,10 @@ private fun CultivateApp() {
                         "garden" -> {
                             Text("Сад духовных трав", color = Gold, fontWeight = FontWeight.Bold)
                             Text("На небольшом участке растут самые простые травы Смертного мира. Позже, в других мирах, сад сможет принимать семена с совершенно иной природой.", color = Color.LightGray, fontSize = 12.sp)
-                            Text(if (gardenReadyAt <= nowMillis) "Урожай созрел: можно собрать травы." else "До следующего урожая примерно $gardenMinutes мин.", color = Jade)
+                            Text(if (gardenReadyAt <= nowMillis) "Урожай созрел: можно собрать травы." else "До следующего урожая примерно $gardenRemaining.", color = Jade)
                             Button(onClick = {
                                 val now = System.currentTimeMillis()
-                                if (now >= gardenReadyAt) { val harvest = 2 + abodeLevel; spiritHerbs += harvest; dailyGardenCollected = true; gardenReadyAt = now + 300000L; if (Random.nextInt(100) < 3 && "moon_deer" !in ownedPetIds.split("|")) { ownedPetIds += "|moon_deer"; message = "Собрано трав: $harvest. Среди листьев появился лунный оленёнок — редкий питомец!" } else message = "Собрано духовных трав: $harvest. Следующий урожай через 5 минут." }
+                                if (now >= gardenReadyAt) { val harvest = 2 + abodeLevel; spiritHerbs += harvest; dailyGardenCollected = true; gardenReadyAt = now + 28_800_000L; if (Random.nextInt(100) < 3 && "moon_deer" !in ownedPetIds.split("|")) { ownedPetIds += "|moon_deer"; message = "Собрано трав: $harvest. Среди листьев появился лунный оленёнок — редкий питомец!" } else message = "Собрано духовных трав: $harvest. Следующий урожай через 5 минут." }
                                 else message = "Сад ещё растёт. Вернись позже."
                             }, enabled = gardenReadyAt <= nowMillis, modifier = Modifier.fillMaxWidth()) { Text("Собрать урожай · ${2 + abodeLevel} травы") }
                             Text("Урожайность растёт вместе с уровнем обители.", color = Color.LightGray, fontSize = 11.sp)
@@ -640,10 +641,10 @@ private fun CultivateApp() {
                     }
                 }
                 GameCard("Родник и хозяйство", "Небольшие источники ресурсов для ремесла") {
-                    Text(if (springReadyAt <= nowMillis) "Родник наполнился духовной водой." else "Родник восстановится примерно через $springMinutes мин.", color = Color.LightGray, fontSize = 12.sp)
+                    Text(if (springReadyAt <= nowMillis) "Родник наполнился духовной водой." else "Родник восстановится примерно через $springRemaining.", color = Color.LightGray, fontSize = 12.sp)
                     Button(onClick = {
                         val now = System.currentTimeMillis()
-                        if (now >= springReadyAt) { spiritWater += 1 + abodeLevel / 3; springReadyAt = now + 300000L; if (Random.nextInt(100) < 3 && "river_koi" !in ownedPetIds.split("|")) { ownedPetIds += "|river_koi"; message = "В роднике вспыхнула золотая чешуя! Ты приручил духовного карпа." } else message = "Набрана духовная вода из родника." }
+                        if (now >= springReadyAt) { spiritWater += 1 + abodeLevel / 3; springReadyAt = now + 28_800_000L; if (Random.nextInt(100) < 3 && "river_koi" !in ownedPetIds.split("|")) { ownedPetIds += "|river_koi"; message = "В роднике вспыхнула золотая чешуя! Ты приручил духовного карпа." } else message = "Набрана духовная вода из родника." }
                         else message = "Родник ещё не восстановился."
                     }, enabled = springReadyAt <= nowMillis, modifier = Modifier.fillMaxWidth()) { Text("Набрать духовную воду") }
                 }
@@ -921,17 +922,19 @@ private fun CultivateApp() {
                 }
                 Text("Репутация союза: $clanReputation · ежедневный вклад помогает заслужить доверие старейшин.", color = Gold, fontSize = 11.sp)
                 Button(onClick = {
-                    if (!dailyClanDonated && stones >= 50) { stones -= 50; qi += 35; clanReputation++; dailyClanDonated = true; message = "Вклад принят. +35 Ци и 1 очко репутации." }
+                    if (chosenSect < 0) message = "Сначала вступи в клан или секту."
+                    else if (!dailyClanDonated && stones >= 50) { stones -= 50; qi += 35; clanReputation++; dailyClanDonated = true; message = "Вклад принят. +35 Ци и 1 очко репутации." }
                     else if (dailyClanDonated) message = "Сегодня ты уже внёс вклад."
                     else message = "Для вклада нужно 50 камней духа."
-                }, enabled = !dailyClanDonated && stones >= 50, modifier = Modifier.fillMaxWidth()) { Text(if (dailyClanDonated) "Вклад сегодня внесён" else "Внести ежедневный вклад · 50 камней") }
+                }, enabled = chosenSect >= 0 && !dailyClanDonated && stones >= 50, modifier = Modifier.fillMaxWidth()) { Text(if (chosenSect < 0) "Сначала вступи в клан / секту" else if (dailyClanDonated) "Вклад сегодня внесён" else "Внести ежедневный вклад · 50 камней") }
             }
 
             if (selectedMenu == 7) GameCard("Духовный зверинец", "Коллекция питомцев · активен: ${activePet.name}") {
                 Text("Каждый зверь меняет стиль боя. Опыт связи получает только активный питомец за победы. Развитие намеренно сложное: нужны опыт, эссенция зверя и ядра для ключевых рубежей.", color = Color.LightGray, fontSize = 12.sp)
                 Text("Эссенция: $petEssence · ядра зверя: $petCores · поиск редкого зверя: $petPity / 20 побед", color = Jade, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 Text("Активен: ${activePet.symbol} ${activePet.name} · уровень $petLevel / 30 · опыт связи $petXp · пробуждение $petAscension / 5", color = Gold)
-                Text("Бонусы: атака +$petAttack · защита +$petDefense · здоровье +${activePet.hp + petLevel * 3} · техника +$petSkill · крит +${activePet.critical}% · лечение +${activePet.healing}", color = Jade, fontSize = 11.sp)
+                Text("Бонусы: атака +$petAttack · защита +$petDefense · здоровье +${activePet.hp + petLevel * 3 + if (petSynergy) 20 else 0} · техника +$petSkill · крит +${activePet.critical + if (petSynergy) 2 else 0}% · лечение +${activePet.healing + if (petSynergy) 2 else 0}", color = Jade, fontSize = 11.sp)
+                Text(if (petSynergy) "Резонанс класса: активен · питомец усиливает твой путь" else "Резонанс класса: нет · выбери подходящий класс для полного раскрытия питомца", color = if (petSynergy) Gold else Color.Gray, fontSize = 10.sp)
                 val xpCost = 100 + petLevel * 75
                 val essenceCost = 1 + petLevel / 5
                 val coreCost = if ((petLevel + 1) % 5 == 0) 1 else 0
@@ -1564,6 +1567,24 @@ private fun techniqueName(index: Int): String = when (index) {
 }
 
 private fun bossMaxHp(level: Int): Int = 100 + (level - 1) * 35
+
+private fun petClassSynergy(petId: String, classIndex: Int): Boolean = when (petId) {
+    "jade_fox" -> classIndex == 0 || classIndex == 3
+    "stone_tortoise" -> classIndex == 1
+    "thunder_hawk" -> classIndex == 0 || classIndex == 2
+    "ember_wolf" -> classIndex == 0
+    "moon_deer" -> classIndex == 1 || classIndex == 3
+    "iron_ape" -> classIndex == 1
+    "river_koi" -> classIndex == 2 || classIndex == 3
+    else -> false
+}
+
+private fun formatRemainingTime(milliseconds: Long): String {
+    val totalMinutes = (milliseconds.coerceAtLeast(0L) + 59_999L) / 60_000L
+    val hours = totalMinutes / 60L
+    val minutes = totalMinutes % 60L
+    return if (hours > 0) "${hours} ч. ${minutes} мин." else "${minutes} мин."
+}
 
 private fun qiIntervalForAbode(level: Int): Long = (QI_INTERVAL_SECONDS - (level - 1) * 30L).coerceAtLeast(300L)
 private fun cultivationQiCost(stage: Int): Int = when (stage) {

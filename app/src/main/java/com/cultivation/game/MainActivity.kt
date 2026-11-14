@@ -434,21 +434,28 @@ private fun CultivateApp() {
             Modifier.fillMaxSize().background(Ink).verticalScroll(pageScrollState).padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text("ПУТЬ БЕССМЕРТНОГО", color = Gold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            Text("Cultivate", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
-            Text("${worldName(stage)} · Тихая сила рождается внутри.", color = Jade)
-
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                StatCard("Ци", qi.toString(), Modifier.weight(1f))
-                StatCard("Камни духа", stones.toString(), Modifier.weight(1f))
-                StatCard("Победы", wins.toString(), Modifier.weight(1f))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("CULTIVATE  ·  ПУТЬ ДАО", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text("${worldName(stage)} · ${stageName(stage)}", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    HomeResource("☯", "Ци", qi.toString())
+                    HomeResource("◈", "Камни", stones.toString())
+                    HomeResource("⚔", "Победы", wins.toString())
+                }
             }
 
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("Город", "Путь", "Арена", "Персонаж", "Инвентарь", "Навыки", if (stage < 7) "Кланы" else "Секты", "Спутник", "Обитель").forEachIndexed { index, label ->
-                    if (selectedMenu == index) Button(onClick = { selectedMenu = index; selectedTownBuilding = "" }) { Text(label) }
-                    else OutlinedButton(onClick = { selectedMenu = index; selectedTownBuilding = "" }) { Text(label) }
-                }
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                HomeNavItem("Город", "⌂", 0) { selectedMenu = 0; selectedTownBuilding = "" }
+                HomeNavItem("Путь", "☯", 1) { selectedMenu = 1; selectedTownBuilding = "" }
+                HomeNavItem("Арена", "⚔", 2) { selectedMenu = 2; selectedTownBuilding = "" }
+                HomeNavItem("Персонаж", "♙", 3) { selectedMenu = 3; selectedTownBuilding = "" }
+                HomeNavItem("Склад", "♢", 4) { selectedMenu = 4; selectedTownBuilding = "" }
+                HomeNavItem("Навыки", "✧", 5) { selectedMenu = 5; selectedTownBuilding = "" }
+                HomeNavItem(if (stage < 7) "Кланы" else "Секты", "⚜", 6) { selectedMenu = 6; selectedTownBuilding = "" }
+                HomeNavItem("Питомцы", "狐", 7) { selectedMenu = 7; selectedTownBuilding = "" }
+                HomeNavItem("Обитель", "🏯", 8) { selectedMenu = 8; selectedTownBuilding = "" }
             }
 
             if (selectedMenu == 0) {
@@ -1079,8 +1086,8 @@ private fun CinematicHomeScreen(
         HomeHotspot("Кузница", "Ковка и усиление", "⚒", Modifier.align(Alignment.Center).offset(x = maxWidth * .01f, y = maxHeight * .16f)) { onNavigate(4) }
         HomeHotspot("Арена", "Поединки и добыча", "⚔", Modifier.align(Alignment.Center).offset(x = maxWidth * .24f, y = maxHeight * .04f)) { onNavigate(2) }
         HomeHotspot("Аукцион", "Торговля и редкости", "⚖", Modifier.align(Alignment.Center).offset(x = maxWidth * .37f, y = maxHeight * .17f)) { onBuilding("auction") }
-        HomeHotspot("Доска заданий", "Поручения долины", "📜", Modifier.align(Alignment.Center).offset(x = maxWidth * .13f, y = maxHeight * .30f)) { onBuilding("quests") }
-        HomeHotspot("Лавка", "Предметы и ресурсы", "✧", Modifier.align(Alignment.Center).offset(x = maxWidth * .38f, y = maxHeight * .31f)) { onBuilding("shop") }
+        HomeHotspot("Доска заданий", "Поручения долины", "📜", Modifier.align(Alignment.Center).offset(x = maxWidth * .13f, y = maxHeight * .20f)) { onBuilding("quests") }
+        HomeHotspot("Лавка", "Предметы и ресурсы", "✧", Modifier.align(Alignment.Center).offset(x = maxWidth * .38f, y = maxHeight * .21f)) { onBuilding("shop") }
 
         Row(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth()

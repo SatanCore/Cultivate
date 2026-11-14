@@ -580,8 +580,8 @@ private fun weaponPowerScore(item: WeaponDefinition): Int =
     item.attackBonus + item.bonusDamage + item.defenseBonus * 2 + item.healOnHit * 2
 
 private fun rollWeaponDrop(stage: Int, ownedIds: List<String>): WeaponDefinition? {
-    val alreadyOwned = ownedIds.map { it.substringBefore("~") }.toSet()
-    val available = weaponCatalog.filter { it.requiredStage <= stage && it.id !in alreadyOwned }
+    // Повторные экземпляры разрешены: один и тот же клинок может выпасть с иным набором характеристик.
+    val available = weaponCatalog.filter { it.requiredStage <= stage }
     if (available.isEmpty()) return null
     val roll = Random.nextInt(1000)
     val rarity = when {

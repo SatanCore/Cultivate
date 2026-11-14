@@ -79,7 +79,10 @@ private fun CultivateApp() {
 
     val enemyMaxHp = bossMaxHp(bossLevel)
     val passiveSkillCount = if(chosenClass < 0) 0 else (0..8).count { skillTreeLevels[chosenClass*9+it] == 1 && !skillDefinitions[chosenClass][it].active }
-    val classBonus = if(chosenClass < 0) 0 else classBaseAttack[chosenClass] + passiveSkillCount*4 + weaponAttackBonus[selectedWeapon]
+    val weaponBranchBonus = if(chosenClass < 0) 0 else
+        (if(skillTreeLevels[chosenClass*9+1] == 1) weaponNodeOneBonus[selectedWeapon] else 0) +
+        (if(skillTreeLevels[chosenClass*9+4] == 1) weaponNodeTwoBonus[selectedWeapon] else 0)
+    val classBonus = if(chosenClass < 0) 0 else classBaseAttack[chosenClass] + passiveSkillCount*4 + weaponAttackBonus[selectedWeapon] + weaponBranchBonus
     val activeSkillReady = chosenClass >= 0 && skillTreeLevels[chosenClass*9+activeSkillNode] == 1 && skillDefinitions[chosenClass][activeSkillNode].active && activeSkillCooldown == 0
     val activeTechniqueLevel = when (selectedTechnique) {
         0 -> swordLevel
@@ -191,7 +194,7 @@ private fun CultivateApp() {
                             val activeBonus = if(activeSkillReady) activeSkillDamage[chosenClass] else 0
                             val damage = 22 + stage*3 + petLevel*2 + techniqueDamage + classBonus + activeBonus
                             enemyHp = (enemyHp-damage).coerceAtLeast(0)
-                            if(activeSkillReady) activeSkillCooldown = 3 else if(activeSkillCooldown > 0) activeSkillCooldown--
+                            if(activeSkillReady) activeSkillCooldown = 2 else if(activeSkillCooldown > 0) activeSkillCooldown--
                             if (enemyHp == 0) {
                                 val reward = 80 + bossLevel * 15 + stage * 5
                                 stones += reward
@@ -369,9 +372,11 @@ private val classNames=listOf("Мечник","Закалённый воин","З
 private val classDescriptions=listOf("Физический универсал: точность, парирование и контратаки.","Мастер закалки тела: стойкость, мощные удары и сопротивление урону.","Маг разрушения: огонь, лёд и молнии, высокий урон и контроль.","Маг поддержки: духовные печати, ослабления и восстановление.")
 private val classStats=listOf("Атака 8 · Защита 8 · Контроль 6","Атака 9 · Защита 10 · Контроль 4","Атака 10 · Защита 5 · Контроль 9","Атака 7 · Защита 8 · Контроль 10")
 private val classBaseAttack=listOf(9,8,11,7)
-private val activeSkillDamage=listOf(34,30,38,28)
+private val activeSkillDamage=listOf(34,34,38,34)
 private val weaponNames=listOf("Меч","Копьё","Посох","Боевые перчатки")
 private val weaponAttackBonus=listOf(8,10,7,9)
+private val weaponNodeOneBonus=listOf(3,5,2,4)
+private val weaponNodeTwoBonus=listOf(4,2,5,3)
 private val skillDefinitions=listOf(
  listOf(
   SkillDefinition("Основы меча","Активное: точный разрез; открывает обе ветви.",true),

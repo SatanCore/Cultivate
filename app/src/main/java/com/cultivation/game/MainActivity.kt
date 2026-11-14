@@ -82,14 +82,14 @@ private fun CultivateApp() {
     val ownedWeapons = remember(ownedWeaponIds) { ownedWeaponList.mapNotNull { resolveWeaponInstance(it) } }
     val equippedWeapon = resolveWeaponInstance(equippedWeaponId)?.takeIf { equippedWeaponId in ownedWeaponList } ?: weaponCatalog.first()
     var activeSkillNode by remember { mutableIntStateOf(prefs.getInt("active_skill_node",0).coerceIn(0,8)) }
-    var activeSkillCooldown by remember { mutableIntStateOf(0) }
+    val skillCooldowns = remember { mutableStateListOf<Int>().apply { repeat(9) { add(0) } } }
     var techniqueCooldown by remember { mutableIntStateOf(0) }
     var weaponCooldown by remember { mutableIntStateOf(0) }
     var autoBattle by remember { mutableStateOf(prefs.getBoolean("auto_battle", false)) }
     val rotationOrder = remember { mutableStateListOf<Int>().apply {
-        val saved = (prefs.getString("battle_rotation", "0,1,2") ?: "0,1,2").split(",").mapNotNull { it.toIntOrNull() }.filter { it in 0..2 }.distinct()
+        val saved = (prefs.getString("battle_rotation_v2", "0,9,10") ?: "0,9,10").split(",").mapNotNull { it.toIntOrNull() }.filter { it in 0..10 }.distinct()
         addAll(saved)
-        (0..2).filter { it !in this }.forEach { add(it) }
+        listOf(0, 9, 10).filter { it !in this }.forEach { add(it) }
     } }
     var chosenSect by remember { mutableIntStateOf(prefs.getInt("chosen_sect", -1).coerceIn(-1, 7)) }
     var chosenAlliance by remember { mutableIntStateOf(prefs.getInt("chosen_alliance", -1).coerceIn(-1, 1)) }
@@ -112,7 +112,7 @@ private fun CultivateApp() {
         (if(skillTreeLevels[chosenClass*9+1] == 1) weaponNodeOneBonus[selectedWeapon] else 0) +
         (if(skillTreeLevels[chosenClass*9+4] == 1) weaponNodeTwoBonus[selectedWeapon] else 0)
     val classBonus = classProfile.attack + passiveSkillCount*4 + weaponAttackBonus[selectedWeapon] + weaponBranchBonus + equippedWeapon.attackBonus + equippedWeapon.bonusDamage
-    val activeSkillReady = chosenClass >= 0 && skillTreeLevels[chosenClass*9+activeSkillNode] == 1 && skillDefinitions[chosenClass][activeSkillNode].active && activeSkillCooldown == 0
+    val activeSkillReady = chosenClass >= 0 && skillTreeLevels[chosenClass*9+activeSkillNode] == 1 && skillDefinitions[chosenClass][activeSkillNode].active && skillCooldowns[activeSkillNode] == 0
     val activeTechniqueLevel = when (selectedTechnique) {
         0 -> swordLevel
         1 -> lotusLevel
@@ -126,34 +126,56 @@ private fun CultivateApp() {
     }
     val techniqueDamage = if (activeTechniqueLevel >= 50) (techniqueDamageBase * 1.2).toInt() else techniqueDamageBase
 
+    fun learnSkillNode(node: Int) {
+        if (chosenClass < 0 || skillPoints <= 0) return
+        if (!skillNodeUnlocked(chosenClass, node, skillTreeLevels, stage.coerceAtMost(20))) {
+            message = "Навык пока закрыт: проверь уровень персонажа и предыдущие умения."
+            return
+        }
+        skillTreeLevels[chosenClass * 9 + node] = 1
+        skillPoints--
+        if (skillDefinitions[chosenClass][node].active && node !in rotationOrder) {
+            val insertAt = rotationOrder.indexOfFirst { it >= 9 }.let { if (it < 0) rotationOrder.size else it }
+            rotationOrder.add(insertAt, node)
+        }
+        message = "Изучено умение: ${skillDefinitions[chosenClass][node].name}."
+    }
+
     fun performCombatTurn() {
         if (enemyHp <= 0 || playerHp <= 0) return
-        val skillCd = (activeSkillCooldown - 1).coerceAtLeast(0)
+        val nextSkillCooldowns = skillCooldowns.map { (it - 1).coerceAtLeast(0) }
         val techniqueCd = (techniqueCooldown - 1).coerceAtLeast(0)
         val weaponCd = (weaponCooldown - 1).coerceAtLeast(0)
-        val skillAvailable = chosenClass >= 0 && skillTreeLevels[chosenClass * 9 + activeSkillNode] == 1 &&
-            skillDefinitions[chosenClass][activeSkillNode].active && skillCd == 0
         val action = rotationOrder.firstOrNull { candidate ->
-            when (candidate) { 0 -> skillAvailable; 1 -> techniqueCd == 0; 2 -> weaponCd == 0; else -> false }
+            when {
+                candidate in 0..8 -> chosenClass >= 0 &&
+                    skillTreeLevels[chosenClass * 9 + candidate] == 1 &&
+                    skillDefinitions[chosenClass][candidate].active &&
+                    nextSkillCooldowns[candidate] == 0
+                candidate == 9 -> techniqueCd == 0
+                candidate == 10 -> weaponCd == 0 && equippedWeapon.hasActiveAbility
+                else -> false
+            }
         }
-        val actionBonus = when (action) {
-            0 -> activeSkillDamage[chosenClass] + classProfile.skillPower
-            1 -> techniqueDamage
-            2 -> 12 + equippedWeapon.bonusDamage * 2
+        val actionBonus = when {
+            action != null && action in 0..8 -> activeSkillDamage[chosenClass] + classProfile.skillPower
+            action == 9 -> techniqueDamage
+            action == 10 -> 12 + equippedWeapon.bonusDamage * 2
             else -> techniqueDamage / 2
         }
         val rawDamage = 22 + stage * 3 + petLevel * 2 + classBonus + actionBonus
         val critical = Random.nextInt(100) < classProfile.criticalChance
         val damage = if (critical) (rawDamage * 1.5).toInt() else rawDamage
         enemyHp = (enemyHp - damage).coerceAtLeast(0)
-        activeSkillCooldown = if (action == 0) 4 else skillCd
-        techniqueCooldown = if (action == 1) 3 else techniqueCd
-        weaponCooldown = if (action == 2) 6 else weaponCd
+        for (i in 0..8) skillCooldowns[i] = nextSkillCooldowns[i]
+        if (action != null && action in 0..8) skillCooldowns[action] = 4
+        techniqueCooldown = if (action == 9) 3 else techniqueCd
+        weaponCooldown = if (action == 10) 6 else weaponCd
         val weaponHealing = equippedWeapon.healOnHit + if (chosenClass == 3) classProfile.healingBonus else 0
         if (weaponHealing > 0) playerHp = (playerHp + weaponHealing).coerceAtMost(playerMaxHp)
         if (enemyHp > 0) {
             var incoming = (12 + bossLevel * 3 - classDefense).coerceAtLeast(2)
-            if (action == 0) {
+            if (action != null && action in 0..8) {
                 incoming = when (chosenClass) { 0 -> incoming * 55 / 100; 1 -> incoming * 25 / 100; 2 -> 0; else -> incoming * 70 / 100 }
                 if (chosenClass == 3) playerHp = (playerHp + 45).coerceAtMost(playerMaxHp)
             }
@@ -181,10 +203,10 @@ private fun CultivateApp() {
             autoBattle = false
             message = "Ты пал в бою. Восстановись за 40 камней духа, чтобы продолжить."
         } else {
-            val actionName = when (action) {
-                0 -> skillDefinitions[chosenClass][activeSkillNode].name
-                1 -> activeTechniqueName
-                2 -> "Способность оружия: ${equippedWeapon.name}"
+            val actionName = when {
+                action != null && action in 0..8 -> skillDefinitions[chosenClass][action].name
+                action == 9 -> activeTechniqueName
+                action == 10 -> "Способность оружия: ${equippedWeapon.name}"
                 else -> "Обычная атака"
             }
             message = (if (critical) "КРИТИЧЕСКИЙ УДАР! " else "") + "$actionName · урон $damage."
@@ -252,7 +274,7 @@ private fun CultivateApp() {
             .putInt("town_story_chapter", storyChapter)
             .putString("skill_materials", skillMaterials.joinToString(","))
             .putBoolean("auto_battle", autoBattle)
-            .putString("battle_rotation", rotationOrder.joinToString(","))
+            .putString("battle_rotation_v2", rotationOrder.joinToString(","))
             .also { editor -> skillTreeLevels.forEachIndexed { index, level -> editor.putInt("skill_tree_${index/9}_${index%9}", level) } }
             .putLong("last_seen", System.currentTimeMillis())
             .apply()
@@ -411,7 +433,7 @@ private fun CultivateApp() {
                     Text(if (autoBattle) "Остановить автобой" else "Наблюдать за боем · авто")
                 }
                 Text("Ротация: " + rotationOrder.joinToString(" → ") { when(it) { 0 -> "Навык"; 1 -> "Техника"; else -> "Оружие" } }, color = Gold, fontSize = 11.sp)
-                Text("Перезарядка · навык $activeSkillCooldown · техника $techniqueCooldown · оружие $weaponCooldown", color = Color.LightGray, fontSize = 11.sp)
+                Text("Перезарядка · выбранный навык ${skillCooldowns[activeSkillNode]} · техника $techniqueCooldown · оружие $weaponCooldown", color = Color.LightGray, fontSize = 11.sp)
 
                 if (playerHp <= 0) {
                     Button(onClick = { if (stones >= 40) { stones -= 40; playerHp = playerMaxHp; message = "Ты восстановил силы и готов вернуться на арену." } else message = "Нужно 40 камней духа для восстановления." }, modifier = Modifier.fillMaxWidth()) { Text("Восстановиться · 40 камней") }
@@ -445,6 +467,10 @@ private fun CultivateApp() {
                         Text("Сила техник +${profile.skillPower} · Бонус лечения +${profile.healingBonus}", color = Jade, fontSize = 11.sp)
                         OutlinedButton(onClick = {
                             chosenClass = i
+                            rotationOrder.clear()
+                            (0..8).filter { skillTreeLevels[i*9+it] == 1 && skillDefinitions[i][it].active }.forEach { rotationOrder.add(it) }
+                            rotationOrder.add(9)
+                            rotationOrder.add(10)
                             if (skillTreeLevels[i*9+activeSkillNode] == 0 || !skillDefinitions[i][activeSkillNode].active) activeSkillNode = 0
                             playerHp = playerHp.coerceAtMost(500 + stage*30 + profile.bonusHp)
                             message = "Выбран класс: $n"
@@ -513,11 +539,17 @@ private fun CultivateApp() {
                     )
                     Text("Дополнительный урон выбранной техники: +$techniqueDamage", color = Gold, fontWeight = FontWeight.Bold)
                 }
-                GameCard("Ротация автобоя", "Порядок автоматического применения техник и оружия") {
-                    Text("Перетаскивания пока нет: меняй приоритет стрелками. Система применяет первое готовое действие в очереди.", color = Color.LightGray, fontSize = 11.sp)
+                GameCard("Ротация автобоя", "Порядок автоматического применения навыков, техник и оружия") {
+                    Text("Все изученные активные навыки добавляются в очередь автоматически. Меняй приоритет стрелками: система применяет первое готовое действие.", color = Color.LightGray, fontSize = 11.sp)
                     rotationOrder.forEachIndexed { index, action ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(when(action) { 0 -> "Активный навык · перезарядка 4 сек"; 1 -> "Техника · перезарядка 3 сек"; else -> "Способность оружия · перезарядка 6 сек" }, color = Gold, modifier = Modifier.weight(1f), fontSize = 11.sp)
+                            val actionLabel = when {
+                                action in 0..8 && chosenClass >= 0 -> skillDefinitions[chosenClass][action].name + " · КД 4 сек"
+                                action == 9 -> "Техника · КД 3 сек"
+                                action == 10 -> "Активация оружия · КД 6 сек"
+                                else -> "Навык · КД 4 сек"
+                            }
+                            Text(actionLabel, color = Gold, modifier = Modifier.weight(1f), fontSize = 11.sp)
                             OutlinedButton(onClick = { if (index > 0) { val v = rotationOrder[index-1]; rotationOrder[index-1] = rotationOrder[index]; rotationOrder[index] = v } }, enabled = index > 0) { Text("↑") }
                             OutlinedButton(onClick = { if (index < rotationOrder.lastIndex) { val v = rotationOrder[index+1]; rotationOrder[index+1] = rotationOrder[index]; rotationOrder[index] = v } }, enabled = index < rotationOrder.lastIndex) { Text("↓") }
                         }
@@ -527,22 +559,22 @@ private fun CultivateApp() {
                     if (chosenClass >= 0) {
                         Text("Очки навыков: $skillPoints · пассивных узлов: $passiveSkillCount", color = Gold, fontWeight = FontWeight.Bold)
                         SkillTreeSection("Начальный навык", chosenClass, listOf(0), skillTreeLevels, skillPoints, selectedWeapon, activeSkillNode, stage.coerceAtMost(20),
-                            onLearn = { node -> skillTreeLevels[chosenClass*9+node] = 1; skillPoints-- },
+                            onLearn = { node -> learnSkillNode(node) },
                             onSetActive = { node -> activeSkillNode = node })
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text("Ветвь I · Напор", color = Jade, fontWeight = FontWeight.Bold)
                                 SkillTreeSection("", chosenClass, listOf(1,2,3), skillTreeLevels, skillPoints, selectedWeapon, activeSkillNode, stage.coerceAtMost(20),
-                                    { node -> skillTreeLevels[chosenClass*9+node] = 1; skillPoints-- }, { node -> activeSkillNode = node })
+                                    { node -> learnSkillNode(node) }, { node -> activeSkillNode = node })
                             }
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text("Ветвь II · Искусность", color = Jade, fontWeight = FontWeight.Bold)
                                 SkillTreeSection("", chosenClass, listOf(4,5,6), skillTreeLevels, skillPoints, selectedWeapon, activeSkillNode, stage.coerceAtMost(20),
-                                    { node -> skillTreeLevels[chosenClass*9+node] = 1; skillPoints-- }, { node -> activeSkillNode = node })
+                                    { node -> learnSkillNode(node) }, { node -> activeSkillNode = node })
                             }
                         }
                         SkillTreeSection("Слияние ветвей", chosenClass, listOf(7,8), skillTreeLevels, skillPoints, selectedWeapon, activeSkillNode, stage.coerceAtMost(20),
-                            onLearn = { node -> skillTreeLevels[chosenClass*9+node] = 1; skillPoints-- },
+                            onLearn = { node -> learnSkillNode(node) },
                             onSetActive = { node -> activeSkillNode = node })
                         Text("Активный навык: ${skillDefinitions[chosenClass][activeSkillNode].name} · перезарядка: $activeSkillCooldown", color = Gold, fontSize = 12.sp)
                     }
@@ -680,7 +712,8 @@ private data class WeaponDefinition(
     val defenseBonus: Int,
     val bonusDamage: Int,
     val healOnHit: Int,
-    val effectDescription: String
+    val effectDescription: String,
+    val hasActiveAbility: Boolean = rarity == WeaponRarity.EPIC || rarity == WeaponRarity.LEGENDARY || rarity == WeaponRarity.MYTHIC
 )
 
 private fun weapon(

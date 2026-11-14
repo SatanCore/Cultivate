@@ -319,6 +319,17 @@ private fun CultivateApp() {
                         Text("${weaponNames[item.type]} · ${stageName(item.requiredStage)} · ступень ${item.requiredStage}", color = Color.LightGray, fontSize = 11.sp)
                         Text("Рейтинг ${weaponPowerScore(item)} · атака +${item.attackBonus} · доп. урон +${item.bonusDamage} · защита +${item.defenseBonus} · лечение +${item.healOnHit}", color = Jade, fontSize = 11.sp)
                         Text(item.effectDescription, color = Color.LightGray, fontSize = 11.sp)
+                        val powerDifference = weaponPowerScore(item) - weaponPowerScore(equippedWeapon)
+                        Text(
+                            when {
+                                encodeWeaponInstance(item) == encodeWeaponInstance(equippedWeapon) -> "Сейчас надето"
+                                powerDifference > 0 -> "Рейтинг на +$powerDifference выше текущего оружия"
+                                powerDifference < 0 -> "Рейтинг на ${-powerDifference} ниже текущего оружия"
+                                else -> "Рейтинг равен текущему оружию"
+                            },
+                            color = if (powerDifference > 0) Jade else Color.LightGray,
+                            fontSize = 11.sp
+                        )
                         OutlinedButton(
                             onClick = { equippedWeaponId = encodeWeaponInstance(item); selectedWeapon = item.type; message = "Экипировано: ${item.name}" },
                             enabled = stage >= item.requiredStage,

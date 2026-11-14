@@ -1057,7 +1057,7 @@ private fun TownScene(stage: Int, storyChapter: Int) {
         }
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text("ЛУННАЯ ГАВАНЬ  ·  \${worldName(stage).uppercase()}", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
+        Text("ЛУННАЯ ГАВАНЬ  ·  ${worldName(stage).uppercase()}", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
         Text("СТУПЕНЬ $stage", color = Jade, fontSize = 10.sp, fontWeight = FontWeight.Bold)
     }
 }

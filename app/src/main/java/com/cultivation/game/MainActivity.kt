@@ -111,10 +111,29 @@ private fun CultivateApp() {
         else -> foxLevel
     }
     val activeTechniqueName = techniqueName(selectedTechnique)
-    val techniqueDamage = when (selectedTechnique) {
-        0 -> 18 + swordLevel * 12
-        1 -> 10 + lotusLevel * 8
-        else -> 14 + foxLevel * 10
+    val techniqueDamageBase = when (selectedTechnique) {
+        0 -> 18 + swordLevel.coerceAtMost(50) * 12
+        1 -> 10 + lotusLevel.coerceAtMost(50) * 8
+        else -> 14 + foxLevel.coerceAtMost(50) * 10
+    }
+    val techniqueDamage = if (activeTechniqueLevel >= 50) (techniqueDamageBase * 1.2).toInt() else techniqueDamageBase
+
+    fun upgradeTechnique(level: Int, setLevel: (Int) -> Unit) {
+        if (level >= 50) { message = "Техника достигла предела мастерства 50 и получила усиление +20%."; return }
+        val targetLevel = level + 1
+        if (level < 20) {
+            val cost = techniqueUpgradeCost(level)
+            if (stones >= cost) { stones -= cost; setLevel(targetLevel); message = "Мастерство повышено до $targetLevel." }
+            else message = "Не хватает камней духа."
+        } else {
+            val tier = ((targetLevel - 21) / 5).coerceIn(0, 5)
+            val amount = (((targetLevel - 21) % 5) + 1) * (tier + 1)
+            if (skillMaterials[tier] >= amount) {
+                skillMaterials[tier] = skillMaterials[tier] - amount
+                setLevel(targetLevel)
+                message = "Техника достигла $targetLevel уровня. Использовано: ${skillMaterialNames[tier]} ×$amount."
+            } else message = "Не хватает ресурса: ${skillMaterialNames[tier]} ×$amount."
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -325,6 +344,8 @@ private fun CultivateApp() {
                                 stones += reward
                                 wins++
                                 skillPoints++
+                                val materialTier = ((bossLevel - 1) / 5).coerceIn(0, 5)
+                                skillMaterials[materialTier] = skillMaterials[materialTier] + 1
                                 val weaponDrop = rollWeaponDrop(stage, ownedWeaponList)
                                 val rareSkillFound = chosenClass >= 0 && rareSkill.isBlank() && Random.nextDouble() < 0.008
                                 val baseMessage = "Победа! Получено $reward камней духа и 1 очко навыков."
@@ -432,40 +453,41 @@ private fun CultivateApp() {
 
             if (selectedMenu == 5) {
                 GameCard("Боевые техники", "Выбранная техника: $activeTechniqueName · мастерство $activeTechniqueLevel") {
-                    Text("Техника усиливает каждый удар на арене. Развивай её за камни духа.", color = Color.LightGray)
+                    Text("Уровни 1–20 повышаются за камни духа. Начиная с 21-го уровня нужны материалы; каждые пять уровней открывается следующий, более редкий ресурс. На 50-м уровне техника получает дополнительный эффект +20%.", color = Color.LightGray)
+                    Text("Материалы: " + skillMaterialNames.indices.joinToString(" · ") { "${skillMaterialNames[it]}: ${skillMaterials[it]}" }, color = Jade, fontSize = 11.sp)
                     TechniqueRow("Меч рассекающей Ци", "Сильный прямой удар", selectedTechnique == 0, swordLevel, techniqueUpgradeCost(swordLevel), stones,
                         onSelect = { selectedTechnique = 0 },
-                        onUpgrade = { val cost = techniqueUpgradeCost(swordLevel); if (stones >= cost) { stones -= cost; swordLevel++; message = "Мастерство меча повышено до $swordLevel." } else message = "Не хватает камней духа для улучшения." }
+                        onUpgrade = { upgradeTechnique(swordLevel) { swordLevel = it } }
                     )
                     TechniqueRow("Нефритовый лотос", "Устойчивая техника духовной энергии", selectedTechnique == 1, lotusLevel, techniqueUpgradeCost(lotusLevel), stones,
                         onSelect = { selectedTechnique = 1 },
-                        onUpgrade = { val cost = techniqueUpgradeCost(lotusLevel); if (stones >= cost) { stones -= cost; lotusLevel++; message = "Мастерство лотоса повышено до $lotusLevel." } else message = "Не хватает камней духа для улучшения." }
+                        onUpgrade = { upgradeTechnique(lotusLevel) { lotusLevel = it } }
                     )
                     TechniqueRow("Коготь лиса", "Быстрая атака в союзе со спутником", selectedTechnique == 2, foxLevel, techniqueUpgradeCost(foxLevel), stones,
                         onSelect = { selectedTechnique = 2 },
-                        onUpgrade = { val cost = techniqueUpgradeCost(foxLevel); if (stones >= cost) { stones -= cost; foxLevel++; message = "Мастерство когтя лиса повышено до $foxLevel." } else message = "Не хватает камней духа для улучшения." }
+                        onUpgrade = { upgradeTechnique(foxLevel) { foxLevel = it } }
                     )
                     Text("Дополнительный урон выбранной техники: +$techniqueDamage", color = Gold, fontWeight = FontWeight.Bold)
                 }
                 GameCard("Древо навыков", if (chosenClass < 0) "Сначала выбери класс в меню персонажа" else classNames[chosenClass]) {
                     if (chosenClass >= 0) {
                         Text("Очки навыков: $skillPoints · пассивных узлов: $passiveSkillCount", color = Gold, fontWeight = FontWeight.Bold)
-                        SkillTreeSection("Начальный навык", chosenClass, listOf(0), skillTreeLevels, skillPoints, selectedWeapon, activeSkillNode,
+                        SkillTreeSection("Начальный навык", chosenClass, listOf(0), skillTreeLevels, skillPoints, selectedWeapon, activeSkillNode, stage.coerceAtMost(20),
                             onLearn = { node -> skillTreeLevels[chosenClass*9+node] = 1; skillPoints-- },
                             onSetActive = { node -> activeSkillNode = node })
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text("Ветвь I · Напор", color = Jade, fontWeight = FontWeight.Bold)
-                                SkillTreeSection("", chosenClass, listOf(1,2,3), skillTreeLevels, skillPoints, selectedWeapon, activeSkillNode,
+                                SkillTreeSection("", chosenClass, listOf(1,2,3), skillTreeLevels, skillPoints, selectedWeapon, activeSkillNode, stage.coerceAtMost(20),
                                     { node -> skillTreeLevels[chosenClass*9+node] = 1; skillPoints-- }, { node -> activeSkillNode = node })
                             }
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text("Ветвь II · Искусность", color = Jade, fontWeight = FontWeight.Bold)
-                                SkillTreeSection("", chosenClass, listOf(4,5,6), skillTreeLevels, skillPoints, selectedWeapon, activeSkillNode,
+                                SkillTreeSection("", chosenClass, listOf(4,5,6), skillTreeLevels, skillPoints, selectedWeapon, activeSkillNode, stage.coerceAtMost(20),
                                     { node -> skillTreeLevels[chosenClass*9+node] = 1; skillPoints-- }, { node -> activeSkillNode = node })
                             }
                         }
-                        SkillTreeSection("Слияние ветвей", chosenClass, listOf(7,8), skillTreeLevels, skillPoints, selectedWeapon, activeSkillNode,
+                        SkillTreeSection("Слияние ветвей", chosenClass, listOf(7,8), skillTreeLevels, skillPoints, selectedWeapon, activeSkillNode, stage.coerceAtMost(20),
                             onLearn = { node -> skillTreeLevels[chosenClass*9+node] = 1; skillPoints-- },
                             onSetActive = { node -> activeSkillNode = node })
                         Text("Активный навык: ${skillDefinitions[chosenClass][activeSkillNode].name} · перезарядка: $activeSkillCooldown", color = Gold, fontSize = 12.sp)
@@ -521,16 +543,17 @@ private fun TechniqueRow(
     Surface(color = if (selected) Color(0xFF29463F) else Color(0xFF24333B), shape = MaterialTheme.shapes.large) {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(name + if (selected) " · выбрана" else "", color = Gold, fontWeight = FontWeight.Bold)
-            Text("$description · уровень $level", color = Color.LightGray, fontSize = 12.sp)
+            Text("$description · уровень $level / 50", color = Color.LightGray, fontSize = 12.sp)
+            if (level == 20) Text("Достигнут рубеж: дальше нужны редкие материалы.", color = Gold, fontSize = 11.sp)
+            if (level >= 50) Text("Предел достигнут · дополнительный эффект +20% к урону", color = Jade, fontSize = 11.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onSelect, modifier = Modifier.weight(1f)) { Text("Выбрать") }
-                Button(onClick = onUpgrade, enabled = stones >= cost, modifier = Modifier.weight(1f)) { Text("Улучшить · $cost") }
+                Button(onClick = onUpgrade, enabled = stones >= cost && level < 50, modifier = Modifier.weight(1f)) { Text(if(level >= 50) "Максимум" else if(level >= 20) "Улучшить · ресурс" else "Улучшить · $cost") }
             }
         }
     }
 }
 
-@Composable
 @Composable
 private fun TownBuilding(name: String, description: String, symbol: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(modifier, color = Color(0xFF263C3B), shape = MaterialTheme.shapes.large, border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.55f))) {
@@ -542,6 +565,7 @@ private fun TownBuilding(name: String, description: String, symbol: String, modi
     }
 }
 
+@Composable
 private fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
     Surface(modifier, color = Panel, shape = MaterialTheme.shapes.large) {
         Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -751,9 +775,11 @@ private val skillDefinitions=listOf(
   SkillDefinition("Круг перерождения","Пассивное: соединяет поддержку и подавление.",false),
   SkillDefinition("Печать вечной души","Активное: высшее искусство мистика.",true))
 )
-private fun skillNodeUnlocked(ci:Int,node:Int,levels:List<Int>):Boolean {
+private fun skillNodeUnlocked(ci:Int,node:Int,levels:List<Int>,characterLevel:Int=20):Boolean {
  val b=ci*9
- return when(node){0->true;1,4->levels[b]==1;2->levels[b+1]==1;3->levels[b+2]==1;5->levels[b+4]==1;6->levels[b+5]==1;7->levels[b+3]==1&&levels[b+6]==1;8->levels[b+7]==1;else->false}
+ val requiredLevel = when(node) { 0 -> 1; 1,4 -> 3; 2,5 -> 6; 3,6 -> 9; 7 -> 13; 8 -> 18; else -> 1 }
+ val branchReady = when(node){0->true;1,4->levels[b]==1;2->levels[b+1]==1;3->levels[b+2]==1;5->levels[b+4]==1;6->levels[b+5]==1;7->levels[b+3]==1&&levels[b+6]==1;8->levels[b+7]==1;else->false}
+ return branchReady && characterLevel >= requiredLevel
 }
 private fun weaponSkillDescription(ci:Int,node:Int,w:Int):String {
  val weapon=weaponNames[w]
@@ -766,11 +792,13 @@ private fun weaponSkillDescription(ci:Int,node:Int,w:Int):String {
  return weapon+" меняет навык: "+effects[w]+"."
 }
 @Composable
-private fun SkillTreeSection(title:String,classIndex:Int,nodes:List<Int>,levels:List<Int>,points:Int,weapon:Int,activeNode:Int,onLearn:(Int)->Unit,onSetActive:(Int)->Unit){
+private fun SkillTreeSection(title:String,classIndex:Int,nodes:List<Int>,levels:List<Int>,points:Int,weapon:Int,activeNode:Int,characterLevel:Int,onLearn:(Int)->Unit,onSetActive:(Int)->Unit){
  if(title.isNotBlank()) Text(title,color=Gold,fontWeight=FontWeight.Bold)
  nodes.forEach { node ->
   val ix=classIndex*9+node
   val learned=levels[ix]==1
+  val requiredLevel = when(node) { 0 -> 1; 1,4 -> 3; 2,5 -> 6; 3,6 -> 9; 7 -> 13; 8 -> 18; else -> 1 }
+  val unlocked = skillNodeUnlocked(classIndex,node,levels,characterLevel)
   val def=skillDefinitions[classIndex][node]
   val desc=if(node==1||node==4) weaponSkillDescription(classIndex,node,weapon) else def.description
   Surface(color=if(learned) Color(0xFF29463F) else Color(0xFF24333B),shape=MaterialTheme.shapes.large){
@@ -778,7 +806,8 @@ private fun SkillTreeSection(title:String,classIndex:Int,nodes:List<Int>,levels:
     Text((node+1).toString()+". "+def.name,color=Gold,fontWeight=FontWeight.Bold,fontSize=12.sp)
     Text(if(def.active)"АКТИВНЫЙ НАВЫК" else "ПАССИВНЫЙ НАВЫК",color=Jade,fontSize=10.sp)
     Text(desc,color=Color.LightGray,fontSize=11.sp)
-    if(!learned) Button(onClick={onLearn(node)},enabled=skillNodeUnlocked(classIndex,node,levels)&&points>0,modifier=Modifier.fillMaxWidth()){Text(if(!skillNodeUnlocked(classIndex,node,levels))"Сначала изучи предыдущий узел" else "Изучить · 1 очко")}
+    if(!learned) Text("Требуемый уровень персонажа: $requiredLevel" + if(!unlocked && characterLevel < requiredLevel) " · сейчас $characterLevel" else "",color=Color(0xFFFFC978),fontSize=10.sp)
+    if(!learned) Button(onClick={onLearn(node)},enabled=unlocked&&points>0,modifier=Modifier.fillMaxWidth()){Text(if(characterLevel < requiredLevel) "Откроется на уровне $requiredLevel" else if(!unlocked) "Сначала изучи связанные навыки" else "Изучить · 1 очко")}
     else if(def.active) OutlinedButton(onClick={onSetActive(node)},modifier=Modifier.fillMaxWidth()){Text(if(activeNode==node)"Назначен активным" else "Назначить активным")}
     else Text("Изучено",color=Jade,fontSize=10.sp)
    }
@@ -791,7 +820,8 @@ private val sectNames = listOf("Секта Кровавого Меча", "Сек
 private val sectAlliance = listOf(1, 1, 1, 1, 0, 0, 0, 0)
 private val sectLore = listOf("Кровавые мечники усиливают атаки ценой риска.", "Запретные огненные искусства и взрывной урон.", "Яды, проклятия и постепенное истощение противника.", "Скрытность, критические удары и внезапные атаки.", "Стремительные выпады и контроль дистанции.", "Защита, внутренняя энергия и прочность тела.", "Духовные печати, очищение и поддержка.", "Молнии, скорость и подавление противника.")
 
-private fun techniqueUpgradeCost(level: Int): Int = level * 100
+private val skillMaterialNames = listOf("Осколок духа", "Нефритовая эссенция", "Сердце зверя", "Кристалл души", "Печать бессмертия", "Ядро хаоса")
+private fun techniqueUpgradeCost(level: Int): Int = if (level >= 20) 0 else level * 100
 
 private fun techniqueName(index: Int): String = when (index) {
     0 -> "Меч рассекающей Ци"

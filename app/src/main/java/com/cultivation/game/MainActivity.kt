@@ -1112,36 +1112,42 @@ private fun BattleScene(autoBattle: Boolean, actionText: String) {
     val pulse by transition.animateFloat(.25f,.95f,infiniteRepeatable(tween(850),RepeatMode.Reverse),label="core-pulse")
     val sweep by transition.animateFloat(-.12f,.12f,infiniteRepeatable(tween(if(autoBattle)520 else 1500),RepeatMode.Reverse),label="energy-sweep")
     val aura by transition.animateFloat(.7f,1.18f,infiniteRepeatable(tween(1100),RepeatMode.Reverse),label="aura")
-    Canvas(Modifier.fillMaxWidth().height(252.dp)) {
-        val w=size.width; val h=size.height
-        drawRect(brush=Brush.verticalGradient(listOf(Color(0xFF11192B),Color(0xFF3B2943),Color(0xFF172B31))))
-        drawCircle(Color(0xFFFFDCA8).copy(alpha=.7f),w*.055f,Offset(w*.82f,h*.18f))
-        val ridge=Path().apply{moveTo(0f,h*.65f);lineTo(w*.17f,h*.34f);lineTo(w*.31f,h*.62f);lineTo(w*.55f,h*.28f);lineTo(w*.74f,h*.61f);lineTo(w*.91f,h*.37f);lineTo(w,h*.58f);lineTo(w,h);lineTo(0f,h);close()}
-        drawPath(ridge,Color(0xFF202E3B))
-        drawRect(Color(0xFF263B35),Offset(0f,h*.79f),Size(w,h*.21f))
-        drawLine(Color(0xFFB08A60),Offset(0f,h*.79f),Offset(w,h*.79f),3f)
-        drawCircle(Color(0xFF83D7C7).copy(alpha=.18f),w*.19f,Offset(w*.49f,h*.78f))
-        drawCircle(Color(0xFF9ADFD1).copy(alpha=.48f),w*.14f,Offset(w*.49f,h*.78f),style=androidx.compose.ui.graphics.drawscope.Stroke(width=2f))
-        for(i in 0..7){val angle=i*.785f;drawCircle(Color(0xFFE5BD72).copy(alpha=.72f),3f,Offset(w*.49f+kotlin.math.cos(angle)*w*.14f,h*.78f+kotlin.math.sin(angle)*w*.14f))}
-        val hx=w*.23f; val hy=h*.43f
-        drawCircle(Color(0xFFE8C4A0),w*.027f,Offset(hx,hy))
-        drawCircle(Color(0xFF20202A),w*.03f,Offset(hx,hy-w*.012f))
-        drawPath(Path().apply{moveTo(hx-w*.045f,hy+h*.04f);lineTo(hx+w*.045f,hy+h*.04f);lineTo(hx+w*.075f,h*.80f);lineTo(hx,h*.85f);lineTo(hx-w*.07f,h*.80f);close()},Color(0xFF397F7B))
-        drawPath(Path().apply{moveTo(hx-w*.04f,hy+h*.05f);lineTo(hx-w*.11f,h*.65f);lineTo(hx-w*.08f,h*.68f);lineTo(hx+w*.005f,hy+h*.14f);close()},Color(0xFFB6D4CF))
-        drawLine(Color(0xFFD8C7A6),Offset(hx+w*.03f,hy+h*.10f),Offset(hx+w*.16f,hy-h*.12f),5f)
-        drawLine(Color(0xFFB9D8E0),Offset(hx+w*.16f,hy-h*.12f),Offset(hx+w*.19f,hy-h*.20f),3f)
-        val ex=w*.78f; val ey=h*.43f
-        drawCircle(Color(0xFFB98E7D),w*.045f,Offset(ex,ey))
-        drawLine(Color(0xFF6E4A52),Offset(ex-w*.025f,ey-w*.025f),Offset(ex-w*.06f,ey-w*.09f),5f)
-        drawLine(Color(0xFF6E4A52),Offset(ex+w*.025f,ey-w*.025f),Offset(ex+w*.06f,ey-w*.09f),5f)
-        drawPath(Path().apply{moveTo(ex-w*.09f,ey+h*.06f);lineTo(ex+w*.09f,ey+h*.06f);lineTo(ex+w*.13f,h*.83f);lineTo(ex,h*.87f);lineTo(ex-w*.13f,h*.83f);close()},Color(0xFF754650))
-        drawLine(Color(0xFFB66F67),Offset(ex-w*.07f,ey+h*.12f),Offset(ex-w*.17f,h*.70f),9f)
-        val orb=Offset(w*(.38f+sweep),h*(.42f+sweep*.25f))
-        drawCircle(Color(0xFF72E5D2).copy(alpha=.13f),w*.12f*aura,orb)
-        drawCircle(Color(0xFF9BFFE9).copy(alpha=pulse),w*.035f,orb)
-        drawLine(Color(0xFF8DF2D8).copy(alpha=pulse),Offset(hx+w*.17f,hy-h*.02f),orb,4f)
-        for(i in 0..10){val x=orb.x+(i-5)*w*.018f;val y=orb.y+((i%3)-1)*h*.035f;drawCircle(Color(0xFFFFD58A).copy(alpha=pulse*.75f),2.4f,Offset(x,y))}
-        drawRect(brush=Brush.verticalGradient(0f to Color.Transparent,.75f to Color.Transparent,1f to Color(0x99101820)))
+    val camera by transition.animateFloat(1f,1.045f,infiniteRepeatable(tween(4200),RepeatMode.Reverse),label="battle-camera")
+    Box(Modifier.fillMaxWidth().height(252.dp)) {
+        Image(
+            painter = painterResource(id = R.drawable.lunar_harbor_bg),
+            contentDescription = "Арена у горного святилища",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize().graphicsLayer { scaleX=camera; scaleY=camera }
+        )
+        Canvas(Modifier.fillMaxSize()) {
+            val w=size.width; val h=size.height
+            drawRect(Color(0x66101820))
+            drawRect(Color(0xFF172B31).copy(alpha=.34f),Offset(0f,h*.79f),Size(w,h*.21f))
+            drawLine(Color(0xFFB08A60).copy(alpha=.75f),Offset(0f,h*.79f),Offset(w,h*.79f),3f)
+            drawCircle(Color(0xFF83D7C7).copy(alpha=.18f),w*.19f,Offset(w*.49f,h*.78f))
+            drawCircle(Color(0xFF9ADFD1).copy(alpha=.48f),w*.14f,Offset(w*.49f,h*.78f),style=androidx.compose.ui.graphics.drawscope.Stroke(width=2f))
+            for(i in 0..7){val angle=i*.785f;drawCircle(Color(0xFFE5BD72).copy(alpha=.72f),3f,Offset(w*.49f+kotlin.math.cos(angle)*w*.14f,h*.78f+kotlin.math.sin(angle)*w*.14f))}
+            val hx=w*.23f; val hy=h*.43f
+            drawCircle(Color(0xFFE8C4A0),w*.027f,Offset(hx,hy))
+            drawCircle(Color(0xFF20202A),w*.03f,Offset(hx,hy-w*.012f))
+            drawPath(Path().apply{moveTo(hx-w*.045f,hy+h*.04f);lineTo(hx+w*.045f,hy+h*.04f);lineTo(hx+w*.075f,h*.80f);lineTo(hx,h*.85f);lineTo(hx-w*.07f,h*.80f);close()},Color(0xFF397F7B))
+            drawPath(Path().apply{moveTo(hx-w*.04f,hy+h*.05f);lineTo(hx-w*.11f,h*.65f);lineTo(hx-w*.08f,h*.68f);lineTo(hx+w*.005f,hy+h*.14f);close()},Color(0xFFB6D4CF))
+            drawLine(Color(0xFFD8C7A6),Offset(hx+w*.03f,hy+h*.10f),Offset(hx+w*.16f,hy-h*.12f),5f)
+            drawLine(Color(0xFFB9D8E0),Offset(hx+w*.16f,hy-h*.12f),Offset(hx+w*.19f,hy-h*.20f),3f)
+            val ex=w*.78f; val ey=h*.43f
+            drawCircle(Color(0xFFB98E7D),w*.045f,Offset(ex,ey))
+            drawLine(Color(0xFF6E4A52),Offset(ex-w*.025f,ey-w*.025f),Offset(ex-w*.06f,ey-w*.09f),5f)
+            drawLine(Color(0xFF6E4A52),Offset(ex+w*.025f,ey-w*.025f),Offset(ex+w*.06f,ey-w*.09f),5f)
+            drawPath(Path().apply{moveTo(ex-w*.09f,ey+h*.06f);lineTo(ex+w*.09f,ey+h*.06f);lineTo(ex+w*.13f,h*.83f);lineTo(ex,h*.87f);lineTo(ex-w*.13f,h*.83f);close()},Color(0xFF754650))
+            drawLine(Color(0xFFB66F67),Offset(ex-w*.07f,ey+h*.12f),Offset(ex-w*.17f,h*.70f),9f)
+            val orb=Offset(w*(.38f+sweep),h*(.42f+sweep*.25f))
+            drawCircle(Color(0xFF72E5D2).copy(alpha=.13f),w*.12f*aura,orb)
+            drawCircle(Color(0xFF9BFFE9).copy(alpha=pulse),w*.035f,orb)
+            drawLine(Color(0xFF8DF2D8).copy(alpha=pulse),Offset(hx+w*.17f,hy-h*.02f),orb,4f)
+            for(i in 0..10){val x=orb.x+(i-5)*w*.018f;val y=orb.y+((i%3)-1)*h*.035f;drawCircle(Color(0xFFFFD58A).copy(alpha=pulse*.75f),2.4f,Offset(x,y))}
+            drawRect(brush=Brush.verticalGradient(0f to Color.Transparent,.75f to Color.Transparent,1f to Color(0xCC101820)))
+        }
     }
     Text(if(autoBattle)"БОЙ · ТЕХНИКИ И ЭФФЕКТЫ АКТИВНЫ" else actionText,color=if(autoBattle) Jade else Color.LightGray,fontSize=11.sp,fontWeight=FontWeight.Bold)
 }

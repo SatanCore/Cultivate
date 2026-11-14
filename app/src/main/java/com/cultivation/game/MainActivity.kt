@@ -224,14 +224,16 @@ private fun CultivateApp() {
                                 wins++
                                 skillPoints++
                                 val weaponDrop = rollWeaponDrop(stage, ownedWeaponList)
+                                val rareSkillFound = chosenClass >= 0 && rareSkill.isBlank() && Random.nextDouble() < 0.008
                                 val baseMessage = "Победа! Получено $reward камней духа и 1 очко навыков."
                                 if (weaponDrop != null) {
                                     ownedWeaponIds = (ownedWeaponList + weaponDrop.id).distinct().joinToString("|")
                                     message = "Добыча: ${weaponDrop.name} · ${weaponDrop.rarity.title}! $baseMessage"
-                                } else if (chosenClass >= 0 && rareSkill.isBlank() && Random.nextDouble() < 0.008) {
-                                    rareSkill = rareArts[chosenClass]
-                                    message = "Редкое наследие пробудилось: $rareSkill"
                                 } else message = baseMessage
+                                if (rareSkillFound) {
+                                    rareSkill = rareArts[chosenClass]
+                                    message += " Редкое наследие пробудилось: $rareSkill!"
+                                }
                             } else if (playerHp <= 0) {
                                 message = "Ты пал в бою. Восстановись за 40 камней духа, чтобы продолжить."
                             } else {

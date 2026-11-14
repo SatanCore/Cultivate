@@ -999,7 +999,6 @@ private fun CultivateApp() {
                         onSelect = { activePetId = pet.id; message = "${pet.name} теперь твой спутник." }
                     )
                 }
-                }
             }
 
             Text(message, color = Gold, fontSize = 14.sp)

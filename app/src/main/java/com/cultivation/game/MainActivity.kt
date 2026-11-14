@@ -9,10 +9,14 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -1017,95 +1021,42 @@ private fun TownScene(stage: Int, storyChapter: Int) {
     val lanternPulse by transition.animateFloat(0.42f, 1f, infiniteRepeatable(tween(1350), RepeatMode.Reverse), label = "lantern-pulse")
     val mistDrift by transition.animateFloat(0.12f, 0.34f, infiniteRepeatable(tween(7000), RepeatMode.Reverse), label = "mist-drift")
     val world = when { stage >= 19 -> 3; stage >= 13 -> 2; stage >= 7 -> 1; else -> 0 }
-    val palette = when (world) {
-        1 -> listOf(Color(0xFF101E36), Color(0xFF244C58), Color(0xFF172C36))
-        2 -> listOf(Color(0xFF211B42), Color(0xFF51406F), Color(0xFF252D48))
-        3 -> listOf(Color(0xFF160F2B), Color(0xFF3A285A), Color(0xFF171B34))
-        else -> listOf(Color(0xFF101D35), Color(0xFF31545A), Color(0xFF182D36))
+    val tint = when (world) {
+        1 -> Color(0xFF426B9B).copy(alpha = .15f)
+        2 -> Color(0xFF7952A6).copy(alpha = .20f)
+        3 -> Color(0xFF9A5BC1).copy(alpha = .24f)
+        else -> Color(0xFF173F50).copy(alpha = .08f)
     }
-    Canvas(Modifier.fillMaxWidth().height(342.dp)) {
-        val w = size.width; val h = size.height
-        fun p(x: Float, y: Float) = Offset(w * x, h * y)
-        drawRect(brush = Brush.verticalGradient(palette))
-        for (i in 0..42) {
-            val x = ((i * 73) % 997) / 997f
-            val y = ((i * 37) % 430) / 1000f
-            val alpha = 0.18f + ((i * 19) % 60) / 100f
-            drawCircle(Color(0xFFDCEBFF).copy(alpha = alpha), if (i % 7 == 0) 2.4f else 1.2f, p(x, y))
-        }
-        drawCircle(Color(0xFFFFE6B8).copy(alpha = 0.10f), w * 0.105f, p(0.82f, 0.17f))
-        drawCircle(Color(0xFFFFEAC8).copy(alpha = 0.88f), w * 0.061f, p(0.82f, 0.17f))
-        drawCircle(palette[0], w * 0.052f, p(0.846f, 0.145f))
-        val far = Path().apply {
-            moveTo(0f,h*.54f); lineTo(w*.10f,h*.31f); lineTo(w*.19f,h*.46f); lineTo(w*.34f,h*.20f)
-            lineTo(w*.48f,h*.48f); lineTo(w*.62f,h*.25f); lineTo(w*.75f,h*.47f); lineTo(w*.91f,h*.22f)
-            lineTo(w,h*.43f); lineTo(w,h*.76f); lineTo(0f,h*.76f); close()
-        }
-        drawPath(far, Color(0xFF273B50).copy(alpha=.92f))
-        val mid = Path().apply {
-            moveTo(0f,h*.63f); lineTo(w*.12f,h*.43f); lineTo(w*.23f,h*.60f); lineTo(w*.39f,h*.37f)
-            lineTo(w*.55f,h*.62f); lineTo(w*.70f,h*.40f); lineTo(w*.86f,h*.61f); lineTo(w,h*.44f)
-            lineTo(w,h); lineTo(0f,h); close()
-        }
-        drawPath(mid, Color(0xFF1D3D43))
-        drawPath(Path().apply {
-            moveTo(w*.62f,h*.43f); cubicTo(w*.60f,h*.57f,w*.69f,h*.62f,w*.66f,h*.78f)
-            lineTo(w*.72f,h*.78f); cubicTo(w*.75f,h*.61f,w*.67f,h*.55f,w*.70f,h*.42f); close()
-        }, Color(0xFF8CC8C2).copy(alpha=.45f))
-        drawPath(Path().apply {
-            moveTo(w*.68f,h*.77f); cubicTo(w*.62f,h*.82f,w*.78f,h*.87f,w*.54f,h)
-            lineTo(w*.93f,h); cubicTo(w*.81f,h*.89f,w*.88f,h*.84f,w*.72f,h*.77f); close()
-        }, Color(0xFF4D9DA0).copy(alpha=.52f))
-        drawRect(Color(0xFF243E37), Offset(0f,h*.70f), Size(w,h*.30f))
-        drawPath(Path().apply {
-            moveTo(w*.39f,h); cubicTo(w*.41f,h*.87f,w*.54f,h*.86f,w*.53f,h*.72f)
-            lineTo(w*.50f,h*.66f); lineTo(w*.61f,h*.66f); lineTo(w*.59f,h*.74f)
-            cubicTo(w*.61f,h*.87f,w*.72f,h*.91f,w*.70f,h); close()
-        }, Color(0xFF927D62).copy(alpha=.86f))
-        fun pavilion(cx: Float, cy: Float, scale: Float, wall: Color, roof: Color, glow: Float) {
-            val bw = w * .105f * scale; val bh = h * .145f * scale
-            drawRoundRect(Color(0xFF171F29).copy(alpha=.45f), Offset(cx-bw*.60f,cy+bh*.76f), Size(bw*1.2f,bh*.18f), androidx.compose.ui.geometry.CornerRadius(10f))
-            drawRect(wall, Offset(cx-bw/2,cy), Size(bw,bh))
-            drawRect(Color(0xFF4C332B), Offset(cx-bw*.105f,cy+bh*.42f), Size(bw*.21f,bh*.58f))
-            for (side in listOf(-1f,1f)) drawRoundRect(Color(0xFFFFD99A).copy(alpha=glow), Offset(cx+side*bw*.27f-bw*.07f,cy+bh*.28f), Size(bw*.14f,bh*.18f), androidx.compose.ui.geometry.CornerRadius(3f))
-            val r = Path().apply {
-                moveTo(cx-bw*.68f,cy+bh*.12f); lineTo(cx,cy-bh*.52f); lineTo(cx+bw*.68f,cy+bh*.12f)
-                lineTo(cx+bw*.52f,cy+bh*.18f); lineTo(cx,cy-bh*.28f); lineTo(cx-bw*.52f,cy+bh*.18f); close()
+    Box(Modifier.fillMaxWidth().height(342.dp)) {
+        Image(
+            painter = painterResource(id = R.drawable.lunar_harbor_bg),
+            contentDescription = "Лунная Гавань — панорама игрового мира",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize().graphicsLayer {
+                val zoom = 1.015f + lanternPulse * .012f
+                scaleX = zoom
+                scaleY = zoom
+                translationX = cloudDrift * 28f
             }
-            drawPath(r, roof)
-        }
-        pavilion(w*.17f,h*.57f,1.08f,Color(0xFF9C8067),Color(0xFF754B45),lanternPulse)
-        pavilion(w*.38f,h*.49f,1.35f,Color(0xFFC19A70),Color(0xFF9A6046),lanternPulse)
-        pavilion(w*.82f,h*.57f,1.12f,Color(0xFF887A83),Color(0xFF554765),lanternPulse)
-        pavilion(w*.96f,h*.66f,.72f,Color(0xFF8D795F),Color(0xFF655044),lanternPulse)
-        drawRoundRect(Color(0xFF493E3A), Offset(w*.70f,h*.50f), Size(w*.10f,h*.23f), androidx.compose.ui.geometry.CornerRadius(7f))
-        drawRoundRect(Color(0xFF17252B), Offset(w*.724f,h*.55f), Size(w*.052f,h*.18f), androidx.compose.ui.geometry.CornerRadius(22f))
-        drawCircle(Color(0xFF82D7C0).copy(alpha=if(storyChapter>0) lanternPulse else .22f), w*.022f, p(.75f,.59f))
-        fun pine(x: Float, y: Float, s: Float) {
-            drawRect(Color(0xFF49392F), Offset(w*x-w*.004f,h*y), Size(w*.008f,h*.13f*s))
-            for (j in 0..2) {
-                val yy=h*y-h*.045f*s*j
-                val path=Path().apply{moveTo(w*x,yy-h*.12f*s);lineTo(w*x-w*.055f*s,yy+h*.025f*s);lineTo(w*x+w*.055f*s,yy+h*.025f*s);close()}
-                drawPath(path,if(j==0) Color(0xFF183C36) else Color(0xFF205044))
+        )
+        Canvas(Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+            drawRect(tint)
+            drawOval(Color(0xFFB9E9E5).copy(alpha = mistDrift * .18f), Offset(w * (.02f + cloudDrift), h * .62f), Size(w * .76f, h * .11f))
+            drawOval(Color(0xFFB9E9E5).copy(alpha = mistDrift * .12f), Offset(w * (.28f - cloudDrift), h * .76f), Size(w * .64f, h * .08f))
+            for (i in 0..22) {
+                val x = ((i * .137f + cloudDrift + 1f) % 1f) * w
+                val y = h * (.22f + ((i * 37) % 65) / 100f) + mistDrift * h * .10f
+                val radius = if (i % 4 == 0) 3.2f else 1.8f
+                val color = if (i % 3 == 0) Color(0xFFFFC8DE) else Color(0xFFB9F7E7)
+                drawCircle(color.copy(alpha = .30f + lanternPulse * .32f), radius, Offset(x, y))
             }
+            drawRect(brush = Brush.verticalGradient(0f to Color(0x220B1422), .55f to Color.Transparent, 1f to Color(0x99101820)))
+            if (storyChapter > 0) drawCircle(Color(0xFF9CFFE6).copy(alpha = lanternPulse * .12f), w * .12f, Offset(w * .78f, h * .34f))
         }
-        pine(.035f,.72f,1.2f); pine(.11f,.79f,.8f); pine(.91f,.75f,1.15f); pine(.98f,.83f,.82f)
-        for (i in 0..5) {
-            val x=.08f+i*.16f; val y=if(i%2==0) .69f else .65f
-            drawLine(Color(0xFF5B4939),p(x,y-.10f),p(x,y),2.5f)
-            drawCircle(Color(0xFFFFD18B).copy(alpha=.12f*lanternPulse),w*.035f,p(x,y))
-            drawRoundRect(Color(0xFFFFD18B).copy(alpha=lanternPulse),Offset(w*x-w*.006f,h*y),Size(w*.012f,h*.035f),androidx.compose.ui.geometry.CornerRadius(4f))
-        }
-        val hx=w*.48f; val hy=h*.79f
-        drawCircle(Color(0xFFE9C9A7),w*.012f,Offset(hx,hy))
-        drawPath(Path().apply{moveTo(hx-w*.018f,hy+h*.012f);lineTo(hx+w*.018f,hy+h*.012f);lineTo(hx+w*.029f,hy+h*.13f);lineTo(hx,hy+h*.17f);lineTo(hx-w*.03f,hy+h*.13f);close()},Color(0xFF4C8D87))
-        drawLine(Color(0xFFD9C7A7),Offset(hx+w*.018f,hy+h*.04f),Offset(hx+w*.065f,hy-h*.04f),3.2f)
-        drawLine(Color(0xFFC5D9DE),Offset(hx+w*.065f,hy-h*.04f),Offset(hx+w*.073f,hy-h*.075f),2f)
-        drawRect(Color(0xFFB5D5CE).copy(alpha=mistDrift*.16f),Offset(w*cloudDrift,h*.60f),Size(w*.72f,h*.09f))
-        drawRect(Color(0xFFB5D5CE).copy(alpha=mistDrift*.11f),Offset(w*(.25f-cloudDrift),h*.73f),Size(w*.68f,h*.07f))
-        drawRect(brush=Brush.verticalGradient(0f to Color.Transparent,.72f to Color.Transparent,1f to Color(0xCC101820)))
     }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween, verticalAlignment=Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Text("ЛУННАЯ ГАВАНЬ  ·  \${worldName(stage).uppercase()}", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
         Text("СТУПЕНЬ $stage", color = Jade, fontSize = 10.sp, fontWeight = FontWeight.Bold)
     }

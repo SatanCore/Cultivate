@@ -412,6 +412,11 @@ private fun CultivateApp() {
                         Button(onClick = { selectedMenu = 4; selectedTownBuilding = "" }, modifier = Modifier.fillMaxWidth()) { Text("Открыть склад оружия") }
                         OutlinedButton(onClick = { selectedTownBuilding = "" }) { Text("Назад на площадь") }
                     }
+                    "event" -> GameCard("Юнь · посыльный ярмарки", "События и вести из соседних долин") {
+                        Text("«На площади сегодня ярмарка духовных огней. Торговцы привезли редкие находки, а вечером у восточных ворот появится странствующий рассказчик».", color = Color.LightGray)
+                        Text("Текущая история: глава ${storyChapter + 1} из 4", color = Gold)
+                        OutlinedButton(onClick = { selectedTownBuilding = ""; message = "Юнь обещал сообщить, когда начнётся новое событие." }) { Text("Вернуться к жителям") }
+                    }
                     "quests" -> GameCard("Доска поручений", "Старейшина Ли ждёт помощи") {
                         Text("Старейшина Ли: «Страж святилища снова тревожит долину. Одолей его хотя бы один раз и принеси весть о победе».", color = Color.LightGray)
                         Text("Поручение: победить стража · прогресс ${wins.coerceAtMost(1)}/1", color = Jade)
@@ -427,8 +432,12 @@ private fun CultivateApp() {
                 GameCard("Жители Лунной Гавани", "Люди, у которых начинается твоя история") {
                     Text("Старейшина Ли · наставник долины", color = Gold, fontWeight = FontWeight.Bold)
                     Text(if (storyChapter == 0) "«Докажи, что способен защитить этот город. Тогда я расскажу, почему древние врата вновь подают знаки»." else "«Ты помог нашей долине. За северными воротами пробуждается древний путь — это только начало твоего странствия».", color = Color.LightGray)
-                    OutlinedButton(onClick = { message = if (storyChapter == 0) "Старейшина Ли: начни с поручения на доске заданий." else "Старейшина Ли: северные врата откроются в следующей главе."; selectedTownBuilding = "quests" }, modifier = Modifier.fillMaxWidth()) { Text("Поговорить со старейшиной") }
-                    Text("Мэй · торговка · Чэнь · кузнец · Юнь · посыльный событий", color = Jade, fontSize = 12.sp)
+                    OutlinedButton(onClick = { message = if (storyChapter == 0) "Старейшина Ли: начни с поручения на доске заданий." else "Старейшина Ли: северные врата откроются в следующей главе."; selectedTownBuilding = "quests" }, modifier = Modifier.fillMaxWidth()) { Text("Старейшина Ли · сюжет и задания") }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedButton(onClick = { selectedTownBuilding = "shop"; message = "Мэй: «Загляни в мою лавку, путник. У меня есть полезные осколки Ци»." }, modifier = Modifier.weight(1f)) { Text("Мэй · торговка") }
+                        OutlinedButton(onClick = { selectedTownBuilding = "forge"; message = "Чэнь: «Покажи оружие и доспехи — подскажу, что лучше надеть»." }, modifier = Modifier.weight(1f)) { Text("Чэнь · кузнец") }
+                    }
+                    OutlinedButton(onClick = { selectedTownBuilding = "event"; message = "Юнь: «У меня свежие вести о событиях долины!»." }, modifier = Modifier.fillMaxWidth()) { Text("Юнь · посыльный событий") }
                 }
                 GameCard("Событие долины", "Ярмарка духовных огней") {
                     Text("Сегодня на площади проходит небольшая ярмарка. Забери разовый подарок для путника.", color = Color.LightGray)

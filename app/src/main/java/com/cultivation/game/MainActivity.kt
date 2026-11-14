@@ -440,9 +440,9 @@ private fun CultivateApp() {
                     Text("${worldName(stage)} · ${stageName(stage)}", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    HomeResource("☯", "Ци", qi.toString())
-                    HomeResource("◈", "Камни", stones.toString())
-                    HomeResource("⚔", "Победы", wins.toString())
+                    HomeResource("qi", "Ци", qi.toString())
+                    HomeResource("chest", "Камни", stones.toString())
+                    HomeResource("arena", "Победы", wins.toString())
                 }
             }
 
@@ -450,11 +450,11 @@ private fun CultivateApp() {
                 HomeNavItem("Город", "⌂", 0) { selectedMenu = 0; selectedTownBuilding = "" }
                 HomeNavItem("Путь", "☯", 1) { selectedMenu = 1; selectedTownBuilding = "" }
                 HomeNavItem("Арена", "⚔", 2) { selectedMenu = 2; selectedTownBuilding = "" }
-                HomeNavItem("Персонаж", "♙", 3) { selectedMenu = 3; selectedTownBuilding = "" }
+                HomeNavItem("Персонаж", "character", 3) { selectedMenu = 3; selectedTownBuilding = "" }
                 HomeNavItem("Склад", "♢", 4) { selectedMenu = 4; selectedTownBuilding = "" }
-                HomeNavItem("Навыки", "✧", 5) { selectedMenu = 5; selectedTownBuilding = "" }
+                HomeNavItem("Навыки", "skills", 5) { selectedMenu = 5; selectedTownBuilding = "" }
                 HomeNavItem(if (stage < 7) "Кланы" else "Секты", "⚜", 6) { selectedMenu = 6; selectedTownBuilding = "" }
-                HomeNavItem("Питомцы", "狐", 7) { selectedMenu = 7; selectedTownBuilding = "" }
+                HomeNavItem("Питомцы", "pets", 7) { selectedMenu = 7; selectedTownBuilding = "" }
                 HomeNavItem("Обитель", "🏯", 8) { selectedMenu = 8; selectedTownBuilding = "" }
             }
 
@@ -1052,9 +1052,9 @@ private fun CinematicHomeScreen(
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
-                HomeResource("☯", "Ци", qi.toString())
-                HomeResource("◈", "Камни", stones.toString())
-                HomeResource("⚔", "Победы", wins.toString())
+                HomeResource("qi", "Ци", qi.toString())
+                HomeResource("chest", "Камни", stones.toString())
+                HomeResource("arena", "Победы", wins.toString())
             }
         }
 
@@ -1079,15 +1079,15 @@ private fun CinematicHomeScreen(
             }
         }
 
-        HomeHotspot("Клан", "Союз и развитие", "⚜", Modifier.align(Alignment.Center).offset(x = -maxWidth * .22f, y = -maxHeight * .08f)) { onNavigate(6) }
-        HomeHotspot("Обитель", "Культивация · ремёсла", "🏯", Modifier.align(Alignment.Center).offset(x = maxWidth * .01f, y = -maxHeight * .25f)) { onNavigate(8) }
-        HomeHotspot("Башня испытаний", "Этажи и награды", "♜", Modifier.align(Alignment.Center).offset(x = maxWidth * .31f, y = -maxHeight * .19f)) { onNavigate(2) }
-        HomeHotspot("Алхимия", "Пилюли и эликсиры", "⚗", Modifier.align(Alignment.Center).offset(x = -maxWidth * .18f, y = maxHeight * .19f)) { onNavigate(8) }
-        HomeHotspot("Кузница", "Ковка и усиление", "⚒", Modifier.align(Alignment.Center).offset(x = maxWidth * .01f, y = maxHeight * .16f)) { onNavigate(4) }
-        HomeHotspot("Арена", "Поединки и добыча", "⚔", Modifier.align(Alignment.Center).offset(x = maxWidth * .24f, y = maxHeight * .04f)) { onNavigate(2) }
-        HomeHotspot("Аукцион", "Торговля и редкости", "⚖", Modifier.align(Alignment.Center).offset(x = maxWidth * .37f, y = maxHeight * .17f)) { onBuilding("auction") }
-        HomeHotspot("Доска заданий", "Поручения долины", "📜", Modifier.align(Alignment.Center).offset(x = maxWidth * .13f, y = maxHeight * .20f)) { onBuilding("quests") }
-        HomeHotspot("Лавка", "Предметы и ресурсы", "✧", Modifier.align(Alignment.Center).offset(x = maxWidth * .38f, y = maxHeight * .21f)) { onBuilding("shop") }
+        HomeHotspot("Клан", "Союз и развитие", "clan", Modifier.align(Alignment.Center).offset(x = -maxWidth * .22f, y = -maxHeight * .08f)) { onNavigate(6) }
+        HomeHotspot("Обитель", "Культивация · ремёсла", "abode", Modifier.align(Alignment.Center).offset(x = maxWidth * .01f, y = -maxHeight * .25f)) { onNavigate(8) }
+        HomeHotspot("Башня испытаний", "Этажи и награды", "tower", Modifier.align(Alignment.Center).offset(x = maxWidth * .31f, y = -maxHeight * .19f)) { onNavigate(2) }
+        HomeHotspot("Алхимия", "Пилюли и эликсиры", "alchemy", Modifier.align(Alignment.Center).offset(x = -maxWidth * .18f, y = maxHeight * .19f)) { onNavigate(8) }
+        HomeHotspot("Кузница", "Ковка и усиление", "forge", Modifier.align(Alignment.Center).offset(x = maxWidth * .01f, y = maxHeight * .16f)) { onNavigate(4) }
+        HomeHotspot("Арена", "Поединки и добыча", "arena", Modifier.align(Alignment.Center).offset(x = maxWidth * .24f, y = maxHeight * .04f)) { onNavigate(2) }
+        HomeHotspot("Аукцион", "Торговля и редкости", "auction", Modifier.align(Alignment.Center).offset(x = maxWidth * .37f, y = maxHeight * .17f)) { onBuilding("auction") }
+        HomeHotspot("Доска заданий", "Поручения долины", "quests", Modifier.align(Alignment.Center).offset(x = maxWidth * .13f, y = maxHeight * .20f)) { onBuilding("quests") }
+        HomeHotspot("Лавка", "Предметы и ресурсы", "shop", Modifier.align(Alignment.Center).offset(x = maxWidth * .38f, y = maxHeight * .21f)) { onBuilding("shop") }
 
         Row(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth()
@@ -1095,13 +1095,13 @@ private fun CinematicHomeScreen(
                 .padding(horizontal = 6.dp, vertical = 7.dp),
             horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically
         ) {
-            HomeNavItem("Культивация", "☯", 1, onNavigate)
-            HomeNavItem("Персонаж", "♙", 3, onNavigate)
-            HomeNavItem("Снаряжение", "♢", 4, onNavigate)
-            HomeNavItem("Навыки", "✧", 5, onNavigate)
-            HomeNavItem("Питомцы", "狐", 7, onNavigate)
-            HomeNavItem("Инвентарь", "🎒", 4, onNavigate)
-            HomeNavItem("Миры", "◎", 8, onNavigate)
+            HomeNavItem("Культивация", "cultivation", 1, onNavigate)
+            HomeNavItem("Персонаж", "character", 3, onNavigate)
+            HomeNavItem("Снаряжение", "equipment", 4, onNavigate)
+            HomeNavItem("Навыки", "skills", 5, onNavigate)
+            HomeNavItem("Питомцы", "pets", 7, onNavigate)
+            HomeNavItem("Инвентарь", "inventory", 4, onNavigate)
+            HomeNavItem("Миры", "worlds", 8, onNavigate)
         }
     }
 }
@@ -1109,9 +1109,9 @@ private fun CinematicHomeScreen(
 @Composable
 private fun HomeResource(symbol: String, label: String, value: String) {
     Surface(color = Color(0xD9152136), shape = MaterialTheme.shapes.large) {
-        Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(symbol, color = Gold, fontSize = 15.sp)
-            Spacer(Modifier.width(4.dp))
+        Row(Modifier.padding(horizontal = 7.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+            RpgIcon(symbol, Modifier.size(25.dp))
+            Spacer(Modifier.width(5.dp))
             Column {
                 Text(value, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Text(label, color = Color(0xFFBFC9D8), fontSize = 8.sp)
@@ -1128,7 +1128,7 @@ private fun HomeHotspot(title: String, subtitle: String, symbol: String, modifie
         shape = MaterialTheme.shapes.large, tonalElevation = 9.dp, shadowElevation = 7.dp
     ) {
         Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(symbol, color = Gold, fontSize = 19.sp)
+            RpgIcon(symbol, Modifier.size(34.dp))
             Spacer(Modifier.width(6.dp))
             Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(title, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -1141,15 +1141,112 @@ private fun HomeHotspot(title: String, subtitle: String, symbol: String, modifie
 @Composable
 private fun HomeNavItem(title: String, symbol: String, target: Int, onNavigate: (Int) -> Unit) {
     Column(
-        Modifier.clickable { onNavigate(target) }.padding(horizontal = 4.dp, vertical = 3.dp),
+        Modifier.clickable { onNavigate(target) }.padding(horizontal = 3.dp, vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        Surface(color = Color(0xDD182642), shape = MaterialTheme.shapes.extraLarge) {
-            Box(Modifier.size(35.dp), contentAlignment = Alignment.Center) {
-                Text(symbol, color = Gold, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        RpgIcon(symbol, Modifier.size(39.dp))
+        Text(title, color = Color(0xFFF1E6D0), fontSize = 9.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    }
+}
+
+@Composable
+private fun RpgIcon(kind: String, modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+        val w = size.width
+        val h = size.height
+        val c = Offset(w * .5f, h * .5f)
+        val unit = minOf(w, h)
+        val goldBright = Color(0xFFFFE5A5)
+        val goldDark = Color(0xFFB7833D)
+        val blue = Color(0xFF78C9E9)
+        val purple = Color(0xFFB58BFF)
+        drawCircle(Brush.radialGradient(listOf(Color(0xFF344B70), Color(0xFF111A30))), unit * .47f, c)
+        drawCircle(goldDark, unit * .46f, c, style = androidx.compose.ui.graphics.drawscope.Stroke(unit * .045f))
+        drawCircle(goldBright.copy(alpha = .7f), unit * .40f, c, style = androidx.compose.ui.graphics.drawscope.Stroke(unit * .012f))
+        val p = Path()
+        val sw = unit * .055f
+        val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = sw, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
+        fun line(x1: Float, y1: Float, x2: Float, y2: Float, color: Color = goldBright, width: Float = sw) {
+            drawLine(color, Offset(w*x1,h*y1), Offset(w*x2,h*y2), width)
+        }
+        fun circle(x: Float, y: Float, r: Float, color: Color = goldBright, fill: Boolean = false) {
+            drawCircle(color, unit*r, Offset(w*x,h*y), style = if(fill) androidx.compose.ui.graphics.drawscope.Fill else stroke)
+        }
+        when (kind) {
+            "cultivation", "qi" -> {
+                p.moveTo(w*.5f,h*.78f); p.cubicTo(w*.18f,h*.62f,w*.28f,h*.28f,w*.5f,h*.20f)
+                p.cubicTo(w*.72f,h*.28f,w*.82f,h*.62f,w*.5f,h*.78f); p.close()
+                drawPath(p, blue.copy(alpha=.9f), style=stroke)
+                line(.5f,.69f,.5f,.32f, goldBright, sw*.75f)
+                line(.5f,.53f,.36f,.42f, goldBright, sw*.65f); line(.5f,.53f,.64f,.42f,goldBright,sw*.65f)
+                circle(.5f,.28f,.035f,blue,true)
+            }
+            "character" -> {
+                circle(.5f,.35f,.13f); p.moveTo(w*.25f,h*.78f); p.cubicTo(w*.27f,h*.55f,w*.73f,h*.55f,w*.75f,h*.78f); drawPath(p,goldBright,style=stroke)
+                line(.32f,.64f,.68f,.64f,blue,sw*.7f)
+            }
+            "equipment", "weapon" -> {
+                line(.28f,.72f,.72f,.25f); line(.23f,.66f,.34f,.77f); line(.62f,.20f,.78f,.36f)
+                p.moveTo(w*.61f,h*.21f); p.lineTo(w*.76f,h*.16f); p.lineTo(w*.80f,h*.31f); drawPath(p,blue,style=stroke)
+            }
+            "skills", "fire" -> {
+                p.moveTo(w*.5f,h*.16f); p.cubicTo(w*.68f,h*.37f,w*.79f,h*.52f,w*.65f,h*.70f); p.cubicTo(w*.55f,h*.85f,w*.27f,h*.76f,w*.28f,h*.55f); p.cubicTo(w*.28f,h*.43f,w*.43f,h*.31f,w*.5f,h*.16f); drawPath(p,Color(0xFFFFB15D),style=stroke)
+                p.moveTo(w*.5f,h*.43f); p.cubicTo(w*.65f,h*.58f,w*.56f,h*.72f,w*.46f,h*.69f); drawPath(p,goldBright,style=stroke)
+            }
+            "pets", "fox", "deer" -> {
+                p.moveTo(w*.29f,h*.37f); p.lineTo(w*.25f,h*.17f); p.lineTo(w*.43f,h*.29f); p.quadraticTo(w*.5f,h*.24f,w*.57f,h*.29f); p.lineTo(w*.75f,h*.17f); p.lineTo(w*.71f,h*.39f); p.quadraticTo(w*.82f,h*.65f,w*.5f,h*.76f); p.quadraticTo(w*.18f,h*.65f,w*.29f,h*.37f); drawPath(p,purple,style=stroke)
+                circle(.41f,.49f,.025f,goldBright,true); circle(.59f,.49f,.025f,goldBright,true)
+            }
+            "inventory", "chest" -> {
+                p.moveTo(w*.24f,h*.39f); p.lineTo(w*.76f,h*.39f); p.lineTo(w*.73f,h*.74f); p.lineTo(w*.27f,h*.74f); p.close(); drawPath(p,goldBright,style=stroke)
+                p.moveTo(w*.24f,h*.39f); p.quadraticTo(w*.5f,h*.17f,w*.76f,h*.39f); drawPath(p,blue,style=stroke)
+                line(.5f,.4f,.5f,.72f); circle(.5f,.54f,.04f,blue)
+            }
+            "worlds", "portal" -> {
+                drawCircle(purple,unit*.27f,c,style=stroke); drawCircle(blue,unit*.18f,c,style=stroke)
+                p.moveTo(w*.5f,h*.26f); p.cubicTo(w*.25f,h*.4f,w*.72f,h*.55f,w*.5f,h*.74f); drawPath(p,goldBright,style=stroke)
+            }
+            "clan", "banner" -> {
+                line(.34f,.18f,.34f,.82f); p.moveTo(w*.36f,h*.22f); p.lineTo(w*.76f,h*.31f); p.lineTo(w*.36f,h*.52f); p.close(); drawPath(p,goldBright,style=stroke)
+                circle(.34f,.18f,.04f,blue,true)
+            }
+            "abode", "temple" -> {
+                p.moveTo(w*.19f,h*.42f); p.lineTo(w*.5f,h*.20f); p.lineTo(w*.81f,h*.42f); p.close(); drawPath(p,goldBright,style=stroke)
+                line(.27f,.45f,.73f,.45f); line(.32f,.47f,.32f,.72f); line(.68f,.47f,.68f,.72f); line(.25f,.75f,.75f,.75f,blue)
+            }
+            "alchemy", "cauldron" -> {
+                p.moveTo(w*.25f,h*.42f); p.quadraticTo(w*.5f,h*.33f,w*.75f,h*.42f); p.lineTo(w*.68f,h*.69f); p.quadraticTo(w*.5f,h*.83f,w*.32f,h*.69f); p.close(); drawPath(p,goldBright,style=stroke)
+                p.moveTo(w*.42f,h*.32f); p.quadraticTo(w*.31f,h*.17f,w*.45f,h*.13f); p.moveTo(w*.57f,h*.32f); p.quadraticTo(w*.69f,h*.17f,w*.56f,h*.11f); drawPath(p,purple,style=stroke)
+            }
+            "forge", "anvil" -> {
+                p.moveTo(w*.24f,h*.42f); p.lineTo(w*.76f,h*.42f); p.lineTo(w*.64f,h*.56f); p.lineTo(w*.57f,h*.76f); p.lineTo(w*.4f,h*.76f); p.lineTo(w*.36f,h*.56f); p.close(); drawPath(p,goldBright,style=stroke)
+                line(.5f,.18f,.5f,.35f,Color(0xFFFFA45D)); line(.39f,.27f,.61f,.27f,Color(0xFFFFA45D))
+            }
+            "arena", "sword" -> {
+                line(.27f,.72f,.72f,.25f); line(.23f,.61f,.39f,.77f); line(.61f,.20f,.79f,.38f,blue)
+                line(.26f,.27f,.72f,.73f,purple); line(.20f,.33f,.34f,.19f,purple); line(.66f,.80f,.80f,.66f,purple)
+            }
+            "auction", "scales" -> {
+                line(.5f,.22f,.5f,.75f); line(.3f,.35f,.7f,.35f); line(.34f,.35f,.24f,.58f); line(.34f,.35f,.44f,.58f); line(.66f,.35f,.56f,.58f); line(.66f,.35f,.76f,.58f); line(.33f,.75f,.67f,.75f)
+                p.moveTo(w*.17f,h*.59f); p.quadraticTo(w*.34f,h*.71f,w*.51f,h*.59f); p.moveTo(w*.49f,h*.59f); p.quadraticTo(w*.66f,h*.71f,w*.83f,h*.59f); drawPath(p,goldBright,style=stroke)
+            }
+            "quests", "scroll" -> {
+                p.moveTo(w*.31f,h*.2f); p.lineTo(w*.68f,h*.2f); p.lineTo(w*.68f,h*.75f); p.lineTo(w*.31f,h*.75f); p.close(); drawPath(p,goldBright,style=stroke)
+                line(.39f,.37f,.61f,.37f,blue); line(.39f,.49f,.61f,.49f); line(.39f,.61f,.57f,.61f)
+            }
+            "shop" -> {
+                p.moveTo(w*.25f,h*.4f); p.lineTo(w*.75f,h*.4f); p.lineTo(w*.69f,h*.75f); p.lineTo(w*.31f,h*.75f); p.close(); drawPath(p,goldBright,style=stroke)
+                p.moveTo(w*.35f,h*.4f); p.quadraticTo(w*.35f,h*.18f,w*.5f,h*.18f); p.quadraticTo(w*.65f,h*.18f,w*.65f,h*.4f); drawPath(p,blue,style=stroke)
+            }
+            "tower" -> {
+                line(.5f,.18f,.5f,.79f); line(.31f,.34f,.69f,.34f); line(.36f,.52f,.64f,.52f); line(.27f,.77f,.73f,.77f)
+                p.moveTo(w*.31f,h*.34f); p.lineTo(w*.5f,h*.2f); p.lineTo(w*.69f,h*.34f); drawPath(p,goldBright,style=stroke)
+            }
+            else -> {
+                circle(.5f,.5f,.2f,blue); line(.5f,.25f,.5f,.75f); line(.25f,.5f,.75f,.5f)
             }
         }
-        Text(title, color = Color(0xFFF1E6D0), fontSize = 9.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        drawCircle(goldBright.copy(alpha=.8f), unit*.025f, Offset(w*.78f,h*.20f))
     }
 }
 

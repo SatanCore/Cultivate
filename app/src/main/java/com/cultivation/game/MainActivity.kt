@@ -2243,7 +2243,7 @@ private fun WorldLandscapeArt(index: Int, modifier: Modifier = Modifier) {
                 // Spiritual lands: luminous falls, crystal growth and ancient cedar forms.
                 for (i in 0..3) {
                     val x = .18f + i * .22f
-                    drawRoundRect(Color(0xFF8BE6E1).copy(alpha = .55f), Offset(w * x, h * (.49f + (i % 2) * .05f)), Size(w * .025f, h * .43f), h * .012f)
+                    drawRoundRect(Color(0xFF8BE6E1).copy(alpha = .55f), Offset(w * x, h * (.49f + (i % 2) * .05f)), Size(w * .025f, h * .43f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(h * .012f))
                     drawLine(Color.White.copy(alpha = .55f), point(x + .012f, .52f), point(x + .012f, .85f), h * .003f)
                 }
                 for (i in 0..6) {
@@ -2265,7 +2265,7 @@ private fun WorldLandscapeArt(index: Int, modifier: Modifier = Modifier) {
                 }
                 for (i in 0..2) {
                     val x = .55f + i * .12f
-                    drawRoundRect(Color(0xFF211D3E), Offset(w * x, h * .43f), Size(w * .055f, h * .24f), h * .012f)
+                    drawRoundRect(Color(0xFF211D3E), Offset(w * x, h * .43f), Size(w * .055f, h * .24f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(h * .012f))
                     polygon(listOf((x - .025f) to .44f, (x + .027f) to .33f, (x + .08f) to .44f, (x + .027f) to .40f), Color(0xFFE0C5F6))
                 }
                 drawOval(Color(0xFFB9D5FF).copy(alpha = .12f), Offset(w * .10f, h * .58f), Size(w * .82f, h * .18f))

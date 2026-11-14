@@ -822,7 +822,12 @@ private fun CultivateApp() {
                         name = n,
                         description = classDescriptions[i],
                         profile = profile,
-                        sigil = listOf("blademaster", "ironbody", "elementalist", "spiritmystic")[i],
+                        sigilRes = when (i) {
+                            0 -> R.drawable.class_sigil_blademaster
+                            1 -> R.drawable.class_sigil_ironbody
+                            2 -> R.drawable.class_sigil_elementalist
+                            else -> R.drawable.class_sigil_spiritmystic
+                        },
                         selected = chosenClass == i,
                         onSelect = {
                             chosenClass = i
@@ -996,7 +1001,12 @@ private fun CultivateApp() {
                 PetCompanionArt()
                 Text("Эссенция: $petEssence · ядра зверя: $petCores · поиск редкого зверя: $petPity / 20 побед", color = Jade, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    RpgIcon(activePet.portraitKey, Modifier.size(34.dp))
+                    Image(
+                        painter = painterResource(id = petPortraitResource(activePet.id)),
+                        contentDescription = activePet.name,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(34.dp)
+                    )
                     Text("Активен: ${activePet.name} · уровень $petLevel / 30 · опыт связи $petXp · пробуждение $petAscension / 5", color = Gold)
                 }
                 Text("Бонусы: атака +$petAttack · защита +$petDefense · здоровье +${activePet.hp + petLevel * 3 + if (petSynergy) 20 else 0} · техника +$petSkill · крит +${activePet.critical + if (petSynergy) 2 else 0}% · лечение +${activePet.healing + if (petSynergy) 2 else 0}", color = Jade, fontSize = 11.sp)
@@ -1441,7 +1451,12 @@ private fun PetCompanionCard(
             Modifier.fillMaxWidth().padding(9.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            RpgIcon(pet.portraitKey, Modifier.size(76.dp))
+            Image(
+                painter = painterResource(id = petPortraitResource(pet.id)),
+                contentDescription = pet.name,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(76.dp)
+            )
             Spacer(Modifier.width(9.dp))
             Column(
                 Modifier.weight(1f),
@@ -1494,7 +1509,7 @@ private fun ClassPortraitCard(
     name: String,
     description: String,
     profile: ClassCombatProfile,
-    sigil: String,
+    sigilRes: Int,
     selected: Boolean,
     onSelect: () -> Unit
 ) {
@@ -1508,7 +1523,12 @@ private fun ClassPortraitCard(
             Modifier.fillMaxWidth().padding(9.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            RpgIcon(sigil, Modifier.size(78.dp))
+            Image(
+                painter = painterResource(id = sigilRes),
+                contentDescription = name,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(78.dp)
+            )
             Spacer(Modifier.width(9.dp))
             Column(
                 Modifier.weight(1f),
@@ -2580,6 +2600,18 @@ private val petCatalog = listOf(
     PetDefinition("iron_ape", "Железная обезьяна", "pet_ape", "боец передней линии", "Сочетает мощные удары с крепкой защитой.", "баланс атаки и защиты", "нет выраженного уклона в магию", "Закалённый воин", "стражи древней заставы", "добыча со стражей ранга 8+", 8, 8, 6, 45, 1, 1, 0),
     PetDefinition("river_koi", "Карп тихой реки", "pet_koi", "духовный помощник", "Усиливает духовные техники и помогает восстанавливать силы.", "техника и лечение", "низкая физическая атака", "Мистик духов / Заклинатель стихий", "редкая встреча в роднике", "шанс 3% при сборе духовной воды", 99, 1, 3, 38, 8, 0, 5)
 )
+
+private fun petPortraitResource(petId: String): Int = when (petId) {
+    "jade_fox" -> R.drawable.pet_jade_fox
+    "stone_tortoise" -> R.drawable.pet_stone_tortoise
+    "thunder_hawk" -> R.drawable.pet_thunder_hawk
+    "ember_wolf" -> R.drawable.pet_ember_wolf
+    "moon_deer" -> R.drawable.pet_moon_deer
+    "iron_ape" -> R.drawable.pet_iron_ape
+    "river_koi" -> R.drawable.pet_river_koi
+    else -> R.drawable.pet_jade_fox
+}
+
 
 private val worldEntries = listOf(
     Triple("Смертный мир", 1, "Мир простых людей, горных долин и первых искателей Дао. Здесь всё начинается с тела, дыхания и крупицы Ци."),

@@ -620,7 +620,7 @@ private fun CultivateApp() {
                             Text(if (gardenReadyAt <= nowMillis) "Урожай созрел: можно собрать травы." else "До следующего урожая примерно $gardenMinutes мин.", color = Jade)
                             Button(onClick = {
                                 val now = System.currentTimeMillis()
-                                if (now >= gardenReadyAt) { val harvest = 2 + abodeLevel; spiritHerbs += harvest; dailyGardenCollected = true; gardenReadyAt = now + 300000L; message = "Собрано духовных трав: $harvest. Следующий урожай через 5 минут." }
+                                if (now >= gardenReadyAt) { val harvest = 2 + abodeLevel; spiritHerbs += harvest; dailyGardenCollected = true; gardenReadyAt = now + 300000L; if (Random.nextInt(100) < 3 && "moon_deer" !in ownedPetIds.split("|")) { ownedPetIds += "|moon_deer"; message = "Собрано трав: $harvest. Среди листьев появился лунный оленёнок — редкий питомец!" } else message = "Собрано духовных трав: $harvest. Следующий урожай через 5 минут." }
                                 else message = "Сад ещё растёт. Вернись позже."
                             }, enabled = gardenReadyAt <= nowMillis, modifier = Modifier.fillMaxWidth()) { Text("Собрать урожай · ${2 + abodeLevel} травы") }
                             Text("Урожайность растёт вместе с уровнем обители.", color = Color.LightGray, fontSize = 11.sp)
@@ -643,7 +643,7 @@ private fun CultivateApp() {
                     Text(if (springReadyAt <= nowMillis) "Родник наполнился духовной водой." else "Родник восстановится примерно через $springMinutes мин.", color = Color.LightGray, fontSize = 12.sp)
                     Button(onClick = {
                         val now = System.currentTimeMillis()
-                        if (now >= springReadyAt) { spiritWater += 1 + abodeLevel / 3; springReadyAt = now + 300000L; message = "Набрана духовная вода из родника." }
+                        if (now >= springReadyAt) { spiritWater += 1 + abodeLevel / 3; springReadyAt = now + 300000L; if (Random.nextInt(100) < 3 && "river_koi" !in ownedPetIds.split("|")) { ownedPetIds += "|river_koi"; message = "В роднике вспыхнула золотая чешуя! Ты приручил духовного карпа." } else message = "Набрана духовная вода из родника." }
                         else message = "Родник ещё не восстановился."
                     }, enabled = springReadyAt <= nowMillis, modifier = Modifier.fillMaxWidth()) { Text("Набрать духовную воду") }
                 }
@@ -909,12 +909,12 @@ private fun CultivateApp() {
                 val factionNames = if (stage < 7) clanNames else sectNames
                 val factionLore = if (stage < 7) clanLore else sectLore
                 factionNames.forEachIndexed { index, sect ->
-                    if (chosenAlliance < 0 || factionAlliance[index] == chosenAlliance) {
+                    if (chosenAlliance < 0 || (if (stage < 7) factionAlliance[index] else sectAlliance[index]) == chosenAlliance) {
                         Column(Modifier.fillMaxWidth().padding(8.dp)) {
                             Text(sect, color = Gold, fontWeight = FontWeight.Bold)
                             Text(factionLore[index], color = Color.LightGray, fontSize = 12.sp)
                             Text("Бонус союза: атака +${clanAttackBonuses[index]} · защита +${clanDefenseBonuses[index]} · здоровье +${clanHpBonuses[index]}", color = Jade, fontSize = 11.sp)
-                            OutlinedButton(onClick = { chosenSect = index; message = if (stage < 7) "Ты вступил в клан «$sect»." else "Ты вступил в секту «$sect»." }, enabled = chosenAlliance == factionAlliance[index], modifier = Modifier.fillMaxWidth()) { Text(if (chosenSect == index) if (stage < 7) "Твой клан" else "Твоя секта" else "Вступить") }
+                            OutlinedButton(onClick = { chosenSect = index; message = if (stage < 7) "Ты вступил в клан «$sect»." else "Ты вступил в секту «$sect»." }, enabled = chosenAlliance == (if (stage < 7) factionAlliance[index] else sectAlliance[index]), modifier = Modifier.fillMaxWidth()) { Text(if (chosenSect == index) if (stage < 7) "Твой клан" else "Твоя секта" else "Вступить") }
                         }
                     }
                 Text("Репутация союза: $clanReputation · ежедневный вклад помогает заслужить доверие старейшин.", color = Gold, fontSize = 11.sp)
@@ -925,16 +925,46 @@ private fun CultivateApp() {
                 }, enabled = !dailyClanDonated && stones >= 50, modifier = Modifier.fillMaxWidth()) { Text(if (dailyClanDonated) "Вклад сегодня внесён" else "Внести ежедневный вклад · 50 камней") }
             }
 
-            if (selectedMenu == 7) GameCard("Духовный спутник", "Нефритовый лис · уровень $petLevel") {
-                Text("Спутник усиливает атаки на арене. Следующий уровень стоит ${petLevel * 60} камней духа.", color = Color.LightGray)
-                Button(
-                    onClick = {
-                        val cost = petLevel * 60
-                        if (stones >= cost) { stones -= cost; petLevel++; message = "Нефритовый лис достиг $petLevel уровня. Сила атак увеличена!" }
-                        else message = "Не хватает камней духа."
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Улучшить спутника") }
+            if (selectedMenu == 7) GameCard("Духовный зверинец", "Коллекция питомцев · активен: ${activePet.name}") {
+                Text("Каждый зверь меняет стиль боя. Опыт связи получает только активный питомец за победы. Развитие намеренно сложное: нужны опыт, эссенция зверя и ядра для ключевых рубежей.", color = Color.LightGray, fontSize = 12.sp)
+                Text("Эссенция: $petEssence · ядра зверя: $petCores · поиск редкого зверя: $petPity / 20 побед", color = Jade, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                Text("Активен: ${activePet.symbol} ${activePet.name} · уровень $petLevel / 30 · опыт связи $petXp · пробуждение $petAscension / 5", color = Gold)
+                Text("Бонусы: атака +$petAttack · защита +$petDefense · здоровье +${activePet.hp + petLevel * 3} · техника +$petSkill · крит +${activePet.critical}% · лечение +${activePet.healing}", color = Jade, fontSize = 11.sp)
+                val xpCost = 100 + petLevel * 75
+                val essenceCost = 1 + petLevel / 5
+                val coreCost = if ((petLevel + 1) % 5 == 0) 1 else 0
+                Button(onClick = {
+                    if (petLevel < 30 && petXp >= xpCost && petEssence >= essenceCost && petCores >= coreCost) {
+                        petBondXp[activePetIndex] = petXp - xpCost
+                        petEssence -= essenceCost
+                        petCores -= coreCost
+                        petLevels[activePetIndex] = petLevel + 1
+                        message = "${activePet.name} достиг ${petLevel + 1} уровня связи."
+                    } else message = "Нужно $xpCost опыта связи, $essenceCost эссенции и $coreCost ядер зверя."
+                }, enabled = petLevel < 30 && petXp >= xpCost && petEssence >= essenceCost && petCores >= coreCost, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (petLevel >= 30) "Предел уровня · требуется пробуждение" else "Укрепить связь · $xpCost XP · $essenceCost эссенции · $coreCost ядер")
+                }
+                if (petLevel >= 30 && petAscension < 5) {
+                    Button(onClick = {
+                        if (petEssence >= 20 && petCores >= 5) { petEssence -= 20; petCores -= 5; petAscensions[activePetIndex] = petAscension + 1; message = "${activePet.name} пробудил новую ступень силы!" }
+                        else message = "Пробуждение требует 20 эссенции и 5 ядер зверя."
+                    }, enabled = petEssence >= 20 && petCores >= 5, modifier = Modifier.fillMaxWidth()) { Text("Пробудить питомца · 20 эссенции + 5 ядер") }
+                }
+                petCatalog.forEachIndexed { index, pet ->
+                    val owned = pet.id in ownedPetIds.split("|")
+                    val isActive = pet.id == activePetId
+                    Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("${pet.symbol} ${pet.name} · ${pet.role}" + if (isActive) " · активен" else "", color = if (owned) Gold else Color.Gray, fontWeight = FontWeight.Bold)
+                        Text(pet.description, color = Color.LightGray, fontSize = 11.sp)
+                        Text("Сильная сторона: ${pet.strength} · слабость: ${pet.weakness}", color = Jade, fontSize = 10.sp)
+                        Text("Подходит: ${pet.bestClass} · получение: ${pet.source}", color = Color.LightGray, fontSize = 10.sp)
+                        if (owned) {
+                            Text("Уровень ${petLevels[index]} · опыт ${petBondXp[index]} · пробуждение ${petAscensions[index]}/5", color = Jade, fontSize = 10.sp)
+                            OutlinedButton(onClick = { activePetId = pet.id; message = "${pet.name} теперь твой спутник." }, enabled = !isActive, modifier = Modifier.fillMaxWidth()) { Text(if (isActive) "Выбран" else "Выбрать питомца") }
+                        } else Text("Не приручён · ${pet.dropHint}", color = Color.Gray, fontSize = 10.sp)
+                    }
+                    Divider(color = Color(0xFF3B4B4F))
+                }
             }
 
             Text(message, color = Gold, fontSize = 14.sp)
@@ -1550,6 +1580,22 @@ private val clanAttackBonuses = listOf(2, 4, 1, 1, 5, 2, 1, 2)
 private val clanDefenseBonuses = listOf(5, 2, 1, 4, 1, 5, 1, 2)
 private val clanHpBonuses = listOf(25, 10, 20, 35, 5, 30, 15, 20)
 private val factionAlliance = listOf(0, 1, 0, 0, 1, 0, 1, 0)
+
+private data class PetDefinition(
+    val id: String, val name: String, val symbol: String, val role: String,
+    val description: String, val strength: String, val weakness: String,
+    val bestClass: String, val source: String, val dropHint: String, val requiredBoss: Int,
+    val attack: Int, val defense: Int, val hp: Int, val skill: Int, val critical: Int, val healing: Int
+)
+private val petCatalog = listOf(
+    PetDefinition("jade_fox", "Нефритовый лис", "🦊", "хитрый дуэлянт", "Усиливает техники и помогает наносить стабильный урон.", "техники и гибкость", "мало здоровья", "Мистик духов / Мечник", "начальный спутник", "выдаётся в начале пути", 1, 5, 1, 20, 5, 2, 1),
+    PetDefinition("stone_tortoise", "Каменная черепаха", "🐢", "страж", "Принимает часть натиска врага и укрепляет владельца.", "защита и здоровье", "низкий урон", "Закалённый воин", "стражи горного перевала", "добыча со стражей ранга 2+", 2, 1, 9, 90, 0, 0, 0),
+    PetDefinition("thunder_hawk", "Громовой ястреб", "🦅", "скоростной атакующий", "Бьёт стремительно и чаще наносит критические удары.", "атака и крит", "слабая защита", "Заклинатель стихий / Мечник", "грозовые стражи", "добыча со стражей ранга 4+", 4, 10, 0, 12, 3, 7, 0),
+    PetDefinition("ember_wolf", "Пепельный волк", "🐺", "охотник", "Разрывает цель сериями атак, но почти не помогает в обороне.", "сильный урон", "низкая выживаемость", "Мечник", "элитные стражи", "добыча со стражей ранга 6+", 6, 13, 1, 5, 2, 4, 0),
+    PetDefinition("moon_deer", "Лунный олень", "🦌", "целитель", "Возвращает владельцу здоровье и поддерживает долгие сражения.", "лечение и здоровье", "низкий урон", "Мистик духов / Закалённый воин", "редкая находка в саду духовных трав", "шанс 3% при сборе урожая", 99, 1, 4, 65, 2, 0, 8),
+    PetDefinition("iron_ape", "Железная обезьяна", "🐒", "боец передней линии", "Сочетает мощные удары с крепкой защитой.", "баланс атаки и защиты", "нет выраженного уклона в магию", "Закалённый воин", "стражи древней заставы", "добыча со стражей ранга 8+", 8, 8, 6, 45, 1, 1, 0),
+    PetDefinition("river_koi", "Карп тихой реки", "🐟", "духовный помощник", "Усиливает духовные техники и помогает восстанавливать силы.", "техника и лечение", "низкая физическая атака", "Мистик духов / Заклинатель стихий", "редкая встреча в роднике", "шанс 3% при сборе духовной воды", 99, 1, 3, 38, 8, 0, 5)
+)
 
 private val worldEntries = listOf(
     Triple("Смертный мир", 1, "Мир простых людей, горных долин и первых искателей Дао. Здесь всё начинается с тела, дыхания и крупицы Ци."),

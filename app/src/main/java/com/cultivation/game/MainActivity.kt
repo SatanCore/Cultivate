@@ -847,11 +847,11 @@ private fun CultivateApp() {
                         name = n,
                         description = classDescriptions[i],
                         profile = profile,
-                        sigilRes = when (i) {
-                            0 -> R.drawable.class_sigil_blademaster
-                            1 -> R.drawable.class_sigil_ironbody
-                            2 -> R.drawable.class_sigil_elementalist
-                            else -> R.drawable.class_sigil_spiritmystic
+                        portraitRes = when (i) {
+                            0 -> R.drawable.class_portrait_blademaster
+                            1 -> R.drawable.class_portrait_ironbody
+                            2 -> R.drawable.class_portrait_elementalist
+                            else -> R.drawable.class_portrait_spiritmystic
                         },
                         selected = chosenClass == i,
                         onSelect = {
@@ -1534,40 +1534,75 @@ private fun ClassPortraitCard(
     name: String,
     description: String,
     profile: ClassCombatProfile,
-    sigilRes: Int,
+    portraitRes: Int,
     selected: Boolean,
     onSelect: () -> Unit
 ) {
+    val aura = rememberInfiniteTransition(label = "class-portrait-$name")
+    val glow by aura.animateFloat(
+        initialValue = .34f,
+        targetValue = .72f,
+        animationSpec = infiniteRepeatable(tween(1700), RepeatMode.Reverse),
+        label = "class-portrait-glow"
+    )
     Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onSelect),
         color = if (selected) Color(0xE52B405A) else Color(0xD916253A),
-        shape = MaterialTheme.shapes.large,
+        shape = MaterialTheme.shapes.extraLarge,
+        border = androidx.compose.foundation.BorderStroke(
+            if (selected) 2.dp else 1.dp,
+            if (selected) Gold.copy(alpha = .75f + glow * .25f) else Color(0x665B7898)
+        ),
         tonalElevation = if (selected) 10.dp else 4.dp,
         shadowElevation = if (selected) 8.dp else 3.dp
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(9.dp),
+            Modifier.fillMaxWidth().padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                painter = painterResource(id = sigilRes),
-                contentDescription = name,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.size(78.dp)
-            )
-            Spacer(Modifier.width(9.dp))
+            Box(
+                Modifier.width(108.dp).height(132.dp)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(
+                                (if (selected) Color(0xFF6CB7D1) else Color(0xFF4D638A)).copy(alpha = .42f + glow * .12f),
+                                Color(0xFF101A2D),
+                                Color.Transparent
+                            )
+                        ),
+                        MaterialTheme.shapes.large
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = portraitRes),
+                    contentDescription = "$name — иллюстрированный образ класса",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            Spacer(Modifier.width(10.dp))
             Column(
                 Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(5.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(name, color = if (selected) Color(0xFFFFE4A0) else Color.White, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        name,
+                        color = if (selected) Color(0xFFFFE4A0) else Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Black
+                    )
                     if (selected) {
                         Spacer(Modifier.width(6.dp))
                         Text("ПУТЬ ВЫБРАН", color = Jade, fontSize = 8.sp, fontWeight = FontWeight.Black)
                     }
                 }
-                Text(description, color = Color(0xFFD1DCEB), fontSize = 10.sp, maxLines = 2)
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(description, color = Color(0xFFD1DCEB), fontSize = 10.sp, maxLines = 3)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     ClassMetric("weapon", profile.attack.toString())
                     ClassMetric("shield", profile.defense.toString())
                     ClassMetric("health", profile.bonusHp.toString())
@@ -1579,16 +1614,15 @@ private fun ClassPortraitCard(
                     fontSize = 9.sp,
                     fontWeight = FontWeight.SemiBold
                 )
-            }
-            Spacer(Modifier.width(6.dp))
-            Surface(
-                modifier = Modifier.size(43.dp).clickable(onClick = onSelect),
-                shape = MaterialTheme.shapes.extraLarge,
-                color = if (selected) Color(0xFF315C51) else Color(0xFF263B58),
-                tonalElevation = 5.dp
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    RpgIcon(if (selected) "check" else "plus", Modifier.size(35.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RpgIcon(if (selected) "check" else "plus", Modifier.size(19.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        if (selected) "ТЕКУЩИЙ ПУТЬ" else "ВЫБРАТЬ ПУТЬ",
+                        color = if (selected) Jade else Color(0xFFE7C98E),
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Black
+                    )
                 }
             }
         }

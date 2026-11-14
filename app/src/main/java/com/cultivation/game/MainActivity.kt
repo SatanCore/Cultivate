@@ -66,6 +66,10 @@ private fun CultivateApp() {
         } }
     } }
     var selectedWeapon by remember { mutableIntStateOf(prefs.getInt("weapon_type",0).coerceIn(0,3)) }
+    var equippedWeaponId by remember { mutableStateOf(prefs.getString("equipped_weapon_id", "tempered_wood_blade") ?: "tempered_wood_blade") }
+    var ownedWeaponIds by remember { mutableStateOf(prefs.getString("owned_weapon_ids", "tempered_wood_blade") ?: "tempered_wood_blade") }
+    val ownedWeaponList = remember(ownedWeaponIds) { ownedWeaponIds.split("|").filter { it.isNotBlank() }.distinct() }
+    val equippedWeapon = weaponCatalog.firstOrNull { it.id == equippedWeaponId && it.id in ownedWeaponList } ?: weaponCatalog.first()
     var activeSkillNode by remember { mutableIntStateOf(prefs.getInt("active_skill_node",0).coerceIn(0,8)) }
     var activeSkillCooldown by remember { mutableIntStateOf(0) }
     var chosenSect by remember { mutableIntStateOf(prefs.getInt("chosen_sect", -1).coerceIn(-1, 7)) }
@@ -83,11 +87,11 @@ private fun CultivateApp() {
     val defensiveNodes = listOf(listOf(3,4,7), listOf(2,4,7), listOf(5,7), listOf(3,5,7))
     val defensiveSkillCount = if(chosenClass < 0) 0 else defensiveNodes[chosenClass].count { skillTreeLevels[chosenClass*9+it] == 1 }
     val passiveSkillCount = if(chosenClass < 0) 0 else (0..8).count { skillTreeLevels[chosenClass*9+it] == 1 && !skillDefinitions[chosenClass][it].active && it !in defensiveNodes[chosenClass] }
-    val classDefense = if(chosenClass < 0) 0 else listOf(5,9,2,6)[chosenClass] + defensiveSkillCount*4
+    val classDefense = (if(chosenClass < 0) 0 else listOf(5,9,2,6)[chosenClass] + defensiveSkillCount*4) + equippedWeapon.defenseBonus
     val weaponBranchBonus = if(chosenClass < 0) 0 else
         (if(skillTreeLevels[chosenClass*9+1] == 1) weaponNodeOneBonus[selectedWeapon] else 0) +
         (if(skillTreeLevels[chosenClass*9+4] == 1) weaponNodeTwoBonus[selectedWeapon] else 0)
-    val classBonus = if(chosenClass < 0) 0 else classBaseAttack[chosenClass] + passiveSkillCount*4 + weaponAttackBonus[selectedWeapon] + weaponBranchBonus
+    val classBonus = (if(chosenClass < 0) 0 else classBaseAttack[chosenClass] + passiveSkillCount*4 + weaponAttackBonus[selectedWeapon] + weaponBranchBonus) + equippedWeapon.attackBonus + equippedWeapon.bonusDamage
     val activeSkillReady = chosenClass >= 0 && skillTreeLevels[chosenClass*9+activeSkillNode] == 1 && skillDefinitions[chosenClass][activeSkillNode].active && activeSkillCooldown == 0
     val activeTechniqueLevel = when (selectedTechnique) {
         0 -> swordLevel
@@ -108,7 +112,7 @@ private fun CultivateApp() {
         }
     }
 
-    LaunchedEffect(qi, stones, stage, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode) {
+    LaunchedEffect(qi, stones, stage, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds) {
         prefs.edit()
             .putInt("qi", qi)
             .putInt("stones", stones)
@@ -128,6 +132,8 @@ private fun CultivateApp() {
             .putInt("chosen_alliance", chosenAlliance)
             .putString("rare_skill", rareSkill)
             .putInt("weapon_type", selectedWeapon)
+            .putString("equipped_weapon_id", equippedWeaponId)
+            .putString("owned_weapon_ids", ownedWeaponIds)
             .putInt("active_skill_node", activeSkillNode)
             .also { editor -> skillTreeLevels.forEachIndexed { index, level -> editor.putInt("skill_tree_${index/9}_${index%9}", level) } }
             .putLong("last_seen", System.currentTimeMillis())
@@ -202,6 +208,7 @@ private fun CultivateApp() {
                             val activeBonus = if(activeSkillReady) activeSkillDamage[chosenClass] else 0
                             val damage = 22 + stage*3 + petLevel*2 + techniqueDamage + classBonus + activeBonus
                             enemyHp = (enemyHp-damage).coerceAtLeast(0)
+                            if (equippedWeapon.healOnHit > 0) playerHp = (playerHp + equippedWeapon.healOnHit).coerceAtMost(playerMaxHp)
                             if(activeSkillReady) activeSkillCooldown = 2 else if(activeSkillCooldown > 0) activeSkillCooldown--
                             if (enemyHp > 0) {
                                 var incoming = (12 + bossLevel * 3 - classDefense).coerceAtLeast(2)
@@ -216,8 +223,15 @@ private fun CultivateApp() {
                                 stones += reward
                                 wins++
                                 skillPoints++
-                                if (chosenClass >= 0 && rareSkill.isBlank() && Random.nextDouble() < 0.008) { rareSkill = rareArts[chosenClass]; message = "Редкое наследие пробудилось: $rareSkill" }
-                                else message = "Победа! Получено $reward камней духа и 1 очко навыков."
+                                val weaponDrop = rollWeaponDrop(stage, ownedWeaponList)
+                                val baseMessage = "Победа! Получено $reward камней духа и 1 очко навыков."
+                                if (weaponDrop != null) {
+                                    ownedWeaponIds = (ownedWeaponList + weaponDrop.id).distinct().joinToString("|")
+                                    message = "Добыча: ${weaponDrop.name} · ${weaponDrop.rarity.title}! $baseMessage"
+                                } else if (chosenClass >= 0 && rareSkill.isBlank() && Random.nextDouble() < 0.008) {
+                                    rareSkill = rareArts[chosenClass]
+                                    message = "Редкое наследие пробудилось: $rareSkill"
+                                } else message = baseMessage
                             } else if (playerHp <= 0) {
                                 message = "Ты пал в бою. Восстановись за 40 камней духа, чтобы продолжить."
                             } else {
@@ -276,8 +290,26 @@ TechniqueRow("Коготь лиса", "Быстрая атака в союзе �
                     }
                 }
                 Text("Оружие — без классовых ограничений",color=Gold,fontWeight=FontWeight.Bold)
-                weaponNames.forEachIndexed { i,n -> OutlinedButton(onClick={selectedWeapon=i;message="Экипировано: $n"},modifier=Modifier.fillMaxWidth()){Text(n+if(selectedWeapon==i)" · экипировано" else "")} }
-                Text("Бонус атаки оружия: +${weaponAttackBonus[selectedWeapon]}",color=Jade)
+                Text("Экипировано: ${equippedWeapon.name}", color = weaponRarityColor(equippedWeapon.rarity), fontWeight = FontWeight.Bold)
+                Text("${equippedWeapon.rarity.title} · Требование: ${stageName(equippedWeapon.requiredStage)} (ступень ${equippedWeapon.requiredStage})", color = Color.LightGray, fontSize = 12.sp)
+                Text("Атака +${equippedWeapon.attackBonus} · защита +${equippedWeapon.defenseBonus} · доп. эффект: ${equippedWeapon.effectDescription}", color = Jade, fontSize = 12.sp)
+                Text("Арсенал · ${ownedWeaponList.size} предметов", color = Gold, fontWeight = FontWeight.Bold)
+                weaponCatalog.filter { it.id in ownedWeaponList }.forEach { item ->
+                    Column(Modifier.fillMaxWidth().padding(6.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text("${item.name} · ${item.rarity.title}", color = weaponRarityColor(item.rarity), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("${weaponNames[item.type]} · ступень ${item.requiredStage} · атака +${item.attackBonus} · защита +${item.defenseBonus}", color = Color.LightGray, fontSize = 11.sp)
+                        Text(item.effectDescription, color = Jade, fontSize = 11.sp)
+                        OutlinedButton(onClick = { equippedWeaponId = item.id; selectedWeapon = item.type; message = "Экипировано: ${item.name}" }, enabled = stage >= item.requiredStage, modifier = Modifier.fillMaxWidth()) {
+                            Text(if (equippedWeaponId == item.id) "Экипировано" else if (stage < item.requiredStage) "Требуется ступень ${item.requiredStage}" else "Экипировать")
+                        }
+                    }
+                }
+                val nextWeaponStage = listOf(1, 4, 7, 10, 13, 16).firstOrNull { it > stage }
+                if (nextWeaponStage != null) {
+                    val preview = weaponCatalog.first { it.requiredStage == nextWeaponStage }
+                    Text("Следующий рубеж откроет оружие: ${preview.name} · ${preview.rarity.title} · атака +${preview.attackBonus}", color = Gold, fontSize = 12.sp)
+                }
+                Text("Бонус типа оружия: +${weaponAttackBonus[selectedWeapon]} · навыки ветвей учитывают тип экипировки", color = Jade, fontSize = 11.sp)
                 if(chosenClass>=0) {
                     Text("Очки навыков: $skillPoints · пассивных узлов: $passiveSkillCount",color=Gold,fontWeight=FontWeight.Bold)
                     SkillTreeSection("Начальный навык",chosenClass,listOf(0),skillTreeLevels,skillPoints,selectedWeapon,activeSkillNode,
@@ -399,6 +431,103 @@ private val weaponNames=listOf("Меч","Копьё","Посох","Боевые 
 private val weaponAttackBonus=listOf(8,10,7,9)
 private val weaponNodeOneBonus=listOf(3,5,2,4)
 private val weaponNodeTwoBonus=listOf(4,2,5,3)
+
+private enum class WeaponRarity(val title: String, val bonus: Int) {
+    COMMON("Обычное", 0),
+    UNCOMMON("Необычное", 3),
+    RARE("Редкое", 7),
+    EPIC("Эпическое", 12),
+    LEGENDARY("Легендарное", 18),
+    MYTHIC("Мифическое", 24)
+}
+
+private data class WeaponDefinition(
+    val id: String,
+    val name: String,
+    val type: Int,
+    val rarity: WeaponRarity,
+    val requiredStage: Int,
+    val attackBonus: Int,
+    val defenseBonus: Int,
+    val bonusDamage: Int,
+    val healOnHit: Int,
+    val effectDescription: String
+)
+
+private fun weapon(
+    id: String, name: String, type: Int, rarity: WeaponRarity, requiredStage: Int,
+    realmBase: Int, defense: Int = 0, extraDamage: Int = 0, healing: Int = 0, effect: String
+) = WeaponDefinition(id, name, type, rarity, requiredStage, realmBase + rarity.bonus, defense, extraDamage, healing, effect)
+
+private val weaponCatalog = listOf(
+    weapon("tempered_wood_blade", "Тренировочный клинок", 0, WeaponRarity.COMMON, 1, 4, effect = "Надёжное оружие начинающего культиватора"),
+    weapon("bamboo_spear", "Бамбуковое копьё", 1, WeaponRarity.UNCOMMON, 1, 4, extraDamage = 1, effect = "Уколы наносят немного больше урона"),
+    weapon("herb_staff", "Посох травника", 2, WeaponRarity.RARE, 1, 4, healing = 1, effect = "Восстанавливает 1 здоровье при ударе"),
+    weapon("stone_fists", "Каменные наручи", 3, WeaponRarity.EPIC, 1, 4, defense = 2, effect = "Укрепляют защиту владельца"),
+    weapon("iron_short_sword", "Железный короткий меч", 0, WeaponRarity.LEGENDARY, 1, 4, extraDamage = 2, effect = "Сбалансированный клинок с усиленным ударом"),
+    weapon("iron_bone_spear", "Костяное копьё", 1, WeaponRarity.MYTHIC, 1, 4, defense = 1, extraDamage = 2, effect = "Редкое оружие первой ступени"),
+
+    weapon("qi_splitting_sword", "Меч Рассекающего Потока", 0, WeaponRarity.COMMON, 4, 36, extraDamage = 2, effect = "Резонирует с накопленной Ци"),
+    weapon("azure_dragon_spear", "Копьё Лазурного Дракона", 1, WeaponRarity.UNCOMMON, 4, 36, extraDamage = 3, effect = "Усиливает пробивающие выпады"),
+    weapon("cloud_pattern_staff", "Посох Облачных Узоров", 2, WeaponRarity.RARE, 4, 36, healing = 3, effect = "Постепенно возвращает здоровье"),
+    weapon("mountain_guard_gauntlets", "Перчатки Горного Стража", 3, WeaponRarity.EPIC, 4, 36, defense = 5, effect = "Укрепляют тело и снижают ответный урон"),
+    weapon("flame_twin_blades", "Парные Клинки Пылающего Ветра", 0, WeaponRarity.LEGENDARY, 4, 36, extraDamage = 6, effect = "Дополнительный урон быстрыми сериями"),
+    weapon("jade_tide_lance", "Нефритовое Копьё Прилива", 1, WeaponRarity.MYTHIC, 4, 36, defense = 3, extraDamage = 5, effect = "Сочетает пробивание и защиту"),
+
+    weapon("golden_core_edge", "Клинок Золотого Ядра", 0, WeaponRarity.COMMON, 7, 100, extraDamage = 5, effect = "Стабилизирует поток Ци в атаке"),
+    weapon("thunderfall_spear", "Копьё Громового Падения", 1, WeaponRarity.UNCOMMON, 7, 100, extraDamage = 8, effect = "Удар сопровождается разрядом молнии"),
+    weapon("nine_flame_staff", "Посох Девяти Пламен", 2, WeaponRarity.RARE, 7, 100, extraDamage = 7, healing = 3, effect = "Стихийный урон и небольшое исцеление"),
+    weapon("adamant_gauntlets", "Адамантовые Рукавицы", 3, WeaponRarity.EPIC, 7, 100, defense = 12, effect = "Значительно повышают стойкость"),
+    weapon("soul_carving_sword", "Меч Гравировки Души", 0, WeaponRarity.LEGENDARY, 7, 100, extraDamage = 12, effect = "Поражает не только тело, но и духовную оболочку"),
+    weapon("star_river_spear", "Копьё Звёздной Реки", 1, WeaponRarity.MYTHIC, 7, 100, defense = 8, extraDamage = 10, effect = "Скрытая сила звёзд усиливает каждый выпад"),
+
+    weapon("nascent_soul_saber", "Сабля Зарождающейся Души", 0, WeaponRarity.COMMON, 10, 230, extraDamage = 12, effect = "Настроена на духовное ядро владельца"),
+    weapon("heaven_piercer", "Копьё Пронзающее Небеса", 1, WeaponRarity.UNCOMMON, 10, 230, extraDamage = 16, effect = "Пробивает укреплённую защиту"),
+    weapon("spirit_sea_staff", "Посох Моря Духов", 2, WeaponRarity.RARE, 10, 230, healing = 8, effect = "Поглощает остаточную энергию и исцеляет"),
+    weapon("dragonbone_gauntlets", "Перчатки Драконьей Кости", 3, WeaponRarity.EPIC, 10, 230, defense = 24, effect = "Тело становится твёрже драконьей чешуи"),
+    weapon("void_echo_blade", "Клинок Эха Пустоты", 0, WeaponRarity.LEGENDARY, 10, 230, extraDamage = 25, effect = "Дополнительный урон эхом разреза"),
+    weapon("phoenix_spear", "Копьё Возрождения Феникса", 1, WeaponRarity.MYTHIC, 10, 230, defense = 16, healing = 10, effect = "Возвращает часть жизненной силы"),
+
+    weapon("immortal_sun_sword", "Меч Бессмертного Солнца", 0, WeaponRarity.COMMON, 13, 520, extraDamage = 28, effect = "Солнечная энергия усиливает рубящий удар"),
+    weapon("sky_breaker_lance", "Копьё Разрушителя Небес", 1, WeaponRarity.UNCOMMON, 13, 520, extraDamage = 35, effect = "Сокрушительный пробивающий выпад"),
+    weapon("moon_heart_staff", "Посох Лунного Сердца", 2, WeaponRarity.RARE, 13, 520, healing = 18, effect = "Лунная энергия восстанавливает здоровье"),
+    weapon("titan_body_fists", "Кулаки Титанического Тела", 3, WeaponRarity.EPIC, 13, 520, defense = 48, effect = "Сила титана укрепляет защиту"),
+    weapon("chaos_edge", "Клинок Первичного Хаоса", 0, WeaponRarity.LEGENDARY, 13, 520, extraDamage = 58, effect = "Хаотическая кромка наносит разрушительный урон"),
+    weapon("world_pillar_spear", "Копьё Столпа Мира", 1, WeaponRarity.MYTHIC, 13, 520, defense = 35, extraDamage = 45, effect = "Стабилизирует тело и усиливает атаку"),
+
+    weapon("void_sundering_blade", "Меч Рассекающий Пустоту", 0, WeaponRarity.COMMON, 16, 1150, extraDamage = 60, effect = "Разрезает пространство перед целью"),
+    weapon("primordial_dragon_lance", "Копьё Первородного Дракона", 1, WeaponRarity.UNCOMMON, 16, 1150, extraDamage = 75, effect = "Пробуждает первородную драконью мощь"),
+    weapon("chaos_oracle_staff", "Посох Оракула Хаоса", 2, WeaponRarity.RARE, 16, 1150, healing = 40, effect = "Преобразует хаос в жизненную энергию"),
+    weapon("heavenly_titan_gauntlets", "Перчатки Небесного Титана", 3, WeaponRarity.EPIC, 16, 1150, defense = 100, effect = "Почти непробиваемая защита"),
+    weapon("ancestor_soul_reaper", "Жнец Душ Прародителя", 0, WeaponRarity.LEGENDARY, 16, 1150, extraDamage = 130, effect = "Пожинает духовную силу поверженных врагов"),
+    weapon("dao_origin_spear", "Копьё Истока Дао", 1, WeaponRarity.MYTHIC, 16, 1150, defense = 75, healing = 55, effect = "Соединяет атаку, защиту и восстановление")
+)
+
+private fun weaponRarityColor(rarity: WeaponRarity): Color = when (rarity) {
+    WeaponRarity.COMMON -> Color(0xFFCFD4D8)
+    WeaponRarity.UNCOMMON -> Color(0xFF78C6A3)
+    WeaponRarity.RARE -> Color(0xFF68A9F5)
+    WeaponRarity.EPIC -> Color(0xFFB58BE8)
+    WeaponRarity.LEGENDARY -> Color(0xFFFFB65C)
+    WeaponRarity.MYTHIC -> Color(0xFFFF718B)
+}
+
+private fun rollWeaponDrop(stage: Int, ownedIds: List<String>): WeaponDefinition? {
+    val available = weaponCatalog.filter { it.requiredStage <= stage && it.id !in ownedIds }
+    if (available.isEmpty()) return null
+    val roll = Random.nextInt(1000)
+    val rarity = when {
+        roll < 400 -> WeaponRarity.COMMON
+        roll < 660 -> WeaponRarity.UNCOMMON
+        roll < 830 -> WeaponRarity.RARE
+        roll < 930 -> WeaponRarity.EPIC
+        roll < 985 -> WeaponRarity.LEGENDARY
+        else -> WeaponRarity.MYTHIC
+    }
+    val sameRarity = available.filter { it.rarity == rarity }
+    return (sameRarity.ifEmpty { available }).random()
+}
+
 private val skillDefinitions=listOf(
  listOf(
   SkillDefinition("Основы меча","Активное: точный разрез; открывает обе ветви.",true),
@@ -496,5 +625,8 @@ private fun stageName(stage: Int): String = when {
     stage < 7 -> "Сбор Ци"
     stage < 10 -> "Золотое ядро"
     stage < 13 -> "Зарождение души"
-    else -> "Вознесение"
+    stage < 16 -> "Вознесение"
+    stage < 19 -> "Преодоление пустоты"
+    stage < 22 -> "Слияние с Дао"
+    else -> "Бессмертный владыка"
 }

@@ -427,7 +427,7 @@ private fun CultivateApp() {
                 stage = stage, qi = qi, stones = stones, wins = wins,
                 storyChapter = storyChapter, combatPower = classBonus + classDefense + playerMaxHp,
                 onNavigate = { target -> selectedMenu = target; selectedTownBuilding = "" },
-                onBuilding = { building -> selectedTownBuilding = building }
+                onBuilding = { building -> selectedTownBuilding = building; selectedMenu = if (building == "quests") 2 else 4 }
             )
         } else {
         Column(
@@ -1006,7 +1006,7 @@ private fun CinematicHomeScreen(
 ) {
     BoxWithConstraints(Modifier.fillMaxSize().background(Color(0xFF081426))) {
         Image(
-            painter = painterResource(R.drawable.cultivate_lunar_harbor_main),
+            painter = painterResource(R.drawable.lunar_harbor_bg),
             contentDescription = "Лунная Гавань — главная игровая локация",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()

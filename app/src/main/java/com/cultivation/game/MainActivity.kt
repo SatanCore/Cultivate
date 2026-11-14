@@ -422,6 +422,14 @@ private fun CultivateApp() {
             onSurface = Color(0xFFF0E8D8)
         )
     ) {
+        if (selectedMenu == 0) {
+            CinematicHomeScreen(
+                stage = stage, qi = qi, stones = stones, wins = wins,
+                storyChapter = storyChapter, combatPower = classBonus + classDefense + playerMaxHp,
+                onNavigate = { target -> selectedMenu = target; selectedTownBuilding = "" },
+                onBuilding = { building -> selectedTownBuilding = building }
+            )
+        } else {
         Column(
             Modifier.fillMaxSize().background(Ink).verticalScroll(pageScrollState).padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -987,6 +995,154 @@ private fun CultivateApp() {
             Text(message, color = Gold, fontSize = 14.sp)
             Text("Прогресс сохраняется автоматически на этом устройстве.", color = Color.Gray, fontSize = 11.sp)
         }
+        }
+    }
+}
+
+@Composable
+private fun CinematicHomeScreen(
+    stage: Int, qi: Int, stones: Int, wins: Int, storyChapter: Int, combatPower: Int,
+    onNavigate: (Int) -> Unit, onBuilding: (String) -> Unit
+) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(Color(0xFF081426))) {
+        Image(
+            painter = painterResource(R.drawable.cultivate_lunar_harbor_main),
+            contentDescription = "Лунная Гавань — главная игровая локация",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
+            0f to Color(0xAA07101F), .22f to Color(0x1807101F),
+            .68f to Color(0x1207101F), 1f to Color(0xE6081020)
+        )))
+        val glow = rememberInfiniteTransition(label = "home-lanterns")
+        val pulse by glow.animateFloat(.72f, 1f, infiniteRepeatable(tween(1600), RepeatMode.Reverse), label = "home-pulse")
+        Canvas(Modifier.fillMaxSize()) {
+            for (i in 0..34) {
+                val x = size.width * (((i * 73) % 97) / 97f)
+                val y = size.height * (.12f + ((i * 29) % 78) / 100f)
+                drawCircle(Color(0xFFFFD99B).copy(alpha = pulse * .30f), if (i % 5 == 0) 2.8f else 1.4f, Offset(x, y))
+            }
+        }
+
+        Row(
+            Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
+            horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top
+        ) {
+            Surface(color = Color(0xDD111B30), shape = MaterialTheme.shapes.extraLarge, tonalElevation = 8.dp) {
+                Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(color = Color(0xFF293A59), shape = MaterialTheme.shapes.extraLarge) {
+                        Box(Modifier.size(42.dp), contentAlignment = Alignment.Center) {
+                            Text("道", color = Gold, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
+                    Spacer(Modifier.width(9.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Text("Странник Лунной Гавани", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("${worldName(stage)} · ${stageName(stage)}", color = Color(0xFFE8D3A6), fontSize = 10.sp)
+                        Text("✦ Боевая мощь  ${combatPower.coerceAtLeast(0)}", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
+                HomeResource("☯", "Ци", qi.toString())
+                HomeResource("◈", "Камни", stones.toString())
+                HomeResource("⚔", "Победы", wins.toString())
+            }
+        }
+
+        Surface(
+            Modifier.align(Alignment.CenterStart).padding(start = 12.dp).width(174.dp),
+            color = Color(0xE8172238), shape = MaterialTheme.shapes.large, tonalElevation = 10.dp
+        ) {
+            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text("СЮЖЕТ · ГЛАВА ${storyChapter + 1}", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                Text("Тень в долине", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("Исследуй горы и укрепи своё Дао.", color = Color(0xFFE4E8F0), fontSize = 10.sp)
+                Divider(color = Color(0x66D9B875))
+                Text("ЕЖЕДНЕВНЫЕ ПОРУЧЕНИЯ", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("◇ Медитация  ·  получить Ци", color = Color.White, fontSize = 10.sp)
+                Text("◇ Победить стража  ·  ${wins.coerceAtMost(1)}/1", color = Color.White, fontSize = 10.sp)
+                Text("◇ Продолжить путь Дао", color = Color.White, fontSize = 10.sp)
+                LinearProgressIndicator(
+                    progress = { (wins.coerceAtMost(1)).toFloat() },
+                    modifier = Modifier.fillMaxWidth().height(3.dp),
+                    color = Jade, trackColor = Color(0xFF43516A)
+                )
+            }
+        }
+
+        HomeHotspot("Клан", "Союз и развитие", "⚜", Modifier.align(Alignment.Center).offset(x = -maxWidth * .22f, y = -maxHeight * .08f)) { onNavigate(6) }
+        HomeHotspot("Обитель", "Культивация · ремёсла", "🏯", Modifier.align(Alignment.Center).offset(x = maxWidth * .01f, y = -maxHeight * .25f)) { onNavigate(8) }
+        HomeHotspot("Башня испытаний", "Этажи и награды", "♜", Modifier.align(Alignment.Center).offset(x = maxWidth * .31f, y = -maxHeight * .19f)) { onNavigate(2) }
+        HomeHotspot("Алхимия", "Пилюли и эликсиры", "⚗", Modifier.align(Alignment.Center).offset(x = -maxWidth * .18f, y = maxHeight * .19f)) { onNavigate(8) }
+        HomeHotspot("Кузница", "Ковка и усиление", "⚒", Modifier.align(Alignment.Center).offset(x = maxWidth * .01f, y = maxHeight * .16f)) { onNavigate(4) }
+        HomeHotspot("Арена", "Поединки и добыча", "⚔", Modifier.align(Alignment.Center).offset(x = maxWidth * .24f, y = maxHeight * .04f)) { onNavigate(2) }
+        HomeHotspot("Аукцион", "Торговля и редкости", "⚖", Modifier.align(Alignment.Center).offset(x = maxWidth * .37f, y = maxHeight * .17f)) { onBuilding("auction") }
+        HomeHotspot("Доска заданий", "Поручения долины", "📜", Modifier.align(Alignment.Center).offset(x = maxWidth * .13f, y = maxHeight * .30f)) { onBuilding("quests") }
+        HomeHotspot("Лавка", "Предметы и ресурсы", "✧", Modifier.align(Alignment.Center).offset(x = maxWidth * .38f, y = maxHeight * .31f)) { onBuilding("shop") }
+
+        Row(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xF20A1325))))
+                .padding(horizontal = 6.dp, vertical = 7.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically
+        ) {
+            HomeNavItem("Культивация", "☯", 1, onNavigate)
+            HomeNavItem("Персонаж", "♙", 3, onNavigate)
+            HomeNavItem("Снаряжение", "♢", 4, onNavigate)
+            HomeNavItem("Навыки", "✧", 5, onNavigate)
+            HomeNavItem("Питомцы", "狐", 7, onNavigate)
+            HomeNavItem("Инвентарь", "🎒", 4, onNavigate)
+            HomeNavItem("Миры", "◎", 8, onNavigate)
+        }
+    }
+}
+
+@Composable
+private fun HomeResource(symbol: String, label: String, value: String) {
+    Surface(color = Color(0xD9152136), shape = MaterialTheme.shapes.large) {
+        Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(symbol, color = Gold, fontSize = 15.sp)
+            Spacer(Modifier.width(4.dp))
+            Column {
+                Text(value, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(label, color = Color(0xFFBFC9D8), fontSize = 8.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeHotspot(title: String, subtitle: String, symbol: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        color = Color(0xE91A2740), contentColor = Color.White,
+        shape = MaterialTheme.shapes.large, tonalElevation = 9.dp, shadowElevation = 7.dp
+    ) {
+        Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(symbol, color = Gold, fontSize = 19.sp)
+            Spacer(Modifier.width(6.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(title, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(subtitle, color = Color(0xFFE3C98F), fontSize = 8.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeNavItem(title: String, symbol: String, target: Int, onNavigate: (Int) -> Unit) {
+    Column(
+        Modifier.clickable { onNavigate(target) }.padding(horizontal = 4.dp, vertical = 3.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Surface(color = Color(0xDD182642), shape = MaterialTheme.shapes.extraLarge) {
+            Box(Modifier.size(35.dp), contentAlignment = Alignment.Center) {
+                Text(symbol, color = Gold, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        Text(title, color = Color(0xFFF1E6D0), fontSize = 9.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
 
@@ -1207,14 +1363,21 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
 
 @Composable
 private fun GameCard(title: String, subtitle: String, content: @Composable ColumnScope.() -> Unit) {
-    Surface(color = Panel, shape = MaterialTheme.shapes.extraLarge) {
-        Column(
-            Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text(title, color = Gold, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-            Text(subtitle, color = Jade, fontSize = 13.sp)
-            content()
+    Surface(
+        color = Color(0xE91A263B),
+        shape = MaterialTheme.shapes.extraLarge,
+        tonalElevation = 8.dp,
+        shadowElevation = 8.dp
+    ) {
+        Column(Modifier.fillMaxWidth()) {
+            Box(Modifier.fillMaxWidth().height(2.dp).background(
+                Brush.horizontalGradient(listOf(Color.Transparent, Gold, Color(0xFF8C6A3D), Gold, Color.Transparent))
+            ))
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(title, color = Gold, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(subtitle, color = Jade, fontSize = 12.sp)
+                content()
+            }
         }
     }
 }

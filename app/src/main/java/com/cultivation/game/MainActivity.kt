@@ -596,7 +596,7 @@ private fun CultivateApp() {
                             Button(onClick = {
                                 if (spiritHerbs >= 6 && spiritWater >= 2) { spiritHerbs -= 6; spiritWater -= 2; qiPills++; message = "Создана пилюля сбора Ци." }
                                 else message = "Нужно 6 духовных трав и 2 порции духовной воды."
-                            }, enabled = spiritHerbs >= 3 && spiritWater >= 1, modifier = Modifier.fillMaxWidth()) { Text("Сварить пилюлю Ци · 6 трав + 2 воды") }
+                            }, enabled = spiritHerbs >= 6 && spiritWater >= 2, modifier = Modifier.fillMaxWidth()) { Text("Сварить пилюлю Ци · 6 трав + 2 воды") }
                             Button(onClick = {
                                 if (spiritHerbs >= 5 && spiritWater >= 2) { spiritHerbs -= 5; spiritWater -= 2; bodyPills++; message = "Создана пилюля крепкого тела." }
                                 else message = "Нужно 5 духовных трав и 2 порции духовной воды."
@@ -621,7 +621,7 @@ private fun CultivateApp() {
                             Text(if (gardenReadyAt <= nowMillis) "Урожай созрел: можно собрать травы." else "До следующего урожая примерно $gardenRemaining.", color = Jade)
                             Button(onClick = {
                                 val now = System.currentTimeMillis()
-                                if (now >= gardenReadyAt) { val harvest = 2 + abodeLevel; spiritHerbs += harvest; dailyGardenCollected = true; gardenReadyAt = now + 28_800_000L; if (Random.nextInt(100) < 3 && "moon_deer" !in ownedPetIds.split("|")) { ownedPetIds += "|moon_deer"; message = "Собрано трав: $harvest. Среди листьев появился лунный оленёнок — редкий питомец!" } else message = "Собрано духовных трав: $harvest. Следующий урожай через 5 минут." }
+                                if (now >= gardenReadyAt) { val harvest = 2 + abodeLevel; spiritHerbs += harvest; dailyGardenCollected = true; gardenReadyAt = now + 28_800_000L; if (Random.nextInt(100) < 3 && "moon_deer" !in ownedPetIds.split("|")) { ownedPetIds += "|moon_deer"; message = "Собрано трав: $harvest. Среди листьев появился лунный оленёнок — редкий питомец!" } else message = "Собрано духовных трав: $harvest. Следующий урожай примерно через 8 часов." }
                                 else message = "Сад ещё растёт. Вернись позже."
                             }, enabled = gardenReadyAt <= nowMillis, modifier = Modifier.fillMaxWidth()) { Text("Собрать урожай · ${2 + abodeLevel} травы") }
                             Text("Урожайность растёт вместе с уровнем обители.", color = Color.LightGray, fontSize = 11.sp)

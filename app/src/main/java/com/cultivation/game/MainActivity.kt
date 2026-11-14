@@ -78,6 +78,19 @@ private fun CultivateApp() {
     } }
     var equippedWeaponId by remember { mutableStateOf(prefs.getString("equipped_weapon_id", "tempered_wood_blade") ?: "tempered_wood_blade") }
     var ownedWeaponIds by remember { mutableStateOf(prefs.getString("owned_weapon_ids", "tempered_wood_blade") ?: "tempered_wood_blade") }
+    var ownedGearIds by remember { mutableStateOf(prefs.getString("owned_gear_ids", "") ?: "") }
+    val gearSlots = remember { GearSlot.values().toList() }
+    val ownedGearList = remember(ownedGearIds) { ownedGearIds.split("|").filter { it.isNotBlank() } }
+    val ownedGear = remember(ownedGearIds) { ownedGearList.mapNotNull { resolveGearInstance(it) } }
+    val equippedGearIds = remember { mutableStateListOf<String>().apply {
+        gearSlots.forEach { slot -> add(prefs.getString("gear_${slot.name}", "") ?: "") }
+    } }
+    val equippedGear = remember(ownedGearIds, equippedGearIds.toList()) {
+        gearSlots.mapIndexedNotNull { index, slot ->
+            val encoded = equippedGearIds.getOrElse(index) { "" }
+            if (encoded.isBlank()) null else resolveGearInstance(encoded)?.takeIf { encoded in ownedGearList }
+        }
+    }
     val ownedWeaponList = remember(ownedWeaponIds) { ownedWeaponIds.split("|").filter { it.isNotBlank() }.distinct() }
     val ownedWeapons = remember(ownedWeaponIds) { ownedWeaponList.mapNotNull { resolveWeaponInstance(it) } }
     val equippedWeapon = resolveWeaponInstance(equippedWeaponId)?.takeIf { equippedWeaponId in ownedWeaponList } ?: weaponCatalog.first()
@@ -106,15 +119,20 @@ private fun CultivateApp() {
 
     val enemyMaxHp = bossMaxHp(bossLevel)
     val classProfile = if (chosenClass >= 0) classCombatProfiles[chosenClass] else classCombatProfiles[0]
-    val playerMaxHp = 500 + stage * 30 + classProfile.bonusHp
+    val activeSetBonus = calculateGearSetBonus(equippedGear)
+    val gearAttackTotal = equippedGear.sumOf { it.attackBonus } + activeSetBonus.attack
+    val gearDefenseTotal = equippedGear.sumOf { it.defenseBonus } + activeSetBonus.defense
+    val gearHpTotal = equippedGear.sumOf { it.hpBonus } + activeSetBonus.hp
+    val gearSkillTotal = equippedGear.sumOf { it.skillBonus } + activeSetBonus.skill
+    val playerMaxHp = 500 + stage * 30 + classProfile.bonusHp + gearHpTotal
     val defensiveNodes = listOf(listOf(3,4,7), listOf(2,4,7), listOf(5,7), listOf(3,5,7))
     val defensiveSkillCount = if(chosenClass < 0) 0 else defensiveNodes[chosenClass].count { skillTreeLevels[chosenClass*9+it] == 1 }
     val passiveSkillCount = if(chosenClass < 0) 0 else (0..8).count { skillTreeLevels[chosenClass*9+it] == 1 && !skillDefinitions[chosenClass][it].active && it !in defensiveNodes[chosenClass] }
-    val classDefense = classProfile.defense + defensiveSkillCount*4 + equippedWeapon.defenseBonus
+    val classDefense = classProfile.defense + defensiveSkillCount*4 + equippedWeapon.defenseBonus + gearDefenseTotal
     val weaponBranchBonus = if(chosenClass < 0) 0 else
         (if(skillTreeLevels[chosenClass*9+1] == 1) weaponNodeOneBonus[selectedWeapon] else 0) +
         (if(skillTreeLevels[chosenClass*9+4] == 1) weaponNodeTwoBonus[selectedWeapon] else 0)
-    val classBonus = classProfile.attack + passiveSkillCount*4 + weaponAttackBonus[selectedWeapon] + weaponBranchBonus + equippedWeapon.attackBonus + equippedWeapon.bonusDamage
+    val classBonus = classProfile.attack + passiveSkillCount*4 + weaponAttackBonus[selectedWeapon] + weaponBranchBonus + equippedWeapon.attackBonus + equippedWeapon.bonusDamage + gearAttackTotal + gearSkillTotal
     val activeTechniqueLevel = when (selectedTechnique) {
         0 -> swordLevel
         1 -> lotusLevel
@@ -192,14 +210,19 @@ private fun CultivateApp() {
             val materialTier = ((bossLevel - 1) / 5).coerceIn(0, 5)
             skillMaterials[materialTier] = skillMaterials[materialTier] + 1
             val weaponDrop = rollWeaponDrop(stage, ownedWeaponList)
+            val gearDrop = if (Random.nextInt(100) < 35) rollGearDrop(stage) else null
             val rareSkillFound = chosenClass >= 0 && rareSkill.isBlank() && Random.nextDouble() < 0.008
             val weaponText = if (weaponDrop != null) {
                 val encodedDrop = encodeWeaponInstance(weaponDrop)
                 ownedWeaponIds = (ownedWeaponList + encodedDrop).joinToString("|")
                 " Добыча: ${weaponDrop.name} · ${weaponDrop.rarity.title}."
             } else ""
+            val gearText = if (gearDrop != null) {
+                ownedGearIds = (ownedGearList + encodeGearInstance(gearDrop)).joinToString("|")
+                " Экипировка: ${gearDrop.name} · ${gearDrop.rarity.title}."
+            } else ""
             if (rareSkillFound) rareSkill = rareArts[chosenClass]
-            message = "Победа! Получено $reward камней, 1 очко навыков и ${skillMaterialNames[materialTier]}.$weaponText" +
+            message = "Победа! Получено $reward камней, 1 очко навыков и ${skillMaterialNames[materialTier]}.$weaponText$gearText" +
                 if (rareSkillFound) " Редкое наследие: $rareSkill!" else ""
         } else if (playerHp <= 0) {
             autoBattle = false
@@ -249,7 +272,7 @@ private fun CultivateApp() {
         }
     }
 
-    LaunchedEffect(qi, stones, stage, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
+    LaunchedEffect(qi, stones, stage, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, ownedGearIds, equippedGearIds.toList(), questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
         prefs.edit()
             .putInt("qi", qi)
             .putInt("stones", stones)
@@ -271,6 +294,8 @@ private fun CultivateApp() {
             .putInt("weapon_type", selectedWeapon)
             .putString("equipped_weapon_id", equippedWeaponId)
             .putString("owned_weapon_ids", ownedWeaponIds)
+            .putString("owned_gear_ids", ownedGearIds)
+            .also { editor -> gearSlots.forEachIndexed { index, slot -> editor.putString("gear_${slot.name}", equippedGearIds.getOrElse(index) { "" }) } }
             .putInt("active_skill_node", activeSkillNode)
             .putBoolean("town_quest_claimed", questClaimed)
             .putInt("town_story_chapter", storyChapter)
@@ -460,6 +485,12 @@ private fun CultivateApp() {
 
             if (selectedMenu == 3) GameCard("Персонаж", if (chosenClass < 0) "Выбери свой путь культивации" else classNames[chosenClass]) {
                 Text("Характеристики и экипировка находятся здесь. Коллекция предметов — в отдельном инвентаре.", color = Color.LightGray)
+                Text("Атака с экипировкой: +$classBonus · защита: +$classDefense · здоровье: $playerMaxHp", color = Jade, fontWeight = FontWeight.Bold)
+                gearSlots.forEachIndexed { index, slot ->
+                    val item = equippedGear.firstOrNull { it.slot == slot }
+                    Text("${slot.title}: ${item?.name ?: "Пусто"}", color = if (item == null) Color.LightGray else weaponRarityColor(item.rarity), fontSize = 12.sp)
+                }
+                Text(activeSetBonus.description.ifBlank { "Бонус комплекта: не активен · собери 2 или 4 предмета одного набора." }, color = Gold, fontSize = 11.sp)
                 classNames.forEachIndexed { i, n ->
                     val profile = classCombatProfiles[i]
                     Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -488,8 +519,8 @@ private fun CultivateApp() {
                 Text("Для смены экипировки перейди в «Инвентарь» и выбери предмет.", color = Color.LightGray, fontSize = 11.sp)
             }
 
-            if (selectedMenu == 4) GameCard("Инвентарь", "Оружие · найдено предметов: ${ownedWeapons.size}") {
-                Text("Предметы здесь хранятся отдельно от экипировки. Каждый выпавший экземпляр получает собственный разброс характеристик.", color = Color.LightGray, fontSize = 12.sp)
+            if (selectedMenu == 4) GameCard("Инвентарь", "Оружие: ${ownedWeapons.size} · броня и артефакты: ${ownedGear.size}") {
+                Text("Оружие, броня, шлемы, кольца и артефакты хранятся отдельно от надетых предметов. Каждый экземпляр получает собственный разброс характеристик.", color = Color.LightGray, fontSize = 12.sp)
                 ownedWeapons.sortedByDescending { weaponPowerScore(it) }.forEach { item ->
                     Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("${item.name} · ${item.rarity.title}", color = weaponRarityColor(item.rarity), fontWeight = FontWeight.Bold)
@@ -514,6 +545,23 @@ private fun CultivateApp() {
                         ) {
                             Text(if (equippedWeaponId == encodeWeaponInstance(item)) "Надето" else if (stage < item.requiredStage) "Откроется на ступени ${item.requiredStage}" else "Экипировать")
                         }
+                    }
+                }
+                Divider(color = Color(0xFF3B4B4F))
+                Text("Броня, шлемы, кольца и артефакты", color = Gold, fontWeight = FontWeight.Bold)
+                Text(activeSetBonus.description.ifBlank { "Комплектные бонусы: 2 предмета дают малый бонус, 4 предмета — полный." }, color = Jade, fontSize = 11.sp)
+                ownedGear.sortedByDescending { gearPowerScore(it) }.forEach { item ->
+                    Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("${item.name} · ${item.rarity.title}", color = weaponRarityColor(item.rarity), fontWeight = FontWeight.Bold)
+                        Text("${item.slot.title} · ${stageName(item.requiredStage)} · набор «${gearSetNames[item.setId] ?: item.setId}»", color = Color.LightGray, fontSize = 11.sp)
+                        Text("Рейтинг ${gearPowerScore(item)} · атака +${item.attackBonus} · защита +${item.defenseBonus} · здоровье +${item.hpBonus} · сила техник +${item.skillBonus}", color = Jade, fontSize = 11.sp)
+                        Text(item.effectDescription, color = Color.LightGray, fontSize = 11.sp)
+                        val equipped = equippedGearIds.getOrElse(item.slot.ordinal) { "" } == encodeGearInstance(item)
+                        OutlinedButton(
+                            onClick = { equippedGearIds[item.slot.ordinal] = encodeGearInstance(item); message = "Экипировано: ${item.name}" },
+                            enabled = stage >= item.requiredStage,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(if (equipped) "Надето" else if (stage < item.requiredStage) "Откроется на ступени ${item.requiredStage}" else "Надеть · ${item.slot.title}") }
                     }
                 }
                 val nextWeaponStage = listOf(1, 4, 7, 10, 13, 16).firstOrNull { it > stage }
@@ -770,6 +818,136 @@ private val weaponCatalog = listOf(
     weapon("ancestor_soul_reaper", "Жнец Душ Прародителя", 0, WeaponRarity.LEGENDARY, 16, 1150, extraDamage = 130, effect = "Пожинает духовную силу поверженных врагов"),
     weapon("dao_origin_spear", "Копьё Истока Дао", 1, WeaponRarity.MYTHIC, 16, 1150, defense = 75, healing = 55, effect = "Соединяет атаку, защиту и восстановление")
 )
+
+private enum class GearSlot(val title: String) {
+    HELMET("Шлем"), ARMOR("Броня"), RING("Кольцо"), ARTIFACT("Артефакт")
+}
+
+private data class GearDefinition(
+    val id: String,
+    val name: String,
+    val slot: GearSlot,
+    val rarity: WeaponRarity,
+    val requiredStage: Int,
+    val attackBonus: Int,
+    val defenseBonus: Int,
+    val hpBonus: Int,
+    val skillBonus: Int,
+    val setId: String,
+    val effectDescription: String
+)
+
+private data class GearSetBonus(
+    val attack: Int = 0,
+    val defense: Int = 0,
+    val hp: Int = 0,
+    val skill: Int = 0,
+    val description: String = ""
+)
+
+private val gearSetNames = mapOf(
+    "moon_guard" to "Страж Луны",
+    "jade_path" to "Нефритовый путь",
+    "sky_oath" to "Клятва Небес",
+    "immortal_soul" to "Душа Бессмертного",
+    "void_walker" to "Странник Пустоты",
+    "chaos_origin" to "Первородный Хаос"
+)
+
+private val gearCatalog = listOf(
+    GearDefinition("moon_helm", "Шлем ночного дозора", GearSlot.HELMET, WeaponRarity.COMMON, 1, 1, 2, 18, 0, "moon_guard", "Укрепляет голову и разум"),
+    GearDefinition("moon_armor", "Доспех лунного стража", GearSlot.ARMOR, WeaponRarity.UNCOMMON, 1, 1, 4, 28, 0, "moon_guard", "Лёгкая защита начинающего культиватора"),
+    GearDefinition("moon_ring", "Кольцо тихой гавани", GearSlot.RING, WeaponRarity.RARE, 1, 2, 1, 12, 2, "moon_guard", "Стабилизирует поток Ци"),
+    GearDefinition("moon_charm", "Талисман лунного света", GearSlot.ARTIFACT, WeaponRarity.EPIC, 1, 3, 2, 20, 3, "moon_guard", "Сохраняет часть духовной энергии"),
+    GearDefinition("jade_helm", "Нефритовый венец", GearSlot.HELMET, WeaponRarity.UNCOMMON, 4, 3, 4, 42, 2, "jade_path", "Усиливает концентрацию"),
+    GearDefinition("jade_armor", "Мантия нефритовых жил", GearSlot.ARMOR, WeaponRarity.RARE, 4, 2, 7, 58, 2, "jade_path", "Защищает меридианы"),
+    GearDefinition("jade_ring", "Перстень зелёного пламени", GearSlot.RING, WeaponRarity.EPIC, 4, 5, 3, 34, 5, "jade_path", "Преобразует Ци в силу"),
+    GearDefinition("jade_artifact", "Печать нефритового дракона", GearSlot.ARTIFACT, WeaponRarity.LEGENDARY, 4, 7, 5, 48, 7, "jade_path", "Пробуждает драконью энергию"),
+    GearDefinition("sky_helm", "Корона небесного грома", GearSlot.HELMET, WeaponRarity.RARE, 7, 6, 7, 78, 4, "sky_oath", "Удерживает грозовую Ци"),
+    GearDefinition("sky_armor", "Броня семи облаков", GearSlot.ARMOR, WeaponRarity.EPIC, 7, 5, 11, 110, 4, "sky_oath", "Рассекает встречные потоки"),
+    GearDefinition("sky_ring", "Кольцо громового сердца", GearSlot.RING, WeaponRarity.LEGENDARY, 7, 9, 5, 66, 8, "sky_oath", "Ускоряет боевые техники"),
+    GearDefinition("sky_artifact", "Зеркало небесного суда", GearSlot.ARTIFACT, WeaponRarity.MYTHIC, 7, 12, 8, 92, 10, "sky_oath", "Отражает часть духовного урона"),
+    GearDefinition("soul_helm", "Венец бессмертной души", GearSlot.HELMET, WeaponRarity.EPIC, 10, 10, 12, 135, 7, "immortal_soul", "Защищает душу от распада"),
+    GearDefinition("soul_armor", "Панцирь вечного пути", GearSlot.ARMOR, WeaponRarity.LEGENDARY, 10, 8, 17, 180, 8, "immortal_soul", "Сковывает тело истинной Ци"),
+    GearDefinition("soul_ring", "Кольцо вечного источника", GearSlot.RING, WeaponRarity.MYTHIC, 10, 15, 10, 110, 13, "immortal_soul", "Поддерживает поток бессмертия"),
+    GearDefinition("soul_artifact", "Сердце бессмертного дерева", GearSlot.ARTIFACT, WeaponRarity.MYTHIC, 10, 18, 12, 155, 16, "immortal_soul", "Возвращает жизненную энергию"),
+    GearDefinition("void_helm", "Шлем беззвёздной пустоты", GearSlot.HELMET, WeaponRarity.LEGENDARY, 13, 16, 19, 205, 12, "void_walker", "Скрывает присутствие в пустоте"),
+    GearDefinition("void_armor", "Доспех пограничного мира", GearSlot.ARMOR, WeaponRarity.MYTHIC, 13, 14, 25, 270, 14, "void_walker", "Сдерживает разрывы пространства"),
+    GearDefinition("void_ring", "Кольцо последней грани", GearSlot.RING, WeaponRarity.MYTHIC, 13, 23, 15, 170, 20, "void_walker", "Усиливает волю культиватора"),
+    GearDefinition("void_artifact", "Осколок вечной пустоты", GearSlot.ARTIFACT, WeaponRarity.MYTHIC, 13, 27, 18, 230, 24, "void_walker", "Поглощает энергию противника"),
+    GearDefinition("chaos_helm", "Диадема первичного хаоса", GearSlot.HELMET, WeaponRarity.MYTHIC, 16, 24, 28, 300, 18, "chaos_origin", "Удерживает хаотическое сознание"),
+    GearDefinition("chaos_armor", "Облачение прародителя", GearSlot.ARMOR, WeaponRarity.MYTHIC, 16, 22, 36, 390, 20, "chaos_origin", "Сшито из материи первозданного мира"),
+    GearDefinition("chaos_ring", "Перстень нулевого Дао", GearSlot.RING, WeaponRarity.MYTHIC, 16, 34, 22, 245, 29, "chaos_origin", "Подчиняет потоки первоосновы"),
+    GearDefinition("chaos_artifact", "Сердце начала и конца", GearSlot.ARTIFACT, WeaponRarity.MYTHIC, 16, 40, 27, 330, 34, "chaos_origin", "Содержит искру первого мира")
+)
+
+private fun encodeGearInstance(item: GearDefinition): String =
+    listOf(item.id, item.attackBonus, item.defenseBonus, item.hpBonus, item.skillBonus).joinToString("~")
+
+private fun resolveGearInstance(encoded: String): GearDefinition? {
+    val parts = encoded.split("~")
+    val base = gearCatalog.firstOrNull { it.id == parts.firstOrNull() } ?: return null
+    if (parts.size < 5) return base
+    return base.copy(
+        attackBonus = parts[1].toIntOrNull() ?: base.attackBonus,
+        defenseBonus = parts[2].toIntOrNull() ?: base.defenseBonus,
+        hpBonus = parts[3].toIntOrNull() ?: base.hpBonus,
+        skillBonus = parts[4].toIntOrNull() ?: base.skillBonus
+    )
+}
+
+private fun gearPowerScore(item: GearDefinition): Int =
+    item.attackBonus + item.defenseBonus * 2 + item.hpBonus / 20 + item.skillBonus * 2
+
+private fun calculateGearSetBonus(items: List<GearDefinition>): GearSetBonus {
+    var attack = 0
+    var defense = 0
+    var hp = 0
+    var skill = 0
+    val active = mutableListOf<String>()
+    items.groupingBy { it.setId }.eachCount().forEach { (setId, count) ->
+        val name = gearSetNames[setId] ?: setId
+        if (count >= 2) {
+            attack += 8
+            defense += 8
+            hp += 80
+            active.add("$name · 2/4")
+        }
+        if (count >= 4) {
+            attack += 12
+            defense += 12
+            hp += 120
+            skill += 8
+            active.remove("$name · 2/4")
+            active.add("$name · полный комплект")
+        }
+    }
+    val description = if (active.isEmpty()) "" else "Бонус комплекта: " + active.joinToString(" · ") +
+        " · атака +$attack · защита +$defense · здоровье +$hp" + if (skill > 0) " · сила техник +$skill" else ""
+    return GearSetBonus(attack, defense, hp, skill, description)
+}
+
+private fun rollGearDrop(stage: Int): GearDefinition? {
+    val available = gearCatalog.filter { it.requiredStage <= stage }
+    if (available.isEmpty()) return null
+    val roll = Random.nextInt(1000)
+    val rarity = when {
+        roll < 400 -> WeaponRarity.COMMON
+        roll < 660 -> WeaponRarity.UNCOMMON
+        roll < 830 -> WeaponRarity.RARE
+        roll < 930 -> WeaponRarity.EPIC
+        roll < 985 -> WeaponRarity.LEGENDARY
+        else -> WeaponRarity.MYTHIC
+    }
+    val base = available.filter { it.rarity == rarity }.ifEmpty { available }.random()
+    val spread = base.rarity.rollSpread
+    return base.copy(
+        attackBonus = (base.attackBonus * Random.nextDouble(1.0 - spread, 1.0 + spread)).toInt().coerceAtLeast(0),
+        defenseBonus = (base.defenseBonus * Random.nextDouble(1.0 - spread, 1.0 + spread)).toInt().coerceAtLeast(0),
+        hpBonus = (base.hpBonus * Random.nextDouble(1.0 - spread, 1.0 + spread)).toInt().coerceAtLeast(1),
+        skillBonus = (base.skillBonus * Random.nextDouble(1.0 - spread, 1.0 + spread)).toInt().coerceAtLeast(0)
+    )
+}
 
 private fun weaponRarityColor(rarity: WeaponRarity): Color = when (rarity) {
     WeaponRarity.COMMON -> Color(0xFFCFD4D8)

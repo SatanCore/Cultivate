@@ -338,7 +338,7 @@ private fun CultivateApp() {
         }
     }
 
-    LaunchedEffect(qi, stones, stage, abodeLevel, ironOre, spiritHerbs, spiritWater, qiPills, bodyPills, bodyPillBonus, forgeTemper, alchemyRank, gardenReadyAt, springReadyAt, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, ownedGearIds, equippedGearIds.toList(), questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
+    LaunchedEffect(qi, stones, stage, abodeLevel, ironOre, spiritHerbs, spiritWater, qiPills, bodyPills, bodyPillBonus, forgeTemper, alchemyRank, gardenReadyAt, springReadyAt, ownedPetIds, activePetId, petLevels.toList(), petBondXp.toList(), petAscensions.toList(), petEssence, petCores, petPity, dailyWins, dailyGardenCollected, dailyMeditated, dailyClanDonated, dailyClaims, clanReputation, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, ownedGearIds, equippedGearIds.toList(), questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
         prefs.edit()
             .putInt("qi", qi)
             .putInt("stones", stones)
@@ -453,7 +453,7 @@ private fun CultivateApp() {
                         TownBuilding(if (stage < 7) "Кланы" else "Секты", if (stage < 7) "Дома и союзы долин" else "Искусства и наставники", "🏯", Modifier.weight(1f)) { selectedMenu = 6 }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TownBuilding("Дом спутника", "Уход за духовным лисом", "🦊", Modifier.weight(1f)) { selectedMenu = 7 }
+                        TownBuilding("Зверинец", "Поиск и воспитание питомцев", "🐾", Modifier.weight(1f)) { selectedMenu = 7 }
                         TownBuilding("Склад", "Экипировка и находки", "🎒", Modifier.weight(1f)) { selectedMenu = 4 }
                     }
                     TownBuilding("Личная обитель", "Медитация · кузница · алхимия", "🏡", Modifier.fillMaxWidth()) { selectedMenu = 8; abodeSection = "sanctuary" }
@@ -554,7 +554,7 @@ private fun CultivateApp() {
                     when (abodeSection) {
                         "sanctuary" -> {
                             Text("Пещера уединения", color = Gold, fontWeight = FontWeight.Bold)
-                            Text("Ци накапливается автоматически даже вне игры. Уровень обители ускоряет медитацию: сейчас одна единица Ци каждые ${QI_INTERVAL_SECONDS - (abodeLevel - 1).coerceAtMost(3)} сек. Прогресс сохраняется.", color = Color.LightGray, fontSize = 12.sp)
+                            Text("Ци накапливается автоматически даже вне игры. Уровень обители ускоряет медитацию: сейчас одна единица Ци каждые ${qiIntervalForAbode(abodeLevel) / 60} мин. Прогресс сохраняется.", color = Color.LightGray, fontSize = 12.sp)
                             Button(onClick = { if (!dailyMeditated) { val gain = 25 + abodeLevel * 5; qi = (qi + gain).coerceAtMost(9999); dailyMeditated = true; message = "Медитация завершена: собрано $gain Ци. Возвращайся завтра." } else message = "Сегодня ты уже завершил основную медитацию. Продолжай пассивное накопление." }, modifier = Modifier.fillMaxWidth()) { Text(if (dailyMeditated) "Ежедневная медитация завершена" else "Провести медитацию · +${25 + abodeLevel * 5} Ци") }
                             Divider(color = Color(0xFF3B4B4F))
                             Text("Развитие обители", color = Gold, fontWeight = FontWeight.Bold)
@@ -904,19 +904,21 @@ private fun CultivateApp() {
             if (selectedMenu == 6) GameCard(if (stage < 7) "Кланы Смертного мира" else "Секты Духовного мира", if (stage < 7) "Родовые дома, торговые союзы и защитники долин" else "Праведный и Злой пути · новый уровень влияния") {
                 Text(if (stage < 7) "В Смертном мире нет сект бессмертных. Здесь власть держат кланы и союзы: они защищают дороги, торгуют ресурсами и обучают простым искусствам." else "За пределами смертных земель культиваторы объединяются в секты, где передают наследия и изучают законы Дао.", color = Color.LightGray, fontSize = 12.sp)
                 (if (stage < 7) listOf("Союз долин", "Вольные дома") else listOf("Праведный альянс", "Злой альянс")).forEachIndexed { index, label ->
-                    OutlinedButton(onClick = { chosenAlliance = index; if (chosenSect >= 0 && sectAlliance[chosenSect] != index) chosenSect = -1; message = "Выбран $label" }, modifier = Modifier.fillMaxWidth()) { Text(label + if (chosenAlliance == index) " · выбран" else "") }
+                    OutlinedButton(onClick = { chosenAlliance = index; val alignment = if (stage < 7) factionAlliance else sectAlliance; if (chosenSect >= 0 && alignment[chosenSect] != index) chosenSect = -1; message = "Выбран $label" }, modifier = Modifier.fillMaxWidth()) { Text(label + if (chosenAlliance == index) " · выбран" else "") }
                 }
                 val factionNames = if (stage < 7) clanNames else sectNames
                 val factionLore = if (stage < 7) clanLore else sectLore
+                val factionAlliances = if (stage < 7) factionAlliance else sectAlliance
                 factionNames.forEachIndexed { index, sect ->
-                    if (chosenAlliance < 0 || (if (stage < 7) factionAlliance[index] else sectAlliance[index]) == chosenAlliance) {
+                    if (chosenAlliance < 0 || factionAlliances[index] == chosenAlliance) {
                         Column(Modifier.fillMaxWidth().padding(8.dp)) {
                             Text(sect, color = Gold, fontWeight = FontWeight.Bold)
                             Text(factionLore[index], color = Color.LightGray, fontSize = 12.sp)
                             Text("Бонус союза: атака +${clanAttackBonuses[index]} · защита +${clanDefenseBonuses[index]} · здоровье +${clanHpBonuses[index]}", color = Jade, fontSize = 11.sp)
-                            OutlinedButton(onClick = { chosenSect = index; message = if (stage < 7) "Ты вступил в клан «$sect»." else "Ты вступил в секту «$sect»." }, enabled = chosenAlliance == (if (stage < 7) factionAlliance[index] else sectAlliance[index]), modifier = Modifier.fillMaxWidth()) { Text(if (chosenSect == index) if (stage < 7) "Твой клан" else "Твоя секта" else "Вступить") }
+                            OutlinedButton(onClick = { chosenSect = index; message = if (stage < 7) "Ты вступил в клан «$sect»." else "Ты вступил в секту «$sect»." }, enabled = chosenAlliance == factionAlliances[index], modifier = Modifier.fillMaxWidth()) { Text(if (chosenSect == index) if (stage < 7) "Твой клан" else "Твоя секта" else "Вступить") }
                         }
                     }
+                }
                 Text("Репутация союза: $clanReputation · ежедневный вклад помогает заслужить доверие старейшин.", color = Gold, fontSize = 11.sp)
                 Button(onClick = {
                     if (!dailyClanDonated && stones >= 50) { stones -= 50; qi += 35; clanReputation++; dailyClanDonated = true; message = "Вклад принят. +35 Ци и 1 очко репутации." }

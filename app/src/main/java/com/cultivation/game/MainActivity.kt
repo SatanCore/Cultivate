@@ -83,6 +83,14 @@ private fun CultivateApp() {
     val equippedWeapon = resolveWeaponInstance(equippedWeaponId)?.takeIf { equippedWeaponId in ownedWeaponList } ?: weaponCatalog.first()
     var activeSkillNode by remember { mutableIntStateOf(prefs.getInt("active_skill_node",0).coerceIn(0,8)) }
     var activeSkillCooldown by remember { mutableIntStateOf(0) }
+    var techniqueCooldown by remember { mutableIntStateOf(0) }
+    var weaponCooldown by remember { mutableIntStateOf(0) }
+    var autoBattle by remember { mutableStateOf(prefs.getBoolean("auto_battle", false)) }
+    val rotationOrder = remember { mutableStateListOf<Int>().apply {
+        val saved = (prefs.getString("battle_rotation", "0,1,2") ?: "0,1,2").split(",").mapNotNull { it.toIntOrNull() }.filter { it in 0..2 }.distinct()
+        addAll(saved)
+        (0..2).filter { it !in this }.forEach { add(it) }
+    } }
     var chosenSect by remember { mutableIntStateOf(prefs.getInt("chosen_sect", -1).coerceIn(-1, 7)) }
     var chosenAlliance by remember { mutableIntStateOf(prefs.getInt("chosen_alliance", -1).coerceIn(-1, 1)) }
     var rareSkill by remember { mutableStateOf(prefs.getString("rare_skill", "") ?: "") }
@@ -118,6 +126,71 @@ private fun CultivateApp() {
     }
     val techniqueDamage = if (activeTechniqueLevel >= 50) (techniqueDamageBase * 1.2).toInt() else techniqueDamageBase
 
+    fun performCombatTurn() {
+        if (enemyHp <= 0 || playerHp <= 0) return
+        val skillCd = (activeSkillCooldown - 1).coerceAtLeast(0)
+        val techniqueCd = (techniqueCooldown - 1).coerceAtLeast(0)
+        val weaponCd = (weaponCooldown - 1).coerceAtLeast(0)
+        val skillAvailable = chosenClass >= 0 && skillTreeLevels[chosenClass * 9 + activeSkillNode] == 1 &&
+            skillDefinitions[chosenClass][activeSkillNode].active && skillCd == 0
+        val action = rotationOrder.firstOrNull { candidate ->
+            when (candidate) { 0 -> skillAvailable; 1 -> techniqueCd == 0; 2 -> weaponCd == 0; else -> false }
+        }
+        val actionBonus = when (action) {
+            0 -> activeSkillDamage[chosenClass] + classProfile.skillPower
+            1 -> techniqueDamage
+            2 -> 12 + equippedWeapon.bonusDamage * 2
+            else -> techniqueDamage / 2
+        }
+        val rawDamage = 22 + stage * 3 + petLevel * 2 + classBonus + actionBonus
+        val critical = Random.nextInt(100) < classProfile.criticalChance
+        val damage = if (critical) (rawDamage * 1.5).toInt() else rawDamage
+        enemyHp = (enemyHp - damage).coerceAtLeast(0)
+        activeSkillCooldown = if (action == 0) 4 else skillCd
+        techniqueCooldown = if (action == 1) 3 else techniqueCd
+        weaponCooldown = if (action == 2) 6 else weaponCd
+        val weaponHealing = equippedWeapon.healOnHit + if (chosenClass == 3) classProfile.healingBonus else 0
+        if (weaponHealing > 0) playerHp = (playerHp + weaponHealing).coerceAtMost(playerMaxHp)
+        if (enemyHp > 0) {
+            var incoming = (12 + bossLevel * 3 - classDefense).coerceAtLeast(2)
+            if (action == 0) {
+                incoming = when (chosenClass) { 0 -> incoming * 55 / 100; 1 -> incoming * 25 / 100; 2 -> 0; else -> incoming * 70 / 100 }
+                if (chosenClass == 3) playerHp = (playerHp + 45).coerceAtMost(playerMaxHp)
+            }
+            playerHp = (playerHp - incoming).coerceAtLeast(0)
+        }
+        if (enemyHp == 0) {
+            autoBattle = false
+            val reward = 80 + bossLevel * 15 + stage * 5
+            stones += reward
+            wins++
+            skillPoints++
+            val materialTier = ((bossLevel - 1) / 5).coerceIn(0, 5)
+            skillMaterials[materialTier] = skillMaterials[materialTier] + 1
+            val weaponDrop = rollWeaponDrop(stage, ownedWeaponList)
+            val rareSkillFound = chosenClass >= 0 && rareSkill.isBlank() && Random.nextDouble() < 0.008
+            val weaponText = if (weaponDrop != null) {
+                val encodedDrop = encodeWeaponInstance(weaponDrop)
+                ownedWeaponIds = (ownedWeaponList + encodedDrop).joinToString("|")
+                " Добыча: ${weaponDrop.name} · ${weaponDrop.rarity.title}."
+            } else ""
+            if (rareSkillFound) rareSkill = rareArts[chosenClass]
+            message = "Победа! Получено $reward камней, 1 очко навыков и ${skillMaterialNames[materialTier]}.$weaponText" +
+                if (rareSkillFound) " Редкое наследие: $rareSkill!" else ""
+        } else if (playerHp <= 0) {
+            autoBattle = false
+            message = "Ты пал в бою. Восстановись за 40 камней духа, чтобы продолжить."
+        } else {
+            val actionName = when (action) {
+                0 -> skillDefinitions[chosenClass][activeSkillNode].name
+                1 -> activeTechniqueName
+                2 -> "Способность оружия: ${equippedWeapon.name}"
+                else -> "Обычная атака"
+            }
+            message = (if (critical) "КРИТИЧЕСКИЙ УДАР! " else "") + "$actionName · урон $damage."
+        }
+    }
+
     fun upgradeTechnique(level: Int, setLevel: (Int) -> Unit) {
         if (level >= 50) { message = "Техника достигла предела мастерства 50 и получила усиление +20%."; return }
         val targetLevel = level + 1
@@ -136,6 +209,15 @@ private fun CultivateApp() {
         }
     }
 
+    LaunchedEffect(autoBattle, selectedMenu) {
+        if (autoBattle && selectedMenu == 2) {
+            while (autoBattle && selectedMenu == 2 && enemyHp > 0 && playerHp > 0) {
+                delay(1000L)
+                performCombatTurn()
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         while (true) {
             delay(QI_INTERVAL_SECONDS * 1000L)
@@ -143,7 +225,7 @@ private fun CultivateApp() {
         }
     }
 
-    LaunchedEffect(qi, stones, stage, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, questClaimed, storyChapter, skillMaterials.toList()) {
+    LaunchedEffect(qi, stones, stage, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
         prefs.edit()
             .putInt("qi", qi)
             .putInt("stones", stones)
@@ -169,6 +251,8 @@ private fun CultivateApp() {
             .putBoolean("town_quest_claimed", questClaimed)
             .putInt("town_story_chapter", storyChapter)
             .putString("skill_materials", skillMaterials.joinToString(","))
+            .putBoolean("auto_battle", autoBattle)
+            .putString("battle_rotation", rotationOrder.joinToString(","))
             .also { editor -> skillTreeLevels.forEachIndexed { index, level -> editor.putInt("skill_tree_${index/9}_${index%9}", level) } }
             .putLong("last_seen", System.currentTimeMillis())
             .apply()
@@ -319,55 +403,15 @@ private fun CultivateApp() {
                     color = Color(0xFFD77A68)
                 )
                 Button(
-                    onClick = {
-                        if (enemyHp <= 0) {
-                            message = "Страж повержен. Начни следующий бой."
-                        } else {
-                            val activeBonus = if(activeSkillReady) activeSkillDamage[chosenClass] else 0
-                            val rawDamage = 22 + stage*3 + petLevel*2 + techniqueDamage + classBonus + activeBonus + classProfile.skillPower
-                            val critical = Random.nextInt(100) < classProfile.criticalChance
-                            val damage = if (critical) (rawDamage * 1.5).toInt() else rawDamage
-                            enemyHp = (enemyHp-damage).coerceAtLeast(0)
-                            val weaponHealing = equippedWeapon.healOnHit + if (chosenClass == 3) classProfile.healingBonus else 0
-                            if (weaponHealing > 0) playerHp = (playerHp + weaponHealing).coerceAtMost(playerMaxHp)
-                            if(activeSkillReady) activeSkillCooldown = 2 else if(activeSkillCooldown > 0) activeSkillCooldown--
-                            if (enemyHp > 0) {
-                                var incoming = (12 + bossLevel * 3 - classDefense).coerceAtLeast(2)
-                                if (activeSkillReady) {
-                                    incoming = when(chosenClass) { 0 -> incoming * 55 / 100; 1 -> incoming * 25 / 100; 2 -> 0; else -> incoming * 70 / 100 }
-                                    if (chosenClass == 3) playerHp = (playerHp + 45).coerceAtMost(playerMaxHp)
-                                }
-                                playerHp = (playerHp - incoming).coerceAtLeast(0)
-                            }
-                            if (enemyHp == 0) {
-                                val reward = 80 + bossLevel * 15 + stage * 5
-                                stones += reward
-                                wins++
-                                skillPoints++
-                                val materialTier = ((bossLevel - 1) / 5).coerceIn(0, 5)
-                                skillMaterials[materialTier] = skillMaterials[materialTier] + 1
-                                val weaponDrop = rollWeaponDrop(stage, ownedWeaponList)
-                                val rareSkillFound = chosenClass >= 0 && rareSkill.isBlank() && Random.nextDouble() < 0.008
-                                val baseMessage = "Победа! Получено $reward камней духа и 1 очко навыков."
-                                if (weaponDrop != null) {
-                                    val encodedDrop = encodeWeaponInstance(weaponDrop)
-                                    ownedWeaponIds = (ownedWeaponList + encodedDrop).distinct().joinToString("|")
-                                    message = "Добыча: ${weaponDrop.name} · ${weaponDrop.rarity.title}! $baseMessage"
-                                } else message = baseMessage
-                                if (rareSkillFound) {
-                                    rareSkill = rareArts[chosenClass]
-                                    message += " Редкое наследие пробудилось: $rareSkill!"
-                                }
-                            } else if (playerHp <= 0) {
-                                message = "Ты пал в бою. Восстановись за 40 камней духа, чтобы продолжить."
-                            } else {
-                                message = (if (critical) "КРИТИЧЕСКИЙ УДАР! " else "") + (if(activeSkillReady) skillDefinitions[chosenClass][activeSkillNode].name + " активирован! Урон: $damage." else "$activeTechniqueName нанесла $damage урона.")
-                            }
-                        }
-                    },
-                    enabled = enemyHp > 0 && playerHp > 0,
+                    onClick = { performCombatTurn() },
+                    enabled = enemyHp > 0 && playerHp > 0 && !autoBattle,
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("Удар потоком Ци") }
+                ) { Text("Сделать следующий ход") }
+                Button(onClick = { autoBattle = !autoBattle }, enabled = enemyHp > 0 && playerHp > 0, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (autoBattle) "Остановить автобой" else "Наблюдать за боем · авто")
+                }
+                Text("Ротация: " + rotationOrder.joinToString(" → ") { when(it) { 0 -> "Навык"; 1 -> "Техника"; else -> "Оружие" } }, color = Gold, fontSize = 11.sp)
+                Text("Перезарядка · навык $activeSkillCooldown · техника $techniqueCooldown · оружие $weaponCooldown", color = Color.LightGray, fontSize = 11.sp)
 
                 if (playerHp <= 0) {
                     Button(onClick = { if (stones >= 40) { stones -= 40; playerHp = playerMaxHp; message = "Ты восстановил силы и готов вернуться на арену." } else message = "Нужно 40 камней духа для восстановления." }, modifier = Modifier.fillMaxWidth()) { Text("Восстановиться · 40 камней") }
@@ -468,6 +512,16 @@ private fun CultivateApp() {
                         onUpgrade = { upgradeTechnique(foxLevel) { foxLevel = it } }
                     )
                     Text("Дополнительный урон выбранной техники: +$techniqueDamage", color = Gold, fontWeight = FontWeight.Bold)
+                }
+                GameCard("Ротация автобоя", "Порядок автоматического применения техник и оружия") {
+                    Text("Перетаскивания пока нет: меняй приоритет стрелками. Система применяет первое готовое действие в очереди.", color = Color.LightGray, fontSize = 11.sp)
+                    rotationOrder.forEachIndexed { index, action ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(when(action) { 0 -> "Активный навык · перезарядка 4 сек"; 1 -> "Техника · перезарядка 3 сек"; else -> "Способность оружия · перезарядка 6 сек" }, color = Gold, modifier = Modifier.weight(1f), fontSize = 11.sp)
+                            OutlinedButton(onClick = { if (index > 0) { val v = rotationOrder[index-1]; rotationOrder[index-1] = rotationOrder[index]; rotationOrder[index] = v } }, enabled = index > 0) { Text("↑") }
+                            OutlinedButton(onClick = { if (index < rotationOrder.lastIndex) { val v = rotationOrder[index+1]; rotationOrder[index+1] = rotationOrder[index]; rotationOrder[index] = v } }, enabled = index < rotationOrder.lastIndex) { Text("↓") }
+                        }
+                    }
                 }
                 GameCard("Древо навыков", if (chosenClass < 0) "Сначала выбери класс в меню персонажа" else classNames[chosenClass]) {
                     if (chosenClass >= 0) {

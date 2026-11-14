@@ -391,6 +391,20 @@ private fun CultivateApp() {
                                 else message = "Недостаточно камней для ставки."
                             }, enabled = stones >= price, modifier = Modifier.fillMaxWidth()) { Text("Купить лот · $price") }
                         }
+                        Divider(color = Color(0xFF3B4B4F))
+                        Text("Редкие предметы экипировки", color = Gold, fontWeight = FontWeight.Bold)
+                        gearCatalog.filter { it.requiredStage <= stage }.sortedByDescending { gearPowerScore(it) }.take(3).forEach { listing ->
+                            val price = 350 + gearPowerScore(listing) * 16
+                            Text("${listing.name} · ${listing.rarity.title}", color = weaponRarityColor(listing.rarity), fontWeight = FontWeight.Bold)
+                            Text("${listing.slot.title} · набор «${gearSetNames[listing.setId]}» · рейтинг ${gearPowerScore(listing)} · $price камней", color = Color.LightGray, fontSize = 11.sp)
+                            OutlinedButton(onClick = {
+                                if (stones >= price) {
+                                    stones -= price
+                                    ownedGearIds = (ownedGearList + encodeGearInstance(listing)).joinToString("|")
+                                    message = "На аукционе приобретено: ${listing.name}."
+                                } else message = "Недостаточно камней для покупки."
+                            }, enabled = stones >= price, modifier = Modifier.fillMaxWidth()) { Text("Купить экипировку · $price") }
+                        }
                         OutlinedButton(onClick = { selectedTownBuilding = "" }) { Text("Назад на площадь") }
                     }
                     "forge" -> GameCard("Кузница Чэня", "Мастерская оружейника") {

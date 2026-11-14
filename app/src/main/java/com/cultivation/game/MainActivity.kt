@@ -50,6 +50,7 @@ private fun CultivateApp() {
     var petLevel by remember { mutableIntStateOf(prefs.getInt("pet", 1).coerceAtLeast(1)) }
     var bossLevel by remember { mutableIntStateOf(prefs.getInt("boss_level", 1).coerceAtLeast(1)) }
     var enemyHp by remember { mutableIntStateOf(prefs.getInt("enemy", 100).coerceAtLeast(0)) }
+    var playerHp by remember { mutableIntStateOf(prefs.getInt("player_hp", 530).coerceAtLeast(0)) }
     var wins by remember { mutableIntStateOf(prefs.getInt("wins", 0).coerceAtLeast(0)) }
     var selectedTechnique by remember { mutableIntStateOf(prefs.getInt("selected_technique", 0).coerceIn(0, 2)) }
     var swordLevel by remember { mutableIntStateOf(prefs.getInt("tech_sword", 1).coerceAtLeast(1)) }
@@ -78,7 +79,11 @@ private fun CultivateApp() {
     }
 
     val enemyMaxHp = bossMaxHp(bossLevel)
-    val passiveSkillCount = if(chosenClass < 0) 0 else (0..8).count { skillTreeLevels[chosenClass*9+it] == 1 && !skillDefinitions[chosenClass][it].active }
+    val playerMaxHp = 500 + stage * 30
+    val defensiveNodes = listOf(listOf(3,4,7), listOf(2,4,7), listOf(5,7), listOf(3,5,7))
+    val defensiveSkillCount = if(chosenClass < 0) 0 else defensiveNodes[chosenClass].count { skillTreeLevels[chosenClass*9+it] == 1 }
+    val passiveSkillCount = if(chosenClass < 0) 0 else (0..8).count { skillTreeLevels[chosenClass*9+it] == 1 && !skillDefinitions[chosenClass][it].active && it !in defensiveNodes[chosenClass] }
+    val classDefense = if(chosenClass < 0) 0 else listOf(5,9,2,6)[chosenClass] + defensiveSkillCount*4
     val weaponBranchBonus = if(chosenClass < 0) 0 else
         (if(skillTreeLevels[chosenClass*9+1] == 1) weaponNodeOneBonus[selectedWeapon] else 0) +
         (if(skillTreeLevels[chosenClass*9+4] == 1) weaponNodeTwoBonus[selectedWeapon] else 0)
@@ -103,7 +108,7 @@ private fun CultivateApp() {
         }
     }
 
-    LaunchedEffect(qi, stones, stage, petLevel, bossLevel, enemyHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode) {
+    LaunchedEffect(qi, stones, stage, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode) {
         prefs.edit()
             .putInt("qi", qi)
             .putInt("stones", stones)
@@ -111,6 +116,7 @@ private fun CultivateApp() {
             .putInt("pet", petLevel)
             .putInt("boss_level", bossLevel)
             .putInt("enemy", enemyHp)
+            .putInt("player_hp", playerHp)
             .putInt("wins", wins)
             .putInt("selected_technique", selectedTechnique)
             .putInt("tech_sword", swordLevel)
@@ -180,6 +186,8 @@ private fun CultivateApp() {
             }
 
             GameCard("Арена испытаний", "Страж святилища · ранг $bossLevel") {
+                Text("Твоё здоровье: ${playerHp.coerceAtMost(playerMaxHp)} / $playerMaxHp", color = Jade)
+                LinearProgressIndicator(progress = { (playerHp.toFloat() / playerMaxHp).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth(), color = Jade)
                 Text("Здоровье противника: $enemyHp / $enemyMaxHp", color = Color.LightGray)
                 LinearProgressIndicator(
                     progress = { (enemyHp.toFloat() / enemyMaxHp).coerceIn(0f, 1f) },
@@ -195,6 +203,14 @@ private fun CultivateApp() {
                             val damage = 22 + stage*3 + petLevel*2 + techniqueDamage + classBonus + activeBonus
                             enemyHp = (enemyHp-damage).coerceAtLeast(0)
                             if(activeSkillReady) activeSkillCooldown = 2 else if(activeSkillCooldown > 0) activeSkillCooldown--
+                            if (enemyHp > 0) {
+                                var incoming = (12 + bossLevel * 3 - classDefense).coerceAtLeast(2)
+                                if (activeSkillReady) {
+                                    incoming = when(chosenClass) { 0 -> incoming * 55 / 100; 1 -> incoming * 25 / 100; 2 -> 0; else -> incoming * 70 / 100 }
+                                    if (chosenClass == 3) playerHp = (playerHp + 45).coerceAtMost(playerMaxHp)
+                                }
+                                playerHp = (playerHp - incoming).coerceAtLeast(0)
+                            }
                             if (enemyHp == 0) {
                                 val reward = 80 + bossLevel * 15 + stage * 5
                                 stones += reward
@@ -202,20 +218,26 @@ private fun CultivateApp() {
                                 skillPoints++
                                 if (chosenClass >= 0 && rareSkill.isBlank() && Random.nextDouble() < 0.008) { rareSkill = rareArts[chosenClass]; message = "Редкое наследие пробудилось: $rareSkill" }
                                 else message = "Победа! Получено $reward камней духа и 1 очко навыков."
+                            } else if (playerHp <= 0) {
+                                message = "Ты пал в бою. Восстановись за 40 камней духа, чтобы продолжить."
                             } else {
-                                message = if(activeSkillReady) skillDefinitions[chosenClass][activeSkillNode].name + " активирован! Общий урон: $damage." else "$activeTechniqueName нанесла $damage урона."
+                                message = if(activeSkillReady) skillDefinitions[chosenClass][activeSkillNode].name + " активирован! Урон: $damage." else "$activeTechniqueName нанесла $damage урона."
                             }
                         }
                     },
-                    enabled = enemyHp > 0,
+                    enabled = enemyHp > 0 && playerHp > 0,
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Удар потоком Ци") }
 
+                if (playerHp <= 0) {
+                    Button(onClick = { if (stones >= 40) { stones -= 40; playerHp = playerMaxHp; message = "Ты восстановил силы и готов вернуться на арену." } else message = "Нужно 40 камней духа для восстановления." }, modifier = Modifier.fillMaxWidth()) { Text("Восстановиться · 40 камней") }
+                }
                 Button(
                     onClick = {
                         if (enemyHp <= 0) {
                             bossLevel++
                             enemyHp = bossMaxHp(bossLevel)
+                            playerHp = playerMaxHp
                             message = "На арену вышел страж ранга $bossLevel. Будь осторожен!"
                         } else {
                             message = "Сначала одолей текущего стража."

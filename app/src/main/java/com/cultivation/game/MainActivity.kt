@@ -52,7 +52,7 @@ private fun CultivateApp() {
     val now = remember { System.currentTimeMillis() }
     val previousVisit = remember { prefs.getLong("last_seen", now) }
     val offlineSeconds = ((now - previousVisit) / 1000L).coerceIn(0L, OFFLINE_CAP_SECONDS)
-    val savedAbodeLevel = prefs.getInt("abode_level", 1).coerceIn(1, 5)
+    val savedAbodeLevel = prefs.getInt("abode_level", 1).coerceIn(1, 20)
     val todayKey = System.currentTimeMillis() / 86_400_000L
     val dailyReset = prefs.getLong("daily_day", todayKey) != todayKey
     val restoredQi = (offlineSeconds / qiIntervalForAbode(savedAbodeLevel)).toInt()
@@ -76,7 +76,7 @@ private fun CultivateApp() {
     var bodyPills by remember { mutableIntStateOf(prefs.getInt("abode_body_pills", 0).coerceAtLeast(0)) }
     var bodyPillBonus by remember { mutableIntStateOf(prefs.getInt("abode_body_bonus", 0).coerceAtLeast(0)) }
     var forgeTemper by remember { mutableIntStateOf(prefs.getInt("abode_forge_temper", 0).coerceAtLeast(0)) }
-    var alchemyRank by remember { mutableIntStateOf(prefs.getInt("abode_alchemy_rank", 1).coerceIn(1, 5)) }
+    var alchemyRank by remember { mutableIntStateOf(prefs.getInt("abode_alchemy_rank", 1).coerceIn(1, 20)) }
     var gardenReadyAt by remember { mutableLongStateOf(prefs.getLong("abode_garden_ready", 0L)) }
     var springReadyAt by remember { mutableLongStateOf(prefs.getLong("abode_spring_ready", 0L)) }
     var abodeSection by remember { mutableStateOf("sanctuary") }
@@ -162,6 +162,8 @@ private fun CultivateApp() {
     }
 
     val enemyMaxHp = bossMaxHp(bossLevel)
+    val maxAbodeLevel = abodeMaxLevel(stage)
+    val maxAlchemyRank = alchemyMaxRank(stage)
     val classProfile = if (chosenClass >= 0) classCombatProfiles[chosenClass] else classCombatProfiles[0]
     val activeSetBonus = calculateGearSetBonus(equippedGear)
     val gearAttackTotal = equippedGear.sumOf { it.attackBonus } + activeSetBonus.attack
@@ -235,7 +237,8 @@ private fun CultivateApp() {
             action == 10 -> 12 + equippedWeapon.bonusDamage * 2
             else -> techniqueDamage / 2
         }
-        val rawDamage = 22 + stage * 3 + classBonus + actionBonus
+        val petFinisherBonus = if (activePet.id == "ember_wolf" && enemyHp <= (enemyMaxHp * 0.30f).toInt()) (22 + stage * 3 + classBonus + actionBonus) / 7 else 0
+        val rawDamage = 22 + stage * 3 + classBonus + actionBonus + petFinisherBonus
         val critical = Random.nextInt(100) < (classProfile.criticalChance + activePet.critical + if (petSynergy) 2 else 0).coerceAtMost(75)
         val damage = if (critical) (rawDamage * 1.5).toInt() else rawDamage
         enemyHp = (enemyHp - damage).coerceAtLeast(0)
@@ -247,6 +250,7 @@ private fun CultivateApp() {
         if (weaponHealing > 0) playerHp = (playerHp + weaponHealing).coerceAtMost(playerMaxHp)
         if (enemyHp > 0) {
             var incoming = (12 + bossLevel * 3 - classDefense).coerceAtLeast(2)
+            if (activePet.id == "stone_tortoise") incoming = (incoming * 80 / 100).coerceAtLeast(1)
             if (action != null && action in 0..8) {
                 incoming = when (chosenClass) { 0 -> incoming * 55 / 100; 1 -> incoming * 25 / 100; 2 -> 0; else -> incoming * 70 / 100 }
                 if (chosenClass == 3) playerHp = (playerHp + 45).coerceAtMost(playerMaxHp)
@@ -559,14 +563,14 @@ private fun CultivateApp() {
                             Button(onClick = { if (!dailyMeditated) { val gain = 25 + abodeLevel * 5; qi = (qi + gain).coerceAtMost(9999); dailyMeditated = true; message = "Медитация завершена: собрано $gain Ци. Возвращайся завтра." } else message = "Сегодня ты уже завершил основную медитацию. Продолжай пассивное накопление." }, modifier = Modifier.fillMaxWidth()) { Text(if (dailyMeditated) "Ежедневная медитация завершена" else "Провести медитацию · +${25 + abodeLevel * 5} Ци") }
                             Divider(color = Color(0xFF3B4B4F))
                             Text("Развитие обители", color = Gold, fontWeight = FontWeight.Bold)
-                            Text(if (abodeLevel < 5) "Следующий уровень: $abodeUpgradeCost камней духа и $oreUpgradeCost руды. Ускоряет пассивное накопление Ци и расширяет хозяйство." else "Обитель достигла предела развития Смертного мира. Дальнейшие улучшения станут доступны за пределами этого мира.", color = Color.LightGray, fontSize = 12.sp)
+                            Text(if (abodeLevel < maxAbodeLevel) "Следующий уровень: $abodeUpgradeCost камней духа и $oreUpgradeCost руды. Ускоряет пассивное накопление Ци и расширяет хозяйство. Предел текущего мира: $maxAbodeLevel." else "Обитель достигла предела текущего мира ($maxAbodeLevel). Следующий предел откроется после перехода в новый мир.", color = Color.LightGray, fontSize = 12.sp)
                             Button(onClick = {
-                                if (abodeLevel >= 5) message = "Для дальнейшего расширения обители потребуется сила следующего мира."
+                                if (abodeLevel >= maxAbodeLevel) message = "Для дальнейшего расширения обители потребуется сила следующего мира."
                                 else if (stones >= abodeUpgradeCost && ironOre >= oreUpgradeCost) {
                                     stones -= abodeUpgradeCost; ironOre -= oreUpgradeCost; abodeLevel++
                                     message = "Обитель улучшена до $abodeLevel уровня. Потоки Ци стали плотнее."
                                 } else message = "Не хватает ресурсов для улучшения обители."
-                            }, enabled = abodeLevel < 5 && stones >= abodeUpgradeCost && ironOre >= oreUpgradeCost, modifier = Modifier.fillMaxWidth()) { Text(if (abodeLevel >= 5) "Предел Смертного мира" else "Улучшить обитель · $abodeUpgradeCost камней") }
+                            }, enabled = abodeLevel < maxAbodeLevel && stones >= abodeUpgradeCost && ironOre >= oreUpgradeCost, modifier = Modifier.fillMaxWidth()) { Text(if (abodeLevel >= maxAbodeLevel) "Предел текущего мира" else "Улучшить обитель · $abodeUpgradeCost камней") }
                             Text("Склад обители · пилюли Ци: $qiPills · пилюли крепкого тела: $bodyPills · постоянная закалка: +$bodyPillBonus к здоровью", color = Jade, fontSize = 11.sp)
                         }
                         "forge" -> {
@@ -592,7 +596,7 @@ private fun CultivateApp() {
                         "alchemy" -> {
                             Text("Алхимическая печь", color = Gold, fontWeight = FontWeight.Bold)
                             Text("Алхимия Смертного мира не творит чудес: простые травы и вода из родника превращаются в пилюли, помогающие пережить путь и ускорить накопление Ци.", color = Color.LightGray, fontSize = 12.sp)
-                            Text("Ранг алхимии: $alchemyRank / 5 · готовых пилюль Ци: $qiPills · пилюль закалки: $bodyPills", color = Jade)
+                            Text("Ранг алхимии: $alchemyRank / $maxAlchemyRank · готовых пилюль Ци: $qiPills · пилюль закалки: $bodyPills", color = Jade)
                             Button(onClick = {
                                 if (spiritHerbs >= 6 && spiritWater >= 2) { spiritHerbs -= 6; spiritWater -= 2; qiPills++; message = "Создана пилюля сбора Ци." }
                                 else message = "Нужно 6 духовных трав и 2 порции духовной воды."
@@ -611,9 +615,9 @@ private fun CultivateApp() {
                                 if (bodyPills > 0) { bodyPills--; bodyPillBonus += bodyPower; playerHp = (playerHp + bodyPower).coerceAtMost(playerMaxHp + bodyPower); message = "Тело укреплено навсегда: максимальное здоровье +$bodyPower." }
                                 else message = "В запасе нет пилюль закалки."
                             }, modifier = Modifier.fillMaxWidth()) { Text("Принять пилюлю закалки · здоровье +${15 + alchemyRank * 2} навсегда") }
-                            if (alchemyRank < 5 && spiritHerbs >= alchemyRank * 4 && spiritWater >= alchemyRank) {
+                            if (alchemyRank < maxAlchemyRank && spiritHerbs >= alchemyRank * 4 && spiritWater >= alchemyRank) {
                                 OutlinedButton(onClick = { spiritHerbs -= alchemyRank * 4; spiritWater -= alchemyRank; alchemyRank++; message = "Ранг алхимии повышен до $alchemyRank. Пилюли стали эффективнее." }, modifier = Modifier.fillMaxWidth()) { Text("Повысить ранг алхимии · травы ${alchemyRank * 4} + вода $alchemyRank") }
-                            } else Text("Для следующего ранга нужны ${alchemyRank * 4} трав и $alchemyRank порций воды.", color = Color.LightGray, fontSize = 11.sp)
+                            } else Text(if (alchemyRank >= maxAlchemyRank) "Достигнут предел алхимии текущего мира: $maxAlchemyRank." else "Для следующего ранга нужны ${alchemyRank * 4} трав и $alchemyRank порций воды.", color = Color.LightGray, fontSize = 11.sp)
                         }
                         "garden" -> {
                             Text("Сад духовных трав", color = Gold, fontWeight = FontWeight.Bold)
@@ -935,6 +939,7 @@ private fun CultivateApp() {
                 Text("Активен: ${activePet.symbol} ${activePet.name} · уровень $petLevel / 30 · опыт связи $petXp · пробуждение $petAscension / 5", color = Gold)
                 Text("Бонусы: атака +$petAttack · защита +$petDefense · здоровье +${activePet.hp + petLevel * 3 + if (petSynergy) 20 else 0} · техника +$petSkill · крит +${activePet.critical + if (petSynergy) 2 else 0}% · лечение +${activePet.healing + if (petSynergy) 2 else 0}", color = Jade, fontSize = 11.sp)
                 Text(if (petSynergy) "Резонанс класса: активен · питомец усиливает твой путь" else "Резонанс класса: нет · выбери подходящий класс для полного раскрытия питомца", color = if (petSynergy) Gold else Color.Gray, fontSize = 10.sp)
+                Text("Особенность спутника: ${petCombatTrait(activePet.id)}", color = Color.LightGray, fontSize = 10.sp)
                 val xpCost = 100 + petLevel * 75
                 val essenceCost = 1 + petLevel / 5
                 val coreCost = if ((petLevel + 1) % 5 == 0) 1 else 0
@@ -1567,6 +1572,26 @@ private fun techniqueName(index: Int): String = when (index) {
 }
 
 private fun bossMaxHp(level: Int): Int = 100 + (level - 1) * 35
+
+private fun abodeMaxLevel(stage: Int): Int = when {
+    stage >= 19 -> 20
+    stage >= 13 -> 15
+    stage >= 7 -> 10
+    else -> 5
+}
+
+private fun alchemyMaxRank(stage: Int): Int = abodeMaxLevel(stage)
+
+private fun petCombatTrait(petId: String): String = when (petId) {
+    "jade_fox" -> "техники получают дополнительную силу"
+    "stone_tortoise" -> "получаемый урон снижается на 20%"
+    "thunder_hawk" -> "повышенный шанс критического удара"
+    "ember_wolf" -> "добивающий урон +14% по ослабленному противнику"
+    "moon_deer" -> "восстанавливает здоровье каждый ход"
+    "iron_ape" -> "сбалансированная атака и стойкость"
+    "river_koi" -> "усиленное восстановление и духовные техники"
+    else -> "неизвестная особенность"
+}
 
 private fun petClassSynergy(petId: String, classIndex: Int): Boolean = when (petId) {
     "jade_fox" -> classIndex == 0 || classIndex == 3

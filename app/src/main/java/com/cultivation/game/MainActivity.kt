@@ -114,6 +114,8 @@ private fun CultivateApp() {
     var selectedWeapon by remember { mutableIntStateOf(prefs.getInt("weapon_type",0).coerceIn(0,3)) }
     var selectedMenu by remember { mutableIntStateOf(0) }
     var selectedTownBuilding by remember { mutableStateOf("") }
+    val pageScrollState = rememberScrollState()
+    LaunchedEffect(selectedMenu, selectedTownBuilding) { pageScrollState.animateScrollTo(0) }
     var questClaimed by remember { mutableStateOf(prefs.getBoolean("town_quest_claimed", false)) }
     var storyChapter by remember { mutableIntStateOf(prefs.getInt("town_story_chapter", 0).coerceIn(0, 3)) }
     val skillMaterials = remember { mutableStateListOf<Int>().apply {
@@ -417,7 +419,7 @@ private fun CultivateApp() {
         )
     ) {
         Column(
-            Modifier.fillMaxSize().background(Ink).verticalScroll(rememberScrollState()).padding(18.dp),
+            Modifier.fillMaxSize().background(Ink).verticalScroll(pageScrollState).padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text("ПУТЬ БЕССМЕРТНОГО", color = Gold, fontSize = 13.sp, fontWeight = FontWeight.Bold)

@@ -80,7 +80,20 @@ private fun CultivateApp() {
     var gardenReadyAt by remember { mutableLongStateOf(prefs.getLong("abode_garden_ready", 0L)) }
     var springReadyAt by remember { mutableLongStateOf(prefs.getLong("abode_spring_ready", 0L)) }
     var abodeSection by remember { mutableStateOf("sanctuary") }
-    var petLevel by remember { mutableIntStateOf(prefs.getInt("pet", 1).coerceAtLeast(1)) }
+    var ownedPetIds by remember { mutableStateOf(prefs.getString("owned_pet_ids", "jade_fox") ?: "jade_fox") }
+    var activePetId by remember { mutableStateOf(prefs.getString("active_pet_id", "jade_fox") ?: "jade_fox") }
+    val petLevels = remember { mutableStateListOf<Int>().apply { petCatalog.forEachIndexed { index, pet -> add(prefs.getInt("pet_level_${pet.id}", if (index == 0) prefs.getInt("pet", 1) else 1).coerceIn(1, 30)) } } }
+    val petBondXp = remember { mutableStateListOf<Int>().apply { petCatalog.forEach { add(prefs.getInt("pet_xp_${it.id}", 0).coerceAtLeast(0)) } } }
+    val petAscensions = remember { mutableStateListOf<Int>().apply { petCatalog.forEach { add(prefs.getInt("pet_ascension_${it.id}", 0).coerceIn(0, 5)) } } }
+    var petEssence by remember { mutableIntStateOf(prefs.getInt("pet_essence", 0).coerceAtLeast(0)) }
+    var petCores by remember { mutableIntStateOf(prefs.getInt("pet_cores", 0).coerceAtLeast(0)) }
+    var petPity by remember { mutableIntStateOf(prefs.getInt("pet_pity", 0).coerceAtLeast(0)) }
+    val safeActivePetId = if (activePetId in ownedPetIds.split("|")) activePetId else "jade_fox"
+    val activePetIndex = petCatalog.indexOfFirst { it.id == safeActivePetId }.coerceAtLeast(0)
+    val activePet = petCatalog[activePetIndex]
+    val petLevel = petLevels[activePetIndex]
+    val petXp = petBondXp[activePetIndex]
+    val petAscension = petAscensions[activePetIndex]
     var bossLevel by remember { mutableIntStateOf(prefs.getInt("boss_level", 1).coerceAtLeast(1)) }
     var enemyHp by remember { mutableIntStateOf(prefs.getInt("enemy", 100).coerceAtLeast(0)) }
     var playerHp by remember { mutableIntStateOf(prefs.getInt("player_hp", 530).coerceAtLeast(0)) }
@@ -159,15 +172,18 @@ private fun CultivateApp() {
     val factionAttack = if (stage < 7 && chosenSect >= 0) clanAttackBonuses[factionIndex] else 0
     val factionDefense = if (stage < 7 && chosenSect >= 0) clanDefenseBonuses[factionIndex] else 0
     val factionHp = if (stage < 7 && chosenSect >= 0) clanHpBonuses[factionIndex] else 0
-    val playerMaxHp = 500 + stage * 30 + classProfile.bonusHp + gearHpTotal + bodyPillBonus + factionHp
+    val petAttack = activePet.attack + petLevel / 3 + petAscension * 3
+    val petDefense = activePet.defense + petLevel / 4 + petAscension * 2
+    val petSkill = activePet.skill + petAscension * 2
+    val playerMaxHp = 500 + stage * 30 + classProfile.bonusHp + gearHpTotal + bodyPillBonus + activePet.hp + petLevel * 3 + factionHp
     val defensiveNodes = listOf(listOf(3,4,7), listOf(2,4,7), listOf(5,7), listOf(3,5,7))
     val defensiveSkillCount = if(chosenClass < 0) 0 else defensiveNodes[chosenClass].count { skillTreeLevels[chosenClass*9+it] == 1 }
     val passiveSkillCount = if(chosenClass < 0) 0 else (0..8).count { skillTreeLevels[chosenClass*9+it] == 1 && !skillDefinitions[chosenClass][it].active && it !in defensiveNodes[chosenClass] }
-    val classDefense = classProfile.defense + defensiveSkillCount*4 + equippedWeapon.defenseBonus + gearDefenseTotal + factionDefense
+    val classDefense = classProfile.defense + defensiveSkillCount*4 + equippedWeapon.defenseBonus + gearDefenseTotal + petDefense + factionDefense
     val weaponBranchBonus = if(chosenClass < 0) 0 else
         (if(skillTreeLevels[chosenClass*9+1] == 1) weaponNodeOneBonus[selectedWeapon] else 0) +
         (if(skillTreeLevels[chosenClass*9+4] == 1) weaponNodeTwoBonus[selectedWeapon] else 0)
-    val classBonus = classProfile.attack + passiveSkillCount*4 + weaponAttackBonus[selectedWeapon] + weaponBranchBonus + equippedWeapon.attackBonus + equippedWeapon.bonusDamage + gearAttackTotal + gearSkillTotal + factionAttack
+    val classBonus = classProfile.attack + passiveSkillCount*4 + weaponAttackBonus[selectedWeapon] + weaponBranchBonus + equippedWeapon.attackBonus + equippedWeapon.bonusDamage + gearAttackTotal + gearSkillTotal + petAttack + petSkill + factionAttack
     val activeTechniqueLevel = when (selectedTechnique) {
         0 -> swordLevel
         1 -> lotusLevel
@@ -218,15 +234,15 @@ private fun CultivateApp() {
             action == 10 -> 12 + equippedWeapon.bonusDamage * 2
             else -> techniqueDamage / 2
         }
-        val rawDamage = 22 + stage * 3 + petLevel * 2 + classBonus + actionBonus
-        val critical = Random.nextInt(100) < classProfile.criticalChance
+        val rawDamage = 22 + stage * 3 + classBonus + actionBonus
+        val critical = Random.nextInt(100) < (classProfile.criticalChance + activePet.critical).coerceAtMost(75)
         val damage = if (critical) (rawDamage * 1.5).toInt() else rawDamage
         enemyHp = (enemyHp - damage).coerceAtLeast(0)
         for (i in 0..8) skillCooldowns[i] = nextSkillCooldowns[i]
         if (action != null && action in 0..8) skillCooldowns[action] = 4
         techniqueCooldown = if (action == 9) 3 else techniqueCd
         weaponCooldown = if (action == 10) 6 else weaponCd
-        val weaponHealing = equippedWeapon.healOnHit + if (chosenClass == 3) classProfile.healingBonus else 0
+        val weaponHealing = equippedWeapon.healOnHit + activePet.healing + if (chosenClass == 3) classProfile.healingBonus else 0
         if (weaponHealing > 0) playerHp = (playerHp + weaponHealing).coerceAtMost(playerMaxHp)
         if (enemyHp > 0) {
             var incoming = (12 + bossLevel * 3 - classDefense).coerceAtLeast(2)
@@ -243,6 +259,9 @@ private fun CultivateApp() {
             wins++
             dailyWins++
             qi = (qi + 5).coerceAtMost(9999)
+            petBondXp[activePetIndex] = petBondXp[activePetIndex] + 15
+            if (Random.nextInt(100) < 25) petEssence++
+            if (Random.nextInt(100) < 4) petCores++
             skillPoints++
             val materialTier = ((bossLevel - 1) / 5).coerceIn(0, 5)
             skillMaterials[materialTier] = skillMaterials[materialTier] + 1
@@ -260,8 +279,16 @@ private fun CultivateApp() {
                 ownedGearIds = (ownedGearList + encodeGearInstance(gearDrop)).joinToString("|")
                 " Экипировка: ${gearDrop.name} · ${gearDrop.rarity.title}."
             } else ""
+            petPity++
+            val petDropPool = petCatalog.filter { it.id !in ownedPetIds.split("|") && it.requiredBoss <= bossLevel && it.id != "moon_deer" && it.id != "river_koi" }
+            val foundPet = if (petDropPool.isNotEmpty() && (Random.nextInt(100) < 5 || petPity >= 20)) petDropPool.random() else null
+            val petDropText = if (foundPet != null) {
+                ownedPetIds = (ownedPetIds.split("|").filter { it.isNotBlank() } + foundPet.id).distinct().joinToString("|")
+                petPity = 0
+                " Редкая находка! Приручён питомец: ${foundPet.name}."
+            } else ""
             if (rareSkillFound) rareSkill = rareArts[chosenClass]
-            message = "Победа! Получено $reward камней, 1 очко навыков, ${skillMaterialNames[materialTier]} и железная руда ×$oreFound.$weaponText$gearText" +
+            message = "Победа! Получено $reward камней, 5 Ци, опыт связи питомца и железная руда ×$oreFound.$weaponText$gearText$petDropText" +
                 if (rareSkillFound) " Редкое наследие: $rareSkill!" else ""
         } else if (playerHp <= 0) {
             autoBattle = false
@@ -316,6 +343,16 @@ private fun CultivateApp() {
             .putInt("qi", qi)
             .putInt("stones", stones)
             .putInt("stage", stage)
+            .putString("owned_pet_ids", ownedPetIds)
+            .putString("active_pet_id", activePetId)
+            .putInt("pet_essence", petEssence)
+            .putInt("pet_cores", petCores)
+            .putInt("pet_pity", petPity)
+            .also { editor -> petCatalog.forEachIndexed { index, pet ->
+                editor.putInt("pet_level_${pet.id}", petLevels[index])
+                editor.putInt("pet_xp_${pet.id}", petBondXp[index])
+                editor.putInt("pet_ascension_${pet.id}", petAscensions[index])
+            } }
             .putLong("daily_day", todayKey)
             .putInt("daily_wins", dailyWins)
             .putBoolean("daily_garden", dailyGardenCollected)

@@ -87,9 +87,12 @@ private fun CultivateApp() {
     var weaponCooldown by remember { mutableIntStateOf(0) }
     var autoBattle by remember { mutableStateOf(prefs.getBoolean("auto_battle", false)) }
     val rotationOrder = remember { mutableStateListOf<Int>().apply {
-        val saved = (prefs.getString("battle_rotation_v2", "0,9,10") ?: "0,9,10").split(",").mapNotNull { it.toIntOrNull() }.filter { it in 0..10 }.distinct()
-        addAll(saved)
-        listOf(0, 9, 10).filter { it !in this }.forEach { add(it) }
+        val defaultSkills = if (chosenClass >= 0) (0..8).filter { skillTreeLevels[chosenClass*9+it] == 1 && skillDefinitions[chosenClass][it].active } else listOf(0)
+        val defaults = defaultSkills + listOf(9, 10)
+        val savedText = prefs.getString("battle_rotation_v2", null)
+        val saved = savedText?.split(",")?.mapNotNull { it.toIntOrNull() }?.filter { it in 0..10 }?.distinct()
+        addAll(saved ?: defaults)
+        defaults.filter { it !in this }.forEach { add(it) }
     } }
     var chosenSect by remember { mutableIntStateOf(prefs.getInt("chosen_sect", -1).coerceIn(-1, 7)) }
     var chosenAlliance by remember { mutableIntStateOf(prefs.getInt("chosen_alliance", -1).coerceIn(-1, 1)) }
@@ -112,7 +115,6 @@ private fun CultivateApp() {
         (if(skillTreeLevels[chosenClass*9+1] == 1) weaponNodeOneBonus[selectedWeapon] else 0) +
         (if(skillTreeLevels[chosenClass*9+4] == 1) weaponNodeTwoBonus[selectedWeapon] else 0)
     val classBonus = classProfile.attack + passiveSkillCount*4 + weaponAttackBonus[selectedWeapon] + weaponBranchBonus + equippedWeapon.attackBonus + equippedWeapon.bonusDamage
-    val activeSkillReady = chosenClass >= 0 && skillTreeLevels[chosenClass*9+activeSkillNode] == 1 && skillDefinitions[chosenClass][activeSkillNode].active && skillCooldowns[activeSkillNode] == 0
     val activeTechniqueLevel = when (selectedTechnique) {
         0 -> swordLevel
         1 -> lotusLevel

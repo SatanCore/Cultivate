@@ -290,7 +290,7 @@ private fun CultivateApp() {
         }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(abodeLevel) {
         while (true) {
             delay((QI_INTERVAL_SECONDS - (abodeLevel - 1).coerceAtMost(3)).coerceAtLeast(2) * 1000L)
             qi = (qi + 1).coerceAtMost(9999)
@@ -359,7 +359,7 @@ private fun CultivateApp() {
         ) {
             Text("ПУТЬ БЕССМЕРТНОГО", color = Gold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             Text("Cultivate", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
-            Text("Тихая сила рождается внутри.", color = Jade)
+            Text("${worldName(stage)} · Тихая сила рождается внутри.", color = Jade)
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatCard("Ци", qi.toString(), Modifier.weight(1f))
@@ -543,13 +543,15 @@ private fun CultivateApp() {
                                 else message = "Нужно 5 духовных трав и 2 порции духовной воды."
                             }, enabled = spiritHerbs >= 5 && spiritWater >= 2, modifier = Modifier.fillMaxWidth()) { Text("Сварить пилюлю закалки · 5 трав + 2 вода") }
                             OutlinedButton(onClick = {
-                                if (qiPills > 0) { qiPills--; qi = (qi + 80).coerceAtMost(9999); message = "Пилюля растворилась, даровав 80 Ци." }
+                                val qiPower = 80 + alchemyRank * 10
+                                if (qiPills > 0) { qiPills--; qi = (qi + qiPower).coerceAtMost(9999); message = "Пилюля растворилась, даровав $qiPower Ци." }
                                 else message = "В запасе нет пилюль сбора Ци."
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Принять пилюлю Ци · +80") }
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Принять пилюлю Ци · +${80 + alchemyRank * 10}") }
                             OutlinedButton(onClick = {
-                                if (bodyPills > 0) { bodyPills--; bodyPillBonus += 15; playerHp = (playerHp + 15).coerceAtMost(playerMaxHp + 15); message = "Тело укреплено навсегда: максимальное здоровье +15." }
+                                val bodyPower = 15 + alchemyRank * 2
+                                if (bodyPills > 0) { bodyPills--; bodyPillBonus += bodyPower; playerHp = (playerHp + bodyPower).coerceAtMost(playerMaxHp + bodyPower); message = "Тело укреплено навсегда: максимальное здоровье +$bodyPower." }
                                 else message = "В запасе нет пилюль закалки."
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Принять пилюлю закалки · здоровье +15 навсегда") }
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Принять пилюлю закалки · здоровье +${15 + alchemyRank * 2} навсегда") }
                             if (alchemyRank < 5 && spiritHerbs >= alchemyRank * 4 && spiritWater >= alchemyRank) {
                                 OutlinedButton(onClick = { spiritHerbs -= alchemyRank * 4; spiritWater -= alchemyRank; alchemyRank++; message = "Ранг алхимии повышен до $alchemyRank. Пилюли стали эффективнее." }, modifier = Modifier.fillMaxWidth()) { Text("Повысить ранг алхимии · травы ${alchemyRank * 4} + вода $alchemyRank") }
                             } else Text("Для следующего ранга нужны ${alchemyRank * 4} трав и $alchemyRank порций воды.", color = Color.LightGray, fontSize = 11.sp)

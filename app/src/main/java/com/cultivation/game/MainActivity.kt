@@ -35,7 +35,7 @@ private val Ink = Color(0xFF101820)
 private val Panel = Color(0xFF1B2A32)
 private val Gold = Color(0xFFE5BD72)
 private val Jade = Color(0xFF78C6A3)
-private const val QI_INTERVAL_SECONDS = 5L
+private const val QI_INTERVAL_SECONDS = 600L
 private const val OFFLINE_CAP_SECONDS = 8L * 60L * 60L
 
 class MainActivity : ComponentActivity() {
@@ -53,13 +53,21 @@ private fun CultivateApp() {
     val previousVisit = remember { prefs.getLong("last_seen", now) }
     val offlineSeconds = ((now - previousVisit) / 1000L).coerceIn(0L, OFFLINE_CAP_SECONDS)
     val savedAbodeLevel = prefs.getInt("abode_level", 1).coerceIn(1, 5)
-    val restoredQi = (offlineSeconds / (QI_INTERVAL_SECONDS - (savedAbodeLevel - 1).coerceAtMost(3))).toInt()
+    val todayKey = System.currentTimeMillis() / 86_400_000L
+    val dailyReset = prefs.getLong("daily_day", todayKey) != todayKey
+    val restoredQi = (offlineSeconds / qiIntervalForAbode(savedAbodeLevel)).toInt()
 
     var qi by remember {
         mutableIntStateOf((prefs.getInt("qi", 0) + restoredQi).coerceAtMost(9999))
     }
     var stones by remember { mutableIntStateOf(prefs.getInt("stones", 120)) }
     var stage by remember { mutableIntStateOf(prefs.getInt("stage", 1).coerceAtLeast(1)) }
+    var dailyWins by remember { mutableIntStateOf(if (dailyReset) 0 else prefs.getInt("daily_wins", 0)) }
+    var dailyGardenCollected by remember { mutableStateOf(!dailyReset && prefs.getBoolean("daily_garden", false)) }
+    var dailyMeditated by remember { mutableStateOf(!dailyReset && prefs.getBoolean("daily_meditated", false)) }
+    var dailyClanDonated by remember { mutableStateOf(!dailyReset && prefs.getBoolean("daily_clan_donated", false)) }
+    var dailyClaims by remember { mutableIntStateOf(if (dailyReset) 0 else prefs.getInt("daily_claims", 0)) }
+    var clanReputation by remember { mutableIntStateOf(prefs.getInt("clan_reputation", 0).coerceAtLeast(0)) }
     var abodeLevel by remember { mutableIntStateOf(savedAbodeLevel) }
     var ironOre by remember { mutableIntStateOf(prefs.getInt("abode_iron_ore", 0).coerceAtLeast(0)) }
     var spiritHerbs by remember { mutableIntStateOf(prefs.getInt("abode_herbs", 0).coerceAtLeast(0)) }
@@ -147,15 +155,19 @@ private fun CultivateApp() {
     val gearDefenseTotal = equippedGear.sumOf { it.defenseBonus } + activeSetBonus.defense
     val gearHpTotal = equippedGear.sumOf { it.hpBonus } + activeSetBonus.hp
     val gearSkillTotal = equippedGear.sumOf { it.skillBonus } + activeSetBonus.skill
-    val playerMaxHp = 500 + stage * 30 + classProfile.bonusHp + gearHpTotal + bodyPillBonus
+    val factionIndex = chosenSect.coerceIn(0, 7)
+    val factionAttack = if (stage < 7 && chosenSect >= 0) clanAttackBonuses[factionIndex] else 0
+    val factionDefense = if (stage < 7 && chosenSect >= 0) clanDefenseBonuses[factionIndex] else 0
+    val factionHp = if (stage < 7 && chosenSect >= 0) clanHpBonuses[factionIndex] else 0
+    val playerMaxHp = 500 + stage * 30 + classProfile.bonusHp + gearHpTotal + bodyPillBonus + factionHp
     val defensiveNodes = listOf(listOf(3,4,7), listOf(2,4,7), listOf(5,7), listOf(3,5,7))
     val defensiveSkillCount = if(chosenClass < 0) 0 else defensiveNodes[chosenClass].count { skillTreeLevels[chosenClass*9+it] == 1 }
     val passiveSkillCount = if(chosenClass < 0) 0 else (0..8).count { skillTreeLevels[chosenClass*9+it] == 1 && !skillDefinitions[chosenClass][it].active && it !in defensiveNodes[chosenClass] }
-    val classDefense = classProfile.defense + defensiveSkillCount*4 + equippedWeapon.defenseBonus + gearDefenseTotal
+    val classDefense = classProfile.defense + defensiveSkillCount*4 + equippedWeapon.defenseBonus + gearDefenseTotal + factionDefense
     val weaponBranchBonus = if(chosenClass < 0) 0 else
         (if(skillTreeLevels[chosenClass*9+1] == 1) weaponNodeOneBonus[selectedWeapon] else 0) +
         (if(skillTreeLevels[chosenClass*9+4] == 1) weaponNodeTwoBonus[selectedWeapon] else 0)
-    val classBonus = classProfile.attack + passiveSkillCount*4 + weaponAttackBonus[selectedWeapon] + weaponBranchBonus + equippedWeapon.attackBonus + equippedWeapon.bonusDamage + gearAttackTotal + gearSkillTotal
+    val classBonus = classProfile.attack + passiveSkillCount*4 + weaponAttackBonus[selectedWeapon] + weaponBranchBonus + equippedWeapon.attackBonus + equippedWeapon.bonusDamage + gearAttackTotal + gearSkillTotal + factionAttack
     val activeTechniqueLevel = when (selectedTechnique) {
         0 -> swordLevel
         1 -> lotusLevel
@@ -229,6 +241,8 @@ private fun CultivateApp() {
             val reward = 80 + bossLevel * 15 + stage * 5
             stones += reward
             wins++
+            dailyWins++
+            qi = (qi + 5).coerceAtMost(9999)
             skillPoints++
             val materialTier = ((bossLevel - 1) / 5).coerceIn(0, 5)
             skillMaterials[materialTier] = skillMaterials[materialTier] + 1
@@ -292,7 +306,7 @@ private fun CultivateApp() {
 
     LaunchedEffect(abodeLevel) {
         while (true) {
-            delay((QI_INTERVAL_SECONDS - (abodeLevel - 1).coerceAtMost(3)).coerceAtLeast(2) * 1000L)
+            delay(qiIntervalForAbode(abodeLevel) * 1000L)
             qi = (qi + 1).coerceAtMost(9999)
         }
     }
@@ -302,6 +316,13 @@ private fun CultivateApp() {
             .putInt("qi", qi)
             .putInt("stones", stones)
             .putInt("stage", stage)
+            .putLong("daily_day", todayKey)
+            .putInt("daily_wins", dailyWins)
+            .putBoolean("daily_garden", dailyGardenCollected)
+            .putBoolean("daily_meditated", dailyMeditated)
+            .putBoolean("daily_clan_donated", dailyClanDonated)
+            .putInt("daily_claims", dailyClaims)
+            .putInt("clan_reputation", clanReputation)
             .putInt("abode_level", abodeLevel)
             .putInt("abode_iron_ore", ironOre)
             .putInt("abode_herbs", spiritHerbs)
@@ -368,7 +389,7 @@ private fun CultivateApp() {
             }
 
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("Город", "Путь", "Арена", "Персонаж", "Инвентарь", "Навыки", "Секты", "Спутник", "Обитель").forEachIndexed { index, label ->
+                listOf("Город", "Путь", "Арена", "Персонаж", "Инвентарь", "Навыки", if (stage < 7) "Кланы" else "Секты", "Спутник", "Обитель").forEachIndexed { index, label ->
                     if (selectedMenu == index) Button(onClick = { selectedMenu = index; selectedTownBuilding = "" }) { Text(label) }
                     else OutlinedButton(onClick = { selectedMenu = index; selectedTownBuilding = "" }) { Text(label) }
                 }
@@ -392,7 +413,7 @@ private fun CultivateApp() {
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TownBuilding("Зал навыков", "Изучение боевых искусств", "✨", Modifier.weight(1f)) { selectedMenu = 5 }
-                        TownBuilding("Секта", "Альянсы и наставники", "🏯", Modifier.weight(1f)) { selectedMenu = 6 }
+                        TownBuilding(if (stage < 7) "Кланы" else "Секты", if (stage < 7) "Дома и союзы долин" else "Искусства и наставники", "🏯", Modifier.weight(1f)) { selectedMenu = 6 }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TownBuilding("Дом спутника", "Уход за духовным лисом", "🦊", Modifier.weight(1f)) { selectedMenu = 7 }
@@ -497,7 +518,7 @@ private fun CultivateApp() {
                         "sanctuary" -> {
                             Text("Пещера уединения", color = Gold, fontWeight = FontWeight.Bold)
                             Text("Ци накапливается автоматически даже вне игры. Уровень обители ускоряет медитацию: сейчас одна единица Ци каждые ${QI_INTERVAL_SECONDS - (abodeLevel - 1).coerceAtMost(3)} сек. Прогресс сохраняется.", color = Color.LightGray, fontSize = 12.sp)
-                            Button(onClick = { qi = (qi + 20 + abodeLevel * 5).coerceAtMost(9999); message = "Ты провёл короткую медитацию и собрал ${20 + abodeLevel * 5} Ци." }, modifier = Modifier.fillMaxWidth()) { Text("Погрузиться в медитацию · +${20 + abodeLevel * 5} Ци") }
+                            Button(onClick = { if (!dailyMeditated) { val gain = 25 + abodeLevel * 5; qi = (qi + gain).coerceAtMost(9999); dailyMeditated = true; message = "Медитация завершена: собрано $gain Ци. Возвращайся завтра." } else message = "Сегодня ты уже завершил основную медитацию. Продолжай пассивное накопление." }, modifier = Modifier.fillMaxWidth()) { Text(if (dailyMeditated) "Ежедневная медитация завершена" else "Провести медитацию · +${25 + abodeLevel * 5} Ци") }
                             Divider(color = Color(0xFF3B4B4F))
                             Text("Развитие обители", color = Gold, fontWeight = FontWeight.Bold)
                             Text(if (abodeLevel < 5) "Следующий уровень: $abodeUpgradeCost камней духа и $oreUpgradeCost руды. Ускоряет пассивное накопление Ци и расширяет хозяйство." else "Обитель достигла предела развития Смертного мира. Дальнейшие улучшения станут доступны за пределами этого мира.", color = Color.LightGray, fontSize = 12.sp)
@@ -562,7 +583,7 @@ private fun CultivateApp() {
                             Text(if (gardenReadyAt <= nowMillis) "Урожай созрел: можно собрать травы." else "До следующего урожая примерно $gardenMinutes мин.", color = Jade)
                             Button(onClick = {
                                 val now = System.currentTimeMillis()
-                                if (now >= gardenReadyAt) { val harvest = 2 + abodeLevel; spiritHerbs += harvest; gardenReadyAt = now + 300000L; message = "Собрано духовных трав: $harvest. Следующий урожай через 5 минут." }
+                                if (now >= gardenReadyAt) { val harvest = 2 + abodeLevel; spiritHerbs += harvest; dailyGardenCollected = true; gardenReadyAt = now + 300000L; message = "Собрано духовных трав: $harvest. Следующий урожай через 5 минут." }
                                 else message = "Сад ещё растёт. Вернись позже."
                             }, enabled = gardenReadyAt <= nowMillis, modifier = Modifier.fillMaxWidth()) { Text("Собрать урожай · ${2 + abodeLevel} травы") }
                             Text("Урожайность растёт вместе с уровнем обители.", color = Color.LightGray, fontSize = 11.sp)
@@ -593,9 +614,10 @@ private fun CultivateApp() {
 
             if (selectedMenu == 1) {
             GameCard("Культивация", "Ступень $stage · ${stageName(stage)}") {
-                val breakthroughCost = stage * 35
+                val breakthroughCost = cultivationQiCost(stage)
+                val requiredBossRank = stage + 1
                 Text(
-                    "Ци накапливается даже в твоё отсутствие — до 8 часов. Для прорыва требуется $breakthroughCost Ци.",
+                    "Путь рассчитан на недели, а не часы: пассивное накопление работает и вне игры до 8 часов. Для прорыва нужно $breakthroughCost Ци и победа над стражем ранга $requiredBossRank.",
                     color = Color.LightGray
                 )
                 LinearProgressIndicator(
@@ -605,21 +627,36 @@ private fun CultivateApp() {
                 )
                 Button(
                     onClick = {
-                        if (qi >= breakthroughCost) {
+                        if (qi >= breakthroughCost && bossLevel >= requiredBossRank) {
                             qi -= breakthroughCost
                             val oldWorld = worldName(stage)
                             stage++
                             skillPoints++
                             stones += 25
-                            message = if (worldName(stage) != oldWorld) "Врата открылись! Ты покинул $oldWorld и вступил в ${worldName(stage)}. Перед тобой совершенно новый путь." else "Прорыв свершился! Ты достиг ступени $stage в мире ${worldName(stage)}."
+                            if (worldName(stage) != oldWorld) {
+                                chosenSect = -1
+                                chosenAlliance = -1
+                                message = "Врата открылись! Ты покинул $oldWorld и вступил в ${worldName(stage)}. Старые клановые союзы остались позади — теперь предстоит искать секту."
+                            } else message = "Прорыв свершился! Ты достиг ступени $stage в мире ${worldName(stage)}."
+                        } else if (bossLevel < requiredBossRank) {
+                            message = "Сначала одолей стража ранга $requiredBossRank, чтобы доказать готовность к следующей ступени."
                         } else {
-                            message = "Недостаточно Ци. Продолжай медитировать."
+                            message = "Недостаточно Ци. Продолжай медитировать и выполняй ежедневные поручения."
                         }
                     },
+                    enabled = qi >= breakthroughCost && bossLevel >= requiredBossRank,
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("Совершить прорыв") }
+                ) { Text("Совершить прорыв · $breakthroughCost Ци") }
             }
-
+                GameCard("Ежедневный путь", "Занятия, которые поддерживают темп долгой культивации") {
+                    Text("Победы сегодня: $dailyWins / 3 · сад собран: ${if (dailyGardenCollected) "да" else "нет"} · медитация: ${if (dailyMeditated) "завершена" else "не выполнена"}", color = Color.LightGray, fontSize = 12.sp)
+                    val battleClaimed = dailyClaims and 1 != 0
+                    Button(onClick = { if (dailyWins >= 3 && !battleClaimed) { qi += 60; stones += 100; dailyClaims = dailyClaims or 1; message = "Ежедневное испытание завершено: +60 Ци и 100 камней." } }, enabled = dailyWins >= 3 && !battleClaimed, modifier = Modifier.fillMaxWidth()) { Text(if (battleClaimed) "Испытание стражей · получено" else "Победить 3 раза · 60 Ци + 100 камней") }
+                    val gardenClaimed = dailyClaims and 2 != 0
+                    Button(onClick = { if (dailyGardenCollected && !gardenClaimed) { qi += 45; spiritHerbs += 2; dailyClaims = dailyClaims or 2; message = "За заботу о саде получено 45 Ци и 2 травы." } }, enabled = dailyGardenCollected && !gardenClaimed, modifier = Modifier.fillMaxWidth()) { Text(if (gardenClaimed) "Урожай дня · получено" else "Собрать сад · 45 Ци + 2 травы") }
+                    val meditationClaimed = dailyClaims and 4 != 0
+                    Button(onClick = { if (dailyMeditated && !meditationClaimed) { qi += 20; stones += 50; dailyClaims = dailyClaims or 4; message = "За ежедневную медитацию получено 20 Ци и 50 камней." } }, enabled = dailyMeditated && !meditationClaimed, modifier = Modifier.fillMaxWidth()) { Text(if (meditationClaimed) "Медитация дня · получено" else "Завершить медитацию · 20 Ци + 50 камней") }
+                }
             }
 
             if (selectedMenu == 2) {
@@ -827,19 +864,28 @@ private fun CultivateApp() {
                 }
             }
 
-            if (selectedMenu == 6) GameCard("Секты и альянсы", "Праведный и Злой пути") {
-                listOf("Праведный альянс", "Злой альянс").forEachIndexed { index, label ->
+            if (selectedMenu == 6) GameCard(if (stage < 7) "Кланы Смертного мира" else "Секты Духовного мира", if (stage < 7) "Родовые дома, торговые союзы и защитники долин" else "Праведный и Злой пути · новый уровень влияния") {
+                Text(if (stage < 7) "В Смертном мире нет сект бессмертных. Здесь власть держат кланы и союзы: они защищают дороги, торгуют ресурсами и обучают простым искусствам." else "За пределами смертных земель культиваторы объединяются в секты, где передают наследия и изучают законы Дао.", color = Color.LightGray, fontSize = 12.sp)
+                (if (stage < 7) listOf("Союз долин", "Вольные дома") else listOf("Праведный альянс", "Злой альянс")).forEachIndexed { index, label ->
                     OutlinedButton(onClick = { chosenAlliance = index; if (chosenSect >= 0 && sectAlliance[chosenSect] != index) chosenSect = -1; message = "Выбран $label" }, modifier = Modifier.fillMaxWidth()) { Text(label + if (chosenAlliance == index) " · выбран" else "") }
                 }
-                sectNames.forEachIndexed { index, sect ->
-                    if (chosenAlliance < 0 || sectAlliance[index] == chosenAlliance) {
+                val factionNames = if (stage < 7) clanNames else sectNames
+                val factionLore = if (stage < 7) clanLore else sectLore
+                factionNames.forEachIndexed { index, sect ->
+                    if (chosenAlliance < 0 || factionAlliance[index] == chosenAlliance) {
                         Column(Modifier.fillMaxWidth().padding(8.dp)) {
                             Text(sect, color = Gold, fontWeight = FontWeight.Bold)
-                            Text(sectLore[index], color = Color.LightGray, fontSize = 12.sp)
-                            OutlinedButton(onClick = { chosenSect = index; message = "Ты вступил в $sect" }, enabled = chosenAlliance == sectAlliance[index], modifier = Modifier.fillMaxWidth()) { Text(if (chosenSect == index) "Твоя секта" else "Вступить") }
+                            Text(factionLore[index], color = Color.LightGray, fontSize = 12.sp)
+                            Text("Бонус союза: атака +${clanAttackBonuses[index]} · защита +${clanDefenseBonuses[index]} · здоровье +${clanHpBonuses[index]}", color = Jade, fontSize = 11.sp)
+                            OutlinedButton(onClick = { chosenSect = index; message = if (stage < 7) "Ты вступил в клан «$sect»." else "Ты вступил в секту «$sect»." }, enabled = chosenAlliance == factionAlliance[index], modifier = Modifier.fillMaxWidth()) { Text(if (chosenSect == index) if (stage < 7) "Твой клан" else "Твоя секта" else "Вступить") }
                         }
                     }
-                }
+                Text("Репутация союза: $clanReputation · ежедневный вклад помогает заслужить доверие старейшин.", color = Gold, fontSize = 11.sp)
+                Button(onClick = {
+                    if (!dailyClanDonated && stones >= 50) { stones -= 50; qi += 35; clanReputation++; dailyClanDonated = true; message = "Вклад принят. +35 Ци и 1 очко репутации." }
+                    else if (dailyClanDonated) message = "Сегодня ты уже внёс вклад."
+                    else message = "Для вклада нужно 50 камней духа."
+                }, enabled = !dailyClanDonated && stones >= 50, modifier = Modifier.fillMaxWidth()) { Text(if (dailyClanDonated) "Вклад сегодня внесён" else "Внести ежедневный вклад · 50 камней") }
             }
 
             if (selectedMenu == 7) GameCard("Духовный спутник", "Нефритовый лис · уровень $petLevel") {
@@ -1449,6 +1495,24 @@ private fun techniqueName(index: Int): String = when (index) {
 }
 
 private fun bossMaxHp(level: Int): Int = 100 + (level - 1) * 35
+
+private fun qiIntervalForAbode(level: Int): Long = (QI_INTERVAL_SECONDS - (level - 1) * 30L).coerceAtLeast(300L)
+private fun cultivationQiCost(stage: Int): Int = when (stage) {
+    1 -> 180
+    2 -> 240
+    3 -> 300
+    4 -> 380
+    5 -> 470
+    6 -> 570
+    else -> 650 + (stage - 7).coerceAtLeast(0) * 160
+}
+
+private val clanNames = listOf("Клан Железной Горы", "Дом Красного Клёна", "Союз Травников", "Клан Тихой Реки", "Дом Пепельного Волка", "Стражи Перевала", "Торговый союз Нефритовой монеты", "Род Лунной Гавани")
+private val clanLore = listOf("Кузнецы и бойцы передней линии. Учат стойкости и тяжёлым ударам.", "Воители с сильными клинками и честью рода. Предпочитают прямой бой.", "Знатоки трав и настоек. Помогают выживать и готовить пилюли.", "Спокойные защитники, мастера обороны и восстановления.", "Охотники и следопыты. Сильны в преследовании и критических атаках.", "Опытные стражи дорог. Снижают опасность ответных ударов.", "Торговцы и собиратели. Ценят ресурсы и ремесло.", "Старый род долины. Сбалансированная подготовка новичков.")
+private val clanAttackBonuses = listOf(2, 4, 1, 1, 5, 2, 1, 2)
+private val clanDefenseBonuses = listOf(5, 2, 1, 4, 1, 5, 1, 2)
+private val clanHpBonuses = listOf(25, 10, 20, 35, 5, 30, 15, 20)
+private val factionAlliance = listOf(0, 1, 0, 0, 1, 0, 1, 0)
 
 private val worldEntries = listOf(
     Triple("Смертный мир", 1, "Мир простых людей, горных долин и первых искателей Дао. Здесь всё начинается с тела, дыхания и крупицы Ци."),

@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -66,10 +67,12 @@ private fun CultivateApp() {
         } }
     } }
     var selectedWeapon by remember { mutableIntStateOf(prefs.getInt("weapon_type",0).coerceIn(0,3)) }
+    var selectedMenu by remember { mutableIntStateOf(0) }
     var equippedWeaponId by remember { mutableStateOf(prefs.getString("equipped_weapon_id", "tempered_wood_blade") ?: "tempered_wood_blade") }
     var ownedWeaponIds by remember { mutableStateOf(prefs.getString("owned_weapon_ids", "tempered_wood_blade") ?: "tempered_wood_blade") }
     val ownedWeaponList = remember(ownedWeaponIds) { ownedWeaponIds.split("|").filter { it.isNotBlank() }.distinct() }
-    val equippedWeapon = weaponCatalog.firstOrNull { it.id == equippedWeaponId && it.id in ownedWeaponList } ?: weaponCatalog.first()
+    val ownedWeapons = remember(ownedWeaponIds) { ownedWeaponList.mapNotNull { resolveWeaponInstance(it) } }
+    val equippedWeapon = resolveWeaponInstance(equippedWeaponId)?.takeIf { equippedWeaponId in ownedWeaponList } ?: weaponCatalog.first()
     var activeSkillNode by remember { mutableIntStateOf(prefs.getInt("active_skill_node",0).coerceIn(0,8)) }
     var activeSkillCooldown by remember { mutableIntStateOf(0) }
     var chosenSect by remember { mutableIntStateOf(prefs.getInt("chosen_sect", -1).coerceIn(-1, 7)) }
@@ -83,15 +86,16 @@ private fun CultivateApp() {
     }
 
     val enemyMaxHp = bossMaxHp(bossLevel)
-    val playerMaxHp = 500 + stage * 30
+    val classProfile = if (chosenClass >= 0) classCombatProfiles[chosenClass] else classCombatProfiles[0]
+    val playerMaxHp = 500 + stage * 30 + classProfile.bonusHp
     val defensiveNodes = listOf(listOf(3,4,7), listOf(2,4,7), listOf(5,7), listOf(3,5,7))
     val defensiveSkillCount = if(chosenClass < 0) 0 else defensiveNodes[chosenClass].count { skillTreeLevels[chosenClass*9+it] == 1 }
     val passiveSkillCount = if(chosenClass < 0) 0 else (0..8).count { skillTreeLevels[chosenClass*9+it] == 1 && !skillDefinitions[chosenClass][it].active && it !in defensiveNodes[chosenClass] }
-    val classDefense = (if(chosenClass < 0) 0 else listOf(5,9,2,6)[chosenClass] + defensiveSkillCount*4) + equippedWeapon.defenseBonus
+    val classDefense = classProfile.defense + defensiveSkillCount*4 + equippedWeapon.defenseBonus
     val weaponBranchBonus = if(chosenClass < 0) 0 else
         (if(skillTreeLevels[chosenClass*9+1] == 1) weaponNodeOneBonus[selectedWeapon] else 0) +
         (if(skillTreeLevels[chosenClass*9+4] == 1) weaponNodeTwoBonus[selectedWeapon] else 0)
-    val classBonus = (if(chosenClass < 0) 0 else classBaseAttack[chosenClass] + passiveSkillCount*4 + weaponAttackBonus[selectedWeapon] + weaponBranchBonus) + equippedWeapon.attackBonus + equippedWeapon.bonusDamage
+    val classBonus = classProfile.attack + passiveSkillCount*4 + weaponAttackBonus[selectedWeapon] + weaponBranchBonus + equippedWeapon.attackBonus + equippedWeapon.bonusDamage
     val activeSkillReady = chosenClass >= 0 && skillTreeLevels[chosenClass*9+activeSkillNode] == 1 && skillDefinitions[chosenClass][activeSkillNode].active && activeSkillCooldown == 0
     val activeTechniqueLevel = when (selectedTechnique) {
         0 -> swordLevel
@@ -206,9 +210,12 @@ private fun CultivateApp() {
                             message = "Страж повержен. Начни следующий бой."
                         } else {
                             val activeBonus = if(activeSkillReady) activeSkillDamage[chosenClass] else 0
-                            val damage = 22 + stage*3 + petLevel*2 + techniqueDamage + classBonus + activeBonus
+                            val rawDamage = 22 + stage*3 + petLevel*2 + techniqueDamage + classBonus + activeBonus + classProfile.skillPower
+                            val critical = Random.nextInt(100) < classProfile.criticalChance
+                            val damage = if (critical) (rawDamage * 1.5).toInt() else rawDamage
                             enemyHp = (enemyHp-damage).coerceAtLeast(0)
-                            if (equippedWeapon.healOnHit > 0) playerHp = (playerHp + equippedWeapon.healOnHit).coerceAtMost(playerMaxHp)
+                            val weaponHealing = equippedWeapon.healOnHit + if (chosenClass == 3) classProfile.healingBonus else 0
+                            if (weaponHealing > 0) playerHp = (playerHp + weaponHealing).coerceAtMost(playerMaxHp)
                             if(activeSkillReady) activeSkillCooldown = 2 else if(activeSkillCooldown > 0) activeSkillCooldown--
                             if (enemyHp > 0) {
                                 var incoming = (12 + bossLevel * 3 - classDefense).coerceAtLeast(2)
@@ -227,7 +234,8 @@ private fun CultivateApp() {
                                 val rareSkillFound = chosenClass >= 0 && rareSkill.isBlank() && Random.nextDouble() < 0.008
                                 val baseMessage = "Победа! Получено $reward камней духа и 1 очко навыков."
                                 if (weaponDrop != null) {
-                                    ownedWeaponIds = (ownedWeaponList + weaponDrop.id).distinct().joinToString("|")
+                                    val encodedDrop = encodeWeaponInstance(weaponDrop)
+                                    ownedWeaponIds = (ownedWeaponList + encodedDrop).distinct().joinToString("|")
                                     message = "Добыча: ${weaponDrop.name} · ${weaponDrop.rarity.title}! $baseMessage"
                                 } else message = baseMessage
                                 if (rareSkillFound) {
@@ -237,7 +245,7 @@ private fun CultivateApp() {
                             } else if (playerHp <= 0) {
                                 message = "Ты пал в бою. Восстановись за 40 камней духа, чтобы продолжить."
                             } else {
-                                message = if(activeSkillReady) skillDefinitions[chosenClass][activeSkillNode].name + " активирован! Урон: $damage." else "$activeTechniqueName нанесла $damage урона."
+                                message = (if (critical) "КРИТИЧЕСКИЙ УДАР! " else "") + (if(activeSkillReady) skillDefinitions[chosenClass][activeSkillNode].name + " активирован! Урон: $damage." else "$activeTechniqueName нанесла $damage урона.")
                             }
                         }
                     },
@@ -424,6 +432,13 @@ private fun GameCard(title: String, subtitle: String, content: @Composable Colum
 }
 
 private data class SkillDefinition(val name:String,val description:String,val active:Boolean)
+private data class ClassCombatProfile(val attack: Int, val defense: Int, val bonusHp: Int, val criticalChance: Int, val skillPower: Int, val healingBonus: Int)
+private val classCombatProfiles = listOf(
+    ClassCombatProfile(14, 6, 45, 12, 2, 0),
+    ClassCombatProfile(9, 15, 220, 3, 0, 0),
+    ClassCombatProfile(18, 3, 20, 7, 16, 0),
+    ClassCombatProfile(10, 8, 95, 5, 5, 28)
+)
 private val classNames=listOf("Мечник","Закалённый воин","Заклинатель стихий","Мистик духов")
 private val classDescriptions=listOf("Физический универсал: точность, парирование и контратаки.","Мастер закалки тела: стойкость, мощные удары и сопротивление урону.","Маг разрушения: огонь, лёд и молнии, высокий урон и контроль.","Маг поддержки: духовные печати, ослабления и восстановление.")
 private val classStats=listOf("Атака 8 · Защита 8 · Контроль 6","Атака 9 · Защита 10 · Контроль 4","Атака 10 · Защита 5 · Контроль 9","Атака 7 · Защита 8 · Контроль 10")

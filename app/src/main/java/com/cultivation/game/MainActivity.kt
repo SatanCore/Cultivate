@@ -1010,78 +1010,104 @@ private fun TechniqueRow(
 
 @Composable
 private fun TownScene(stage: Int, storyChapter: Int) {
-    val transition = rememberInfiniteTransition(label = "town-lanterns")
-    val pulse by transition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 0.95f,
-        animationSpec = infiniteRepeatable(tween(1500), repeatMode = RepeatMode.Reverse),
-        label = "lantern-glow"
-    )
-    Canvas(Modifier.fillMaxWidth().height(218.dp)) {
-        val w = size.width
-        val h = size.height
-        drawRect(brush = Brush.verticalGradient(listOf(Color(0xFF14263D), Color(0xFF294B51), Color(0xFF192E32))))
-        drawCircle(Color(0xFFFFE3AC).copy(alpha = 0.85f), 22f, Offset(w * 0.82f, h * 0.19f))
-        val farMountains = Path().apply {
-            moveTo(0f, h * 0.62f); lineTo(w * 0.16f, h * 0.24f); lineTo(w * 0.30f, h * 0.56f)
-            lineTo(w * 0.48f, h * 0.18f); lineTo(w * 0.69f, h * 0.58f); lineTo(w * 0.86f, h * 0.30f)
-            lineTo(w, h * 0.56f); lineTo(w, h); lineTo(0f, h); close()
-        }
-        drawPath(farMountains, Color(0xFF243C4A))
-        val nearMountains = Path().apply {
-            moveTo(0f, h * 0.70f); lineTo(w * 0.20f, h * 0.45f); lineTo(w * 0.38f, h * 0.72f)
-            lineTo(w * 0.63f, h * 0.42f); lineTo(w * 0.82f, h * 0.72f); lineTo(w, h * 0.50f)
-            lineTo(w, h); lineTo(0f, h); close()
-        }
-        drawPath(nearMountains, Color(0xFF1C353A))
-        drawRect(Color(0xFF29453D), Offset(0f, h * 0.70f), Size(w, h * 0.30f))
-        val road = Path().apply {
-            moveTo(w * 0.42f, h); cubicTo(w * 0.43f, h * 0.85f, w * 0.55f, h * 0.82f, w * 0.54f, h * 0.69f)
-            lineTo(w * 0.52f, h * 0.62f); lineTo(w * 0.60f, h * 0.62f); lineTo(w * 0.62f, h * 0.70f)
-            cubicTo(w * 0.68f, h * 0.85f, w * 0.61f, h * 0.92f, w * 0.60f, h)
-            close()
-        }
-        drawPath(road, Color(0xFF8B7658).copy(alpha = 0.72f))
-        fun house(cx: Float, cy: Float, scale: Float, roof: Color, wall: Color) {
-            val bw = 62f * scale
-            val bh = 45f * scale
-            drawRoundRect(wall, Offset(cx - bw / 2, cy), Size(bw, bh))
-            val roofPath = Path().apply {
-                moveTo(cx - bw * 0.65f, cy + 5f * scale)
-                lineTo(cx, cy - 28f * scale)
-                lineTo(cx + bw * 0.65f, cy + 5f * scale)
-                close()
-            }
-            drawPath(roofPath, roof)
-            drawRect(Color(0xFF4B332A), Offset(cx - 7f * scale, cy + 18f * scale), Size(14f * scale, 27f * scale))
-            drawRect(Color(0xFFFFD48C).copy(alpha = pulse), Offset(cx - 22f * scale, cy + 14f * scale), Size(9f * scale, 11f * scale))
-            drawRect(Color(0xFFFFD48C).copy(alpha = pulse), Offset(cx + 13f * scale, cy + 14f * scale), Size(9f * scale, 11f * scale))
-            drawCircle(Color(0xFFFFC66E).copy(alpha = pulse), 5f * scale, Offset(cx, cy - 24f * scale))
-        }
-        house(w * 0.18f, h * 0.59f, 0.92f, Color(0xFF9C5C45), Color(0xFFB98C66))
-        house(w * 0.48f, h * 0.48f, 1.16f, Color(0xFFB87942), Color(0xFFD0A06B))
-        house(w * 0.79f, h * 0.58f, 0.94f, Color(0xFF7C5C91), Color(0xFFB18A78))
-        // Lantern posts and tiny residents make the square feel inhabited.
-        listOf(0.08f, 0.34f, 0.69f, 0.93f).forEach { x ->
-            drawLine(Color(0xFF493A31), Offset(w * x, h * 0.68f), Offset(w * x, h * 0.88f), 4f)
-            drawRoundRect(Color(0xFFFFD38B).copy(alpha = pulse), Offset(w * x - 5f, h * 0.65f), Size(10f, 15f))
-            drawCircle(Color(0xFFFFD38B).copy(alpha = pulse * 0.18f), 15f, Offset(w * x, h * 0.72f))
-        }
-        fun villager(x: Float, y: Float, robe: Color) {
-            drawCircle(Color(0xFFE8C5A0), 5f, Offset(w * x, h * y))
-            drawRoundRect(robe, Offset(w * x - 6f, h * y + 5f), Size(12f, 20f))
-        }
-        villager(0.37f, 0.72f, Color(0xFF527C8B))
-        villager(0.72f, 0.76f, Color(0xFF9A647A))
-        villager(0.57f, 0.83f, Color(0xFFB58A52))
-        drawRoundRect(Color(0xFF101820).copy(alpha = 0.28f), Offset(0f, 0f), Size(w, h), cornerRadius = androidx.compose.ui.geometry.CornerRadius(14f, 14f))
+    val transition = rememberInfiniteTransition(label = "living-valley")
+    val cloudDrift by transition.animateFloat(-0.08f, 0.08f, infiniteRepeatable(tween(18000), RepeatMode.Reverse), label = "cloud-drift")
+    val lanternPulse by transition.animateFloat(0.42f, 1f, infiniteRepeatable(tween(1350), RepeatMode.Reverse), label = "lantern-pulse")
+    val mistDrift by transition.animateFloat(0.12f, 0.34f, infiniteRepeatable(tween(7000), RepeatMode.Reverse), label = "mist-drift")
+    val world = when { stage >= 19 -> 3; stage >= 13 -> 2; stage >= 7 -> 1; else -> 0 }
+    val palette = when (world) {
+        1 -> listOf(Color(0xFF101E36), Color(0xFF244C58), Color(0xFF172C36))
+        2 -> listOf(Color(0xFF211B42), Color(0xFF51406F), Color(0xFF252D48))
+        3 -> listOf(Color(0xFF160F2B), Color(0xFF3A285A), Color(0xFF171B34))
+        else -> listOf(Color(0xFF101D35), Color(0xFF31545A), Color(0xFF182D36))
     }
-    Text(
-        if (storyChapter == 0) "Лунная Гавань · ступень $stage · северные врата закрыты" else "Лунная Гавань · ступень $stage · путь за северные врата открыт",
-        color = Gold, fontSize = 11.sp, fontWeight = FontWeight.Bold
-    )
+    Canvas(Modifier.fillMaxWidth().height(342.dp)) {
+        val w = size.width; val h = size.height
+        fun p(x: Float, y: Float) = Offset(w * x, h * y)
+        drawRect(brush = Brush.verticalGradient(palette))
+        for (i in 0..42) {
+            val x = ((i * 73) % 997) / 997f
+            val y = ((i * 37) % 430) / 1000f
+            val alpha = 0.18f + ((i * 19) % 60) / 100f
+            drawCircle(Color(0xFFDCEBFF).copy(alpha = alpha), if (i % 7 == 0) 2.4f else 1.2f, p(x, y))
+        }
+        drawCircle(Color(0xFFFFE6B8).copy(alpha = 0.10f), w * 0.105f, p(0.82f, 0.17f))
+        drawCircle(Color(0xFFFFEAC8).copy(alpha = 0.88f), w * 0.061f, p(0.82f, 0.17f))
+        drawCircle(palette[0], w * 0.052f, p(0.846f, 0.145f))
+        val far = Path().apply {
+            moveTo(0f,h*.54f); lineTo(w*.10f,h*.31f); lineTo(w*.19f,h*.46f); lineTo(w*.34f,h*.20f)
+            lineTo(w*.48f,h*.48f); lineTo(w*.62f,h*.25f); lineTo(w*.75f,h*.47f); lineTo(w*.91f,h*.22f)
+            lineTo(w,h*.43f); lineTo(w,h*.76f); lineTo(0f,h*.76f); close()
+        }
+        drawPath(far, Color(0xFF273B50).copy(alpha=.92f))
+        val mid = Path().apply {
+            moveTo(0f,h*.63f); lineTo(w*.12f,h*.43f); lineTo(w*.23f,h*.60f); lineTo(w*.39f,h*.37f)
+            lineTo(w*.55f,h*.62f); lineTo(w*.70f,h*.40f); lineTo(w*.86f,h*.61f); lineTo(w,h*.44f)
+            lineTo(w,h); lineTo(0f,h); close()
+        }
+        drawPath(mid, Color(0xFF1D3D43))
+        drawPath(Path().apply {
+            moveTo(w*.62f,h*.43f); cubicTo(w*.60f,h*.57f,w*.69f,h*.62f,w*.66f,h*.78f)
+            lineTo(w*.72f,h*.78f); cubicTo(w*.75f,h*.61f,w*.67f,h*.55f,w*.70f,h*.42f); close()
+        }, Color(0xFF8CC8C2).copy(alpha=.45f))
+        drawPath(Path().apply {
+            moveTo(w*.68f,h*.77f); cubicTo(w*.62f,h*.82f,w*.78f,h*.87f,w*.54f,h)
+            lineTo(w*.93f,h); cubicTo(w*.81f,h*.89f,w*.88f,h*.84f,w*.72f,h*.77f); close()
+        }, Color(0xFF4D9DA0).copy(alpha=.52f))
+        drawRect(Color(0xFF243E37), Offset(0f,h*.70f), Size(w,h*.30f))
+        drawPath(Path().apply {
+            moveTo(w*.39f,h); cubicTo(w*.41f,h*.87f,w*.54f,h*.86f,w*.53f,h*.72f)
+            lineTo(w*.50f,h*.66f); lineTo(w*.61f,h*.66f); lineTo(w*.59f,h*.74f)
+            cubicTo(w*.61f,h*.87f,w*.72f,h*.91f,w*.70f,h); close()
+        }, Color(0xFF927D62).copy(alpha=.86f))
+        fun pavilion(cx: Float, cy: Float, scale: Float, wall: Color, roof: Color, glow: Float) {
+            val bw = w * .105f * scale; val bh = h * .145f * scale
+            drawRoundRect(Color(0xFF171F29).copy(alpha=.45f), Offset(cx-bw*.60f,cy+bh*.76f), Size(bw*1.2f,bh*.18f), androidx.compose.ui.geometry.CornerRadius(10f))
+            drawRect(wall, Offset(cx-bw/2,cy), Size(bw,bh))
+            drawRect(Color(0xFF4C332B), Offset(cx-bw*.105f,cy+bh*.42f), Size(bw*.21f,bh*.58f))
+            for (side in listOf(-1f,1f)) drawRoundRect(Color(0xFFFFD99A).copy(alpha=glow), Offset(cx+side*bw*.27f-bw*.07f,cy+bh*.28f), Size(bw*.14f,bh*.18f), androidx.compose.ui.geometry.CornerRadius(3f))
+            val r = Path().apply {
+                moveTo(cx-bw*.68f,cy+bh*.12f); lineTo(cx,cy-bh*.52f); lineTo(cx+bw*.68f,cy+bh*.12f)
+                lineTo(cx+bw*.52f,cy+bh*.18f); lineTo(cx,cy-bh*.28f); lineTo(cx-bw*.52f,cy+bh*.18f); close()
+            }
+            drawPath(r, roof)
+        }
+        pavilion(w*.17f,h*.57f,1.08f,Color(0xFF9C8067),Color(0xFF754B45),lanternPulse)
+        pavilion(w*.38f,h*.49f,1.35f,Color(0xFFC19A70),Color(0xFF9A6046),lanternPulse)
+        pavilion(w*.82f,h*.57f,1.12f,Color(0xFF887A83),Color(0xFF554765),lanternPulse)
+        pavilion(w*.96f,h*.66f,.72f,Color(0xFF8D795F),Color(0xFF655044),lanternPulse)
+        drawRoundRect(Color(0xFF493E3A), Offset(w*.70f,h*.50f), Size(w*.10f,h*.23f), androidx.compose.ui.geometry.CornerRadius(7f))
+        drawRoundRect(Color(0xFF17252B), Offset(w*.724f,h*.55f), Size(w*.052f,h*.18f), androidx.compose.ui.geometry.CornerRadius(22f))
+        drawCircle(Color(0xFF82D7C0).copy(alpha=if(storyChapter>0) lanternPulse else .22f), w*.022f, p(.75f,.59f))
+        fun pine(x: Float, y: Float, s: Float) {
+            drawRect(Color(0xFF49392F), Offset(w*x-w*.004f,h*y), Size(w*.008f,h*.13f*s))
+            for (j in 0..2) {
+                val yy=h*y-h*.045f*s*j
+                val path=Path().apply{moveTo(w*x,yy-h*.12f*s);lineTo(w*x-w*.055f*s,yy+h*.025f*s);lineTo(w*x+w*.055f*s,yy+h*.025f*s);close()}
+                drawPath(path,if(j==0) Color(0xFF183C36) else Color(0xFF205044))
+            }
+        }
+        pine(.035f,.72f,1.2f); pine(.11f,.79f,.8f); pine(.91f,.75f,1.15f); pine(.98f,.83f,.82f)
+        for (i in 0..5) {
+            val x=.08f+i*.16f; val y=if(i%2==0) .69f else .65f
+            drawLine(Color(0xFF5B4939),p(x,y-.10f),p(x,y),2.5f)
+            drawCircle(Color(0xFFFFD18B).copy(alpha=.12f*lanternPulse),w*.035f,p(x,y))
+            drawRoundRect(Color(0xFFFFD18B).copy(alpha=lanternPulse),Offset(w*x-w*.006f,h*y),Size(w*.012f,h*.035f),androidx.compose.ui.geometry.CornerRadius(4f))
+        }
+        val hx=w*.48f; val hy=h*.79f
+        drawCircle(Color(0xFFE9C9A7),w*.012f,Offset(hx,hy))
+        drawPath(Path().apply{moveTo(hx-w*.018f,hy+h*.012f);lineTo(hx+w*.018f,hy+h*.012f);lineTo(hx+w*.029f,hy+h*.13f);lineTo(hx,hy+h*.17f);lineTo(hx-w*.03f,hy+h*.13f);close()},Color(0xFF4C8D87))
+        drawLine(Color(0xFFD9C7A7),Offset(hx+w*.018f,hy+h*.04f),Offset(hx+w*.065f,hy-h*.04f),3.2f)
+        drawLine(Color(0xFFC5D9DE),Offset(hx+w*.065f,hy-h*.04f),Offset(hx+w*.073f,hy-h*.075f),2f)
+        drawRect(Color(0xFFB5D5CE).copy(alpha=mistDrift*.16f),Offset(w*cloudDrift,h*.60f),Size(w*.72f,h*.09f))
+        drawRect(Color(0xFFB5D5CE).copy(alpha=mistDrift*.11f),Offset(w*(.25f-cloudDrift),h*.73f),Size(w*.68f,h*.07f))
+        drawRect(brush=Brush.verticalGradient(0f to Color.Transparent,.72f to Color.Transparent,1f to Color(0xCC101820)))
+    }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween, verticalAlignment=Alignment.CenterVertically) {
+        Text("ЛУННАЯ ГАВАНЬ  ·  \${worldName(stage).uppercase()}", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
+        Text("СТУПЕНЬ $stage", color = Jade, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+    }
 }
-
 @Composable
 private fun AbodeScene(level: Int, world: String) {
     val transition = rememberInfiniteTransition(label = "abode-breath")
@@ -1128,50 +1154,56 @@ private fun AbodeScene(level: Int, world: String) {
 
 @Composable
 private fun BattleScene(autoBattle: Boolean, actionText: String) {
-    val transition = rememberInfiniteTransition(label = "battle-effects")
-    val motion by transition.animateFloat(
-        initialValue = 0.18f,
-        targetValue = 0.82f,
-        animationSpec = infiniteRepeatable(tween(if (autoBattle) 650 else 1800), repeatMode = RepeatMode.Reverse),
-        label = "energy-motion"
-    )
-    val pulse by transition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 0.9f,
-        animationSpec = infiniteRepeatable(tween(900), repeatMode = RepeatMode.Reverse),
-        label = "battle-pulse"
-    )
-    Canvas(Modifier.fillMaxWidth().height(174.dp)) {
-        val w = size.width
-        val h = size.height
-        drawRect(brush = Brush.verticalGradient(listOf(Color(0xFF172A3C), Color(0xFF342C45), Color(0xFF17272D))))
-        drawCircle(Color(0xFFFFDDA4).copy(alpha = 0.72f), 18f, Offset(w * 0.82f, h * 0.20f))
-        drawRect(Color(0xFF243C36), Offset(0f, h * 0.78f), Size(w, h * 0.22f))
-        drawLine(Color(0xFF947B58), Offset(0f, h * 0.78f), Offset(w, h * 0.78f), 3f)
-        // Cultivator silhouette.
-        drawCircle(Color(0xFFE8C7A2), 10f, Offset(w * 0.20f, h * 0.43f))
-        drawRoundRect(Color(0xFF4B9B91), Offset(w * 0.16f, h * 0.50f), Size(w * 0.08f, h * 0.27f))
-        drawLine(Color(0xFFD6C7A8), Offset(w * 0.22f, h * 0.56f), Offset(w * 0.34f, h * 0.38f), 5f)
-        drawLine(Color(0xFFB9C9D4), Offset(w * 0.34f, h * 0.38f), Offset(w * 0.37f, h * 0.34f), 3f)
-        // Guardian silhouette.
-        drawCircle(Color(0xFFD1A58C), 16f, Offset(w * 0.80f, h * 0.40f))
-        drawRoundRect(Color(0xFF784C55), Offset(w * 0.72f, h * 0.51f), Size(w * 0.16f, h * 0.28f))
-        drawLine(Color(0xFFB86F67), Offset(w * 0.73f, h * 0.58f), Offset(w * 0.66f, h * 0.72f), 7f)
-        val orb = Offset(w * (0.34f + 0.32f * motion), h * (0.43f + 0.05f * motion))
-        drawCircle(Color(0xFF78E2D0).copy(alpha = pulse * 0.16f), 24f, orb)
-        drawCircle(if (autoBattle) Color(0xFF8DF2D8) else Color(0xFFE5BD72), 7f, orb)
-        drawLine(Color(0xFF8DF2D8).copy(alpha = pulse), Offset(w * 0.34f, h * 0.43f), orb, 2f)
+    val transition=rememberInfiniteTransition(label="cinematic-battle")
+    val pulse by transition.animateFloat(.25f,.95f,infiniteRepeatable(tween(850),RepeatMode.Reverse),label="core-pulse")
+    val sweep by transition.animateFloat(-.12f,.12f,infiniteRepeatable(tween(if(autoBattle)520 else 1500),RepeatMode.Reverse),label="energy-sweep")
+    val aura by transition.animateFloat(.7f,1.18f,infiniteRepeatable(tween(1100),RepeatMode.Reverse),label="aura")
+    Canvas(Modifier.fillMaxWidth().height(252.dp)) {
+        val w=size.width; val h=size.height
+        drawRect(brush=Brush.verticalGradient(listOf(Color(0xFF11192B),Color(0xFF3B2943),Color(0xFF172B31))))
+        drawCircle(Color(0xFFFFDCA8).copy(alpha=.7f),w*.055f,Offset(w*.82f,h*.18f))
+        val ridge=Path().apply{moveTo(0f,h*.65f);lineTo(w*.17f,h*.34f);lineTo(w*.31f,h*.62f);lineTo(w*.55f,h*.28f);lineTo(w*.74f,h*.61f);lineTo(w*.91f,h*.37f);lineTo(w,h*.58f);lineTo(w,h);lineTo(0f,h);close()}
+        drawPath(ridge,Color(0xFF202E3B))
+        drawRect(Color(0xFF263B35),Offset(0f,h*.79f),Size(w,h*.21f))
+        drawLine(Color(0xFFB08A60),Offset(0f,h*.79f),Offset(w,h*.79f),3f)
+        drawCircle(Color(0xFF83D7C7).copy(alpha=.18f),w*.19f,Offset(w*.49f,h*.78f))
+        drawCircle(Color(0xFF9ADFD1).copy(alpha=.48f),w*.14f,Offset(w*.49f,h*.78f),style=androidx.compose.ui.graphics.drawscope.Stroke(width=2f))
+        for(i in 0..7){val angle=i*.785f;drawCircle(Color(0xFFE5BD72).copy(alpha=.72f),3f,Offset(w*.49f+kotlin.math.cos(angle)*w*.14f,h*.78f+kotlin.math.sin(angle)*w*.14f))}
+        val hx=w*.23f; val hy=h*.43f
+        drawCircle(Color(0xFFE8C4A0),w*.027f,Offset(hx,hy))
+        drawCircle(Color(0xFF20202A),w*.03f,Offset(hx,hy-w*.012f))
+        drawPath(Path().apply{moveTo(hx-w*.045f,hy+h*.04f);lineTo(hx+w*.045f,hy+h*.04f);lineTo(hx+w*.075f,h*.80f);lineTo(hx,h*.85f);lineTo(hx-w*.07f,h*.80f);close()},Color(0xFF397F7B))
+        drawPath(Path().apply{moveTo(hx-w*.04f,hy+h*.05f);lineTo(hx-w*.11f,h*.65f);lineTo(hx-w*.08f,h*.68f);lineTo(hx+w*.005f,hy+h*.14f);close()},Color(0xFFB6D4CF))
+        drawLine(Color(0xFFD8C7A6),Offset(hx+w*.03f,hy+h*.10f),Offset(hx+w*.16f,hy-h*.12f),5f)
+        drawLine(Color(0xFFB9D8E0),Offset(hx+w*.16f,hy-h*.12f),Offset(hx+w*.19f,hy-h*.20f),3f)
+        val ex=w*.78f; val ey=h*.43f
+        drawCircle(Color(0xFFB98E7D),w*.045f,Offset(ex,ey))
+        drawLine(Color(0xFF6E4A52),Offset(ex-w*.025f,ey-w*.025f),Offset(ex-w*.06f,ey-w*.09f),5f)
+        drawLine(Color(0xFF6E4A52),Offset(ex+w*.025f,ey-w*.025f),Offset(ex+w*.06f,ey-w*.09f),5f)
+        drawPath(Path().apply{moveTo(ex-w*.09f,ey+h*.06f);lineTo(ex+w*.09f,ey+h*.06f);lineTo(ex+w*.13f,h*.83f);lineTo(ex,h*.87f);lineTo(ex-w*.13f,h*.83f);close()},Color(0xFF754650))
+        drawLine(Color(0xFFB66F67),Offset(ex-w*.07f,ey+h*.12f),Offset(ex-w*.17f,h*.70f),9f)
+        val orb=Offset(w*(.38f+sweep),h*(.42f+sweep*.25f))
+        drawCircle(Color(0xFF72E5D2).copy(alpha=.13f),w*.12f*aura,orb)
+        drawCircle(Color(0xFF9BFFE9).copy(alpha=pulse),w*.035f,orb)
+        drawLine(Color(0xFF8DF2D8).copy(alpha=pulse),Offset(hx+w*.17f,hy-h*.02f),orb,4f)
+        for(i in 0..10){val x=orb.x+(i-5)*w*.018f;val y=orb.y+((i%3)-1)*h*.035f;drawCircle(Color(0xFFFFD58A).copy(alpha=pulse*.75f),2.4f,Offset(x,y))}
+        drawRect(brush=Brush.verticalGradient(0f to Color.Transparent,.75f to Color.Transparent,1f to Color(0x99101820)))
     }
-    Text(if (autoBattle) "Бой идёт · техники применяются автоматически" else actionText, color = if (autoBattle) Jade else Color.LightGray, fontSize = 11.sp)
+    Text(if(autoBattle)"БОЙ · ТЕХНИКИ И ЭФФЕКТЫ АКТИВНЫ" else actionText,color=if(autoBattle) Jade else Color.LightGray,fontSize=11.sp,fontWeight=FontWeight.Bold)
 }
-
 @Composable
 private fun TownBuilding(name: String, description: String, symbol: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Surface(modifier, color = Color(0xFF263C3B), shape = MaterialTheme.shapes.large, border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.55f))) {
-        Column(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(symbol, fontSize = 28.sp)
-            Text(name, color = Gold, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            Text(description, color = Jade, fontSize = 10.sp)
+    Surface(modifier = modifier.heightIn(min = 104.dp).clickable(onClick = onClick), color = Color(0xFF1B3035), shape = MaterialTheme.shapes.large, border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.42f)), shadowElevation = 7.dp) {
+        Box {
+            Canvas(Modifier.matchParentSize()) {
+                drawRect(brush = Brush.verticalGradient(listOf(Color(0xFF31504A).copy(alpha=.55f), Color(0xFF17262D))))
+                drawCircle(Color(0xFFE5BD72).copy(alpha=.08f), size.minDimension*.48f, Offset(size.width*.5f,size.height*.18f))
+            }
+            Column(Modifier.fillMaxWidth().padding(horizontal=8.dp, vertical=9.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(symbol, fontSize = 31.sp)
+                Text(name, color = Gold, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(description, color = Color(0xFFB5C9C0), fontSize = 9.sp, lineHeight = 12.sp)
+            }
         }
     }
 }

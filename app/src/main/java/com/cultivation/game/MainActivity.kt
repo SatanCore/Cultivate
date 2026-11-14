@@ -784,39 +784,68 @@ private fun CultivateApp() {
             }
 
             if (selectedMenu == 2) {
-            GameCard("Арена испытаний", "Страж святилища · ранг $bossLevel") {
-                BattleScene(autoBattle, message)
-                Text("Твоё здоровье: ${playerHp.coerceAtMost(playerMaxHp)} / $playerMaxHp", color = Jade)
-                LinearProgressIndicator(progress = { (playerHp.toFloat() / playerMaxHp).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth(), color = Jade)
-                Text("Здоровье противника: $enemyHp / $enemyMaxHp", color = Color.LightGray)
-                LinearProgressIndicator(
-                    progress = { (enemyHp.toFloat() / enemyMaxHp).coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFFD77A68)
-                )
-                Button(
-                    onClick = { performCombatTurn() },
-                    enabled = enemyHp > 0 && playerHp > 0 && !autoBattle,
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Сделать следующий ход") }
-                Button(onClick = { autoBattle = !autoBattle }, enabled = enemyHp > 0 && playerHp > 0, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (autoBattle) "Остановить автобой" else "Наблюдать за боем · авто")
-                }
-                Text("Ротация: " + rotationOrder.joinToString(" → ") { action ->
-                    when {
-                        action in 0..8 && chosenClass >= 0 -> skillDefinitions[chosenClass][action].name
-                        action == 9 -> "Техника"
-                        action == 10 -> "Оружие"
-                        else -> "Навык"
-                    }
-                }, color = Gold, fontSize = 11.sp)
-                Text("Перезарядка · выбранный навык ${skillCooldowns[activeSkillNode]} · техника $techniqueCooldown · оружие $weaponCooldown", color = Color.LightGray, fontSize = 11.sp)
+                GameCard("Арена испытаний", "Страж святилища · ранг $bossLevel") {
+                    BattleScene(
+                        autoBattle = autoBattle,
+                        actionText = message,
+                        bossLevel = bossLevel,
+                        playerName = if (chosenClass >= 0) classNames[chosenClass] else "Путь не выбран",
+                        playerHp = playerHp,
+                        playerMaxHp = playerMaxHp,
+                        enemyHp = enemyHp,
+                        enemyMaxHp = enemyMaxHp,
+                        playerPortraitRes = when (chosenClass) {
+                            1 -> R.drawable.class_portrait_ironbody
+                            2 -> R.drawable.class_portrait_elementalist
+                            3 -> R.drawable.class_portrait_spiritmystic
+                            else -> R.drawable.class_portrait_blademaster
+                        },
+                        petName = activePet.name,
+                        petPortraitRes = petPortraitResource(activePet.id)
+                    )
 
-                if (playerHp <= 0) {
-                    Button(onClick = { if (stones >= 40) { stones -= 40; playerHp = playerMaxHp; message = "Ты восстановил силы и готов вернуться на арену." } else message = "Нужно 40 камней духа для восстановления." }, modifier = Modifier.fillMaxWidth()) { Text("Восстановиться · 40 камней") }
-                }
-                Button(
-                    onClick = {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        BattleActionButton(
+                            modifier = Modifier.weight(1f),
+                            icon = "arena",
+                            label = "УДАР",
+                            enabled = enemyHp > 0 && playerHp > 0 && !autoBattle
+                        ) { performCombatTurn() }
+                        BattleActionButton(
+                            modifier = Modifier.weight(1f),
+                            icon = if (autoBattle) "check" else "skills",
+                            label = if (autoBattle) "АВТО: ВКЛ" else "АВТОБОЙ",
+                            enabled = enemyHp > 0 && playerHp > 0,
+                            selected = autoBattle
+                        ) { autoBattle = !autoBattle }
+                    }
+
+                    if (playerHp <= 0) {
+                        BattleActionButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            icon = "health",
+                            label = "ВОССТАНОВИТЬСЯ · 40 КАМНЕЙ",
+                            enabled = true
+                        ) {
+                            if (stones >= 40) {
+                                stones -= 40
+                                playerHp = playerMaxHp
+                                message = "Ты восстановил силы и готов вернуться на арену."
+                            } else {
+                                message = "Нужно 40 камней духа для восстановления."
+                            }
+                        }
+                    }
+
+                    BattleActionButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        icon = "portal",
+                        label = "ВЫЗВАТЬ СЛЕДУЮЩЕГО СТРАЖА",
+                        enabled = enemyHp <= 0
+                    ) {
                         if (enemyHp <= 0) {
                             bossLevel++
                             enemyHp = bossMaxHp(bossLevel)
@@ -825,12 +854,35 @@ private fun CultivateApp() {
                         } else {
                             message = "Сначала одолей текущего стража."
                         }
-                    },
-                    enabled = enemyHp <= 0,
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Вызвать следующего стража") }
-            }
+                    }
 
+                    Surface(
+                        color = Color(0xCC17243A),
+                        shape = MaterialTheme.shapes.large
+                    ) {
+                        Column(Modifier.fillMaxWidth().padding(9.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("РОТАЦИЯ БОЯ", color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            Text(
+                                rotationOrder.joinToString("  ›  ") { action ->
+                                    when {
+                                        action in 0..8 && chosenClass >= 0 -> skillDefinitions[chosenClass][action].name
+                                        action == 9 -> "Техника"
+                                        action == 10 -> "Оружие"
+                                        else -> "Навык"
+                                    }
+                                },
+                                color = Color(0xFFE3D8C2),
+                                fontSize = 9.sp,
+                                maxLines = 2
+                            )
+                            Text(
+                                "Перезарядка · навык ${skillCooldowns[activeSkillNode]} · техника $techniqueCooldown · оружие $weaponCooldown",
+                                color = Color(0xFFAEBBCB),
+                                fontSize = 8.sp
+                            )
+                        }
+                    }
+                }
             }
 
             if (selectedMenu == 3) GameCard("Персонаж", if (chosenClass < 0) "Выбери свой путь культивации" else classNames[chosenClass]) {
@@ -2036,50 +2088,305 @@ private fun AbodeScene(level: Int, world: String) {
 }
 
 @Composable
-private fun BattleScene(autoBattle: Boolean, actionText: String) {
-    val transition=rememberInfiniteTransition(label="cinematic-battle")
-    val pulse by transition.animateFloat(.25f,.95f,infiniteRepeatable(tween(850),RepeatMode.Reverse),label="core-pulse")
-    val sweep by transition.animateFloat(-.12f,.12f,infiniteRepeatable(tween(if(autoBattle)520 else 1500),RepeatMode.Reverse),label="energy-sweep")
-    val aura by transition.animateFloat(.7f,1.18f,infiniteRepeatable(tween(1100),RepeatMode.Reverse),label="aura")
-    val camera by transition.animateFloat(1f,1.045f,infiniteRepeatable(tween(4200),RepeatMode.Reverse),label="battle-camera")
-    Box(Modifier.fillMaxWidth().height(252.dp)) {
+private fun BattleScene(
+    autoBattle: Boolean,
+    actionText: String,
+    bossLevel: Int,
+    playerName: String,
+    playerHp: Int,
+    playerMaxHp: Int,
+    enemyHp: Int,
+    enemyMaxHp: Int,
+    playerPortraitRes: Int,
+    petName: String,
+    petPortraitRes: Int
+) {
+    val transition = rememberInfiniteTransition(label = "cinematic-battle")
+    val pulse by transition.animateFloat(
+        .38f, 1f,
+        infiniteRepeatable(tween(if (autoBattle) 520 else 1050), RepeatMode.Reverse),
+        label = "battle-core-pulse"
+    )
+    val sweep by transition.animateFloat(
+        -.10f, .10f,
+        infiniteRepeatable(tween(if (autoBattle) 650 else 1700), RepeatMode.Reverse),
+        label = "battle-energy-sweep"
+    )
+    val camera by transition.animateFloat(
+        1f, 1.035f,
+        infiniteRepeatable(tween(4200), RepeatMode.Reverse),
+        label = "battle-camera"
+    )
+    val playerRatio = (playerHp.toFloat() / playerMaxHp.coerceAtLeast(1)).coerceIn(0f, 1f)
+    val enemyRatio = (enemyHp.toFloat() / enemyMaxHp.coerceAtLeast(1)).coerceIn(0f, 1f)
+    val bossName = when {
+        bossLevel >= 20 -> "Владыка Разлома"
+        bossLevel >= 10 -> "Демон Горного Пика"
+        bossLevel >= 5 -> "Древний Страж"
+        else -> "Страж Святилища"
+    }
+
+    Box(Modifier.fillMaxWidth().height(326.dp)) {
         Image(
             painter = painterResource(id = R.drawable.lunar_harbor_bg),
-            contentDescription = "Арена у горного святилища",
+            contentDescription = "Лунная арена у горного святилища",
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize().graphicsLayer { scaleX=camera; scaleY=camera }
+            modifier = Modifier.fillMaxSize().graphicsLayer {
+                scaleX = camera
+                scaleY = camera
+            }
+        )
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    0f to Color(0xD0091428),
+                    .30f to Color(0x44101820),
+                    .72f to Color(0x22101820),
+                    1f to Color(0xF20A1220)
+                )
+            )
         )
         Canvas(Modifier.fillMaxSize()) {
-            val w=size.width; val h=size.height
-            drawRect(Color(0x66101820))
-            drawRect(Color(0xFF172B31).copy(alpha=.34f),Offset(0f,h*.79f),Size(w,h*.21f))
-            drawLine(Color(0xFFB08A60).copy(alpha=.75f),Offset(0f,h*.79f),Offset(w,h*.79f),3f)
-            drawCircle(Color(0xFF83D7C7).copy(alpha=.18f),w*.19f,Offset(w*.49f,h*.78f))
-            drawCircle(Color(0xFF9ADFD1).copy(alpha=.48f),w*.14f,Offset(w*.49f,h*.78f),style=androidx.compose.ui.graphics.drawscope.Stroke(width=2f))
-            for(i in 0..7){val angle=i*.785f;drawCircle(Color(0xFFE5BD72).copy(alpha=.72f),3f,Offset(w*.49f+kotlin.math.cos(angle)*w*.14f,h*.78f+kotlin.math.sin(angle)*w*.14f))}
-            val hx=w*.23f; val hy=h*.43f
-            drawCircle(Color(0xFFE8C4A0),w*.027f,Offset(hx,hy))
-            drawCircle(Color(0xFF20202A),w*.03f,Offset(hx,hy-w*.012f))
-            drawPath(Path().apply{moveTo(hx-w*.045f,hy+h*.04f);lineTo(hx+w*.045f,hy+h*.04f);lineTo(hx+w*.075f,h*.80f);lineTo(hx,h*.85f);lineTo(hx-w*.07f,h*.80f);close()},Color(0xFF397F7B))
-            drawPath(Path().apply{moveTo(hx-w*.04f,hy+h*.05f);lineTo(hx-w*.11f,h*.65f);lineTo(hx-w*.08f,h*.68f);lineTo(hx+w*.005f,hy+h*.14f);close()},Color(0xFFB6D4CF))
-            drawLine(Color(0xFFD8C7A6),Offset(hx+w*.03f,hy+h*.10f),Offset(hx+w*.16f,hy-h*.12f),5f)
-            drawLine(Color(0xFFB9D8E0),Offset(hx+w*.16f,hy-h*.12f),Offset(hx+w*.19f,hy-h*.20f),3f)
-            val ex=w*.78f; val ey=h*.43f
-            drawCircle(Color(0xFFB98E7D),w*.045f,Offset(ex,ey))
-            drawLine(Color(0xFF6E4A52),Offset(ex-w*.025f,ey-w*.025f),Offset(ex-w*.06f,ey-w*.09f),5f)
-            drawLine(Color(0xFF6E4A52),Offset(ex+w*.025f,ey-w*.025f),Offset(ex+w*.06f,ey-w*.09f),5f)
-            drawPath(Path().apply{moveTo(ex-w*.09f,ey+h*.06f);lineTo(ex+w*.09f,ey+h*.06f);lineTo(ex+w*.13f,h*.83f);lineTo(ex,h*.87f);lineTo(ex-w*.13f,h*.83f);close()},Color(0xFF754650))
-            drawLine(Color(0xFFB66F67),Offset(ex-w*.07f,ey+h*.12f),Offset(ex-w*.17f,h*.70f),9f)
-            val orb=Offset(w*(.38f+sweep),h*(.42f+sweep*.25f))
-            drawCircle(Color(0xFF72E5D2).copy(alpha=.13f),w*.12f*aura,orb)
-            drawCircle(Color(0xFF9BFFE9).copy(alpha=pulse),w*.035f,orb)
-            drawLine(Color(0xFF8DF2D8).copy(alpha=pulse),Offset(hx+w*.17f,hy-h*.02f),orb,4f)
-            for(i in 0..10){val x=orb.x+(i-5)*w*.018f;val y=orb.y+((i%3)-1)*h*.035f;drawCircle(Color(0xFFFFD58A).copy(alpha=pulse*.75f),2.4f,Offset(x,y))}
-            drawRect(brush=Brush.verticalGradient(0f to Color.Transparent,.75f to Color.Transparent,1f to Color(0xCC101820)))
+            val w = size.width
+            val h = size.height
+            val center = Offset(w * .5f, h * .78f)
+            drawCircle(Color(0xFF7EE5D3).copy(alpha = .16f * pulse), w * .22f, center)
+            drawCircle(
+                Color(0xFFB8F5E8).copy(alpha = .58f * pulse),
+                w * .17f,
+                center,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.2f)
+            )
+            drawCircle(
+                Color(0xFFE5BD72).copy(alpha = .68f),
+                w * .125f,
+                center,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5f)
+            )
+            for (i in 0..11) {
+                val angle = i * .523599f
+                val radius = w * if (i % 3 == 0) .17f else .125f
+                val x = center.x + kotlin.math.cos(angle) * radius
+                val y = center.y + kotlin.math.sin(angle) * radius * .55f
+                drawCircle(Color(0xFFFFD993).copy(alpha = .55f + pulse * .25f), if (i % 3 == 0) 3.2f else 1.8f, Offset(x, y))
+            }
+            val clash = Offset(w * (.50f + sweep), h * (.49f - sweep * .25f))
+            drawLine(
+                brush = Brush.linearGradient(
+                    listOf(Color.Transparent, Color(0xFF7EE9E0).copy(alpha = .88f * pulse), Color(0xFFFFD58B).copy(alpha = .72f * pulse), Color.Transparent)
+                ),
+                start = Offset(w * .26f, h * .48f),
+                end = Offset(w * .76f, h * .47f),
+                strokeWidth = 4.5f + pulse * 2.5f
+            )
+            drawCircle(Color(0xFF9BFFE9).copy(alpha = .22f * pulse), w * .105f, clash)
+            drawCircle(Color(0xFFFFE5A5).copy(alpha = .78f * pulse), w * .025f, clash)
+            for (i in 0..18) {
+                val x = w * (((i * 47) % 97) / 97f)
+                val y = h * (.26f + ((i * 31) % 60) / 100f)
+                drawCircle(
+                    if (i % 2 == 0) Color(0xFF8DE5E0).copy(alpha = .25f + pulse * .45f)
+                    else Color(0xFFFFD58A).copy(alpha = .25f + pulse * .35f),
+                    if (i % 4 == 0) 2.8f else 1.4f,
+                    Offset(x, y)
+                )
+            }
+            drawRect(
+                brush = Brush.verticalGradient(
+                    0f to Color.Transparent,
+                    .70f to Color.Transparent,
+                    1f to Color(0xE80A1220)
+                )
+            )
+        }
+
+        Row(
+            Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            BattleHealthPanel(
+                modifier = Modifier.weight(1f),
+                title = "СТРАННИК",
+                subtitle = playerName,
+                current = playerHp,
+                maximum = playerMaxHp,
+                ratio = playerRatio,
+                barColor = Jade,
+                isDefeated = playerHp <= 0
+            )
+            BattleHealthPanel(
+                modifier = Modifier.weight(1f),
+                title = "СТРАЖ · РАНГ $bossLevel",
+                subtitle = bossName,
+                current = enemyHp,
+                maximum = enemyMaxHp,
+                ratio = enemyRatio,
+                barColor = Color(0xFFE47A73),
+                isDefeated = enemyHp <= 0
+            )
+        }
+
+        Image(
+            painter = painterResource(id = playerPortraitRes),
+            contentDescription = "Боевой образ: $playerName",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 8.dp, bottom = 18.dp)
+                .width(132.dp)
+                .height(176.dp)
+                .graphicsLayer { translationY = -pulse * 2.5f }
+        )
+
+        Image(
+            painter = painterResource(id = R.drawable.boss_mountain_lord),
+            contentDescription = bossName,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 5.dp, bottom = 7.dp)
+                .width(158.dp)
+                .height(202.dp)
+                .graphicsLayer {
+                    scaleX = 1f + pulse * .012f
+                    scaleY = 1f + pulse * .012f
+                }
+        )
+
+        Surface(
+            modifier = Modifier.align(Alignment.BottomStart).padding(start = 83.dp, bottom = 11.dp),
+            color = Color(0xE91B2940),
+            shape = MaterialTheme.shapes.extraLarge,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD9B66D))
+        ) {
+            Row(Modifier.padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Image(
+                    painter = painterResource(id = petPortraitRes),
+                    contentDescription = petName,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(47.dp)
+                )
+                Column(Modifier.padding(end = 6.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Text("СПУТНИК", color = Color(0xFFBDEDE1), fontSize = 7.sp, fontWeight = FontWeight.Black)
+                    Text(petName, color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                }
+            }
+        }
+
+        Surface(
+            modifier = Modifier.align(Alignment.Center).padding(top = 28.dp),
+            color = Color(0xCC101A2C),
+            shape = MaterialTheme.shapes.extraLarge,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFD98C).copy(alpha = .75f))
+        ) {
+            Text("VS", Modifier.padding(horizontal = 10.dp, vertical = 5.dp), color = Color(0xFFFFE3A0), fontSize = 12.sp, fontWeight = FontWeight.Black)
+        }
+
+        Surface(
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
+            color = Color(0xD9111C30),
+            shape = MaterialTheme.shapes.extraLarge
+        ) {
+            Text(
+                if (autoBattle) "АВТОБОЙ · РОТАЦИЯ АКТИВНА" else actionText.ifBlank { "ВЫБЕРИ ДЕЙСТВИЕ" },
+                Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                color = if (autoBattle) Jade else Color(0xFFE8D6AD),
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 1
+            )
         }
     }
-    Text(if(autoBattle)"БОЙ · ТЕХНИКИ И ЭФФЕКТЫ АКТИВНЫ" else actionText,color=if(autoBattle) Jade else Color.LightGray,fontSize=11.sp,fontWeight=FontWeight.Bold)
 }
+
+@Composable
+private fun BattleHealthPanel(
+    modifier: Modifier = Modifier,
+    title: String,
+    subtitle: String,
+    current: Int,
+    maximum: Int,
+    ratio: Float,
+    barColor: Color,
+    isDefeated: Boolean
+) {
+    Surface(
+        modifier = modifier,
+        color = Color(0xE90D1729),
+        shape = MaterialTheme.shapes.large,
+        border = androidx.compose.foundation.BorderStroke(1.dp, if (isDefeated) Color(0xFF805C5A) else Color(0xB8D6B36F)),
+        tonalElevation = 7.dp
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(title, color = Color(0xFFFFD98C), fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            Text(subtitle, color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            LinearProgressIndicator(
+                progress = { ratio },
+                modifier = Modifier.fillMaxWidth().height(5.dp),
+                color = if (isDefeated) Color(0xFF777B87) else barColor,
+                trackColor = Color(0xFF3B4050)
+            )
+            Text(
+                "${current.coerceAtLeast(0)} / ${maximum.coerceAtLeast(1)} HP",
+                color = if (isDefeated) Color(0xFFB0A8A8) else Color(0xFFD7E1E9),
+                fontSize = 7.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
+private fun BattleActionButton(
+    modifier: Modifier = Modifier,
+    icon: String,
+    label: String,
+    enabled: Boolean,
+    selected: Boolean = false,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier.heightIn(min = 43.dp).clickable(enabled = enabled, onClick = onClick),
+        color = when {
+            !enabled -> Color(0xFF202B3A)
+            selected -> Color(0xFF315B50)
+            else -> Color(0xFF253D5B)
+        },
+        shape = MaterialTheme.shapes.large,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            when {
+                !enabled -> Color(0xFF465064)
+                selected -> Color(0xFF9CE4C9)
+                else -> Color(0xFFD5B16B)
+            }
+        ),
+        tonalElevation = if (selected) 8.dp else 4.dp,
+        shadowElevation = if (selected) 7.dp else 3.dp
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RpgIcon(icon, Modifier.size(27.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(
+                label,
+                color = if (enabled) Color(0xFFFFE5A5) else Color(0xFF8995A7),
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 1
+            )
+        }
+    }
+}
+
 @Composable
 private fun PetCompanionArt() {
     val transition = rememberInfiniteTransition(label = "spirit-fox-art")

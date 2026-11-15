@@ -576,18 +576,12 @@ private fun CultivateApp() {
                 val gardenRemaining = formatRemainingTime(gardenReadyAt - nowMillis)
                 val springRemaining = formatRemainingTime(springReadyAt - nowMillis)
                 GameCard("Личная обитель", "Уровень $abodeLevel · $currentWorld · тихое место для роста") {
-                    AbodeScene(abodeLevel, currentWorld)
+                    AbodeScene(abodeLevel, currentWorld, abodeSection) { selected -> abodeSection = selected }
                     Text("Небольшой двор в стороне от Лунной Гавани. Здесь ты можешь укрыться от суеты, собирать Ци и постепенно превращать скромное убежище в настоящую резиденцию культиватора.", color = Color.LightGray)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         StatCard("Железная руда", ironOre.toString(), Modifier.weight(1f))
                         StatCard("Травы", spiritHerbs.toString(), Modifier.weight(1f))
                         StatCard("Духовная вода", spiritWater.toString(), Modifier.weight(1f))
-                    }
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf("sanctuary" to "Двор", "forge" to "Кузница", "alchemy" to "Алхимия", "garden" to "Сад духов", "worlds" to "Миры").forEach { (key, label) ->
-                            if (abodeSection == key) Button(onClick = { abodeSection = key }) { Text(label) }
-                            else OutlinedButton(onClick = { abodeSection = key }) { Text(label) }
-                        }
                     }
                     when (abodeSection) {
                         "sanctuary" -> {
@@ -663,6 +657,30 @@ private fun CultivateApp() {
                             }, enabled = gardenReadyAt <= nowMillis, modifier = Modifier.fillMaxWidth()) { Text("Собрать урожай · ${2 + abodeLevel} травы") }
                             Text("Урожайность растёт вместе с уровнем обители.", color = Color.LightGray, fontSize = 11.sp)
                         }
+                        "spring" -> {
+                            Text("Родник духовной воды", color = Gold, fontWeight = FontWeight.Bold)
+                            Text("Горный источник собирает чистую воду из потоков Ци. Запас восстанавливается со временем; уровень обители увеличивает объём каждого сбора.", color = Color.LightGray, fontSize = 12.sp)
+                            Text(if (springReadyAt <= nowMillis) "Источник наполнен: вода готова к сбору." else "Источник восстановится примерно через $springRemaining.", color = Jade)
+                            LinearProgressIndicator(
+                                progress = { if (springReadyAt <= nowMillis) 1f else (1f - ((springReadyAt - nowMillis) / 28_800_000f)).coerceIn(0f, 1f) },
+                                modifier = Modifier.fillMaxWidth(),
+                                color = Color(0xFF73D9E6),
+                                trackColor = Color(0xFF263E50)
+                            )
+                            Button(onClick = {
+                                val now = System.currentTimeMillis()
+                                if (now >= springReadyAt) {
+                                    spiritWater += 1 + abodeLevel / 3
+                                    springReadyAt = now + 28_800_000L
+                                    if (Random.nextInt(100) < 3 && "river_koi" !in ownedPetIds.split("|")) {
+                                        ownedPetIds += "|river_koi"
+                                        message = "В роднике вспыхнула золотая чешуя! Ты приручил духовного карпа."
+                                    } else message = "Набрана духовная вода из родника."
+                                } else message = "Родник ещё не восстановился."
+                            }, enabled = springReadyAt <= nowMillis, modifier = Modifier.fillMaxWidth()) {
+                                Text(if (springReadyAt <= nowMillis) "Набрать духовную воду · \${1 + abodeLevel / 3}" else "Родник восстанавливается")
+                            }
+                        }
                         "worlds" -> {
                             Text("Четыре мира Дао", color = Gold, fontWeight = FontWeight.Bold)
                             Text("Каждая ступень открывает новую область культивации. Коснись иллюстрации, чтобы рассмотреть мир.", color = Color(0xFFC6D2E2), fontSize = 11.sp)
@@ -700,14 +718,6 @@ private fun CultivateApp() {
                             }
                         }
                     }
-                }
-                GameCard("Родник и хозяйство", "Небольшие источники ресурсов для ремесла") {
-                    Text(if (springReadyAt <= nowMillis) "Родник наполнился духовной водой." else "Родник восстановится примерно через $springRemaining.", color = Color.LightGray, fontSize = 12.sp)
-                    Button(onClick = {
-                        val now = System.currentTimeMillis()
-                        if (now >= springReadyAt) { spiritWater += 1 + abodeLevel / 3; springReadyAt = now + 28_800_000L; if (Random.nextInt(100) < 3 && "river_koi" !in ownedPetIds.split("|")) { ownedPetIds += "|river_koi"; message = "В роднике вспыхнула золотая чешуя! Ты приручил духовного карпа." } else message = "Набрана духовная вода из родника." }
-                        else message = "Родник ещё не восстановился."
-                    }, enabled = springReadyAt <= nowMillis, modifier = Modifier.fillMaxWidth()) { Text("Набрать духовную воду") }
                 }
             }
 
@@ -2950,47 +2960,177 @@ private fun TownScene(stage: Int, storyChapter: Int) {
     }
 }
 @Composable
-private fun AbodeScene(level: Int, world: String) {
-    val transition = rememberInfiniteTransition(label = "abode-breath")
-    val glow by transition.animateFloat(
-        initialValue = 0.25f,
-        targetValue = 0.65f,
-        animationSpec = infiniteRepeatable(tween(2200), repeatMode = RepeatMode.Reverse),
-        label = "spring-glow"
+private fun AbodeScene(
+    level: Int,
+    world: String,
+    section: String,
+    onSectionSelected: (String) -> Unit
+) {
+    val transition = rememberInfiniteTransition(label = "abode-scene")
+    val pulse by transition.animateFloat(
+        initialValue = 0.30f,
+        targetValue = 0.88f,
+        animationSpec = infiniteRepeatable(tween(2400), repeatMode = RepeatMode.Reverse),
+        label = "abode-spirit-pulse"
     )
-    Canvas(Modifier.fillMaxWidth().height(190.dp)) {
-        val w = size.width
-        val h = size.height
-        drawRect(brush = Brush.verticalGradient(listOf(Color(0xFF182B3A), Color(0xFF40564A), Color(0xFF24362F))))
-        val ridge = Path().apply {
-            moveTo(0f, h * 0.62f); lineTo(w * 0.18f, h * 0.22f); lineTo(w * 0.34f, h * 0.61f)
-            lineTo(w * 0.55f, h * 0.18f); lineTo(w * 0.78f, h * 0.58f); lineTo(w, h * 0.28f)
-            lineTo(w, h); lineTo(0f, h); close()
-        }
-        drawPath(ridge, Color(0xFF293E3B))
-        drawRect(Color(0xFF526247), Offset(0f, h * 0.72f), Size(w, h * 0.28f))
-        drawRoundRect(Color(0xFF9B7956), Offset(w * 0.12f, h * 0.48f), Size(w * 0.27f, h * 0.30f))
-        val roof = Path().apply {
-            moveTo(w * 0.08f, h * 0.51f); lineTo(w * 0.25f, h * 0.30f); lineTo(w * 0.43f, h * 0.51f); close()
-        }
-        drawPath(roof, Color(0xFF624638))
-        drawRect(Color(0xFF4B332A), Offset(w * 0.22f, h * 0.61f), Size(w * 0.06f, h * 0.17f))
-        drawRect(Color(0xFFFFD38B).copy(alpha = glow), Offset(w * 0.15f, h * 0.57f), Size(w * 0.045f, h * 0.055f))
-        drawRoundRect(Color(0xFF18252B), Offset(w * 0.59f, h * 0.48f), Size(w * 0.23f, h * 0.29f))
-        val cave = Path().apply {
-            moveTo(w * 0.56f, h * 0.51f); lineTo(w * 0.70f, h * 0.30f); lineTo(w * 0.85f, h * 0.51f); close()
-        }
-        drawPath(cave, Color(0xFF46504B))
-        drawCircle(Color(0xFF8ED9B2).copy(alpha = glow), 12f, Offset(w * 0.70f, h * 0.63f))
-        drawCircle(Color(0xFF8ED9B2).copy(alpha = glow * 0.20f), 26f, Offset(w * 0.70f, h * 0.63f))
-        for (i in 0..4) {
-            val x = w * (0.43f + i * 0.045f)
-            drawLine(Color(0xFF8CA36A), Offset(x, h * 0.78f), Offset(x - 3f, h * 0.68f), 3f)
-            drawCircle(Color(0xFF9FC47A), 4f, Offset(x - 3f, h * 0.68f))
-        }
-        drawLine(Color(0xFF91B8A4).copy(alpha = glow), Offset(w * 0.03f, h * 0.89f), Offset(w * 0.97f, h * 0.89f), 3f)
+    val sceneRes = when (section) {
+        "forge" -> R.drawable.abode_forge_scene
+        "alchemy" -> R.drawable.abode_alchemy_scene
+        "garden" -> R.drawable.abode_garden_scene
+        "spring" -> R.drawable.abode_spring_scene
+        else -> R.drawable.abode_meditation_scene
     }
-    Text("Убежище Смертного мира · уровень $level · $world", color = Gold, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+    val accent = when (section) {
+        "forge" -> Color(0xFFFFB56E)
+        "alchemy" -> Color(0xFFC2A0FF)
+        "garden" -> Color(0xFF9EDB91)
+        "spring" -> Color(0xFF75DDE8)
+        else -> Jade
+    }
+    val sectionTitle = when (section) {
+        "forge" -> "КУЗНИЦА"
+        "alchemy" -> "АЛХИМИЯ"
+        "garden" -> "САД ДУХОВНЫХ ТРАВ"
+        "spring" -> "РОДНИК"
+        "worlds" -> "ЧЕТЫРЕ МИРА ДАО"
+        else -> "ПЕЩЕРА МЕДИТАЦИИ"
+    }
+    val locations = listOf(
+        Triple("sanctuary", "Медитация", "temple"),
+        Triple("forge", "Кузница", "anvil"),
+        Triple("alchemy", "Алхимия", "cauldron"),
+        Triple("garden", "Сад", "garden"),
+        Triple("spring", "Родник", "ice"),
+        Triple("worlds", "Миры", "portal")
+    )
+
+    Surface(
+        modifier = Modifier.fillMaxWidth().height(238.dp),
+        color = Color(0xFF101B2B),
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.dp, Gold.copy(alpha = .72f))
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            Image(
+                painter = painterResource(id = sceneRes),
+                contentDescription = "Иллюстрированная локация: $sectionTitle",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            Box(
+                Modifier.fillMaxSize().background(
+                    Brush.verticalGradient(
+                        0f to Color(0x99101A2B),
+                        .42f to Color(0x22101820),
+                        .72f to Color(0x44101820),
+                        1f to Color(0xF20B1422)
+                    )
+                )
+            )
+            Canvas(Modifier.fillMaxSize()) {
+                val w = size.width
+                val h = size.height
+                drawCircle(accent.copy(alpha = .12f * pulse), w * .18f, Offset(w * .78f, h * .38f))
+                drawCircle(accent.copy(alpha = .22f * pulse), w * .105f, Offset(w * .78f, h * .38f), style = Stroke(width = 2f))
+                for (i in 0..20) {
+                    val x = w * (((i * 37) % 97) / 97f)
+                    val y = h * (.12f + ((i * 29) % 76) / 100f)
+                    val radius = if (i % 5 == 0) 3.2f else 1.5f
+                    drawCircle(
+                        if (i % 3 == 0) accent.copy(alpha = .18f + pulse * .30f)
+                        else Color(0xFFFFD58C).copy(alpha = .16f + pulse * .20f),
+                        radius,
+                        Offset(x, y)
+                    )
+                }
+                drawLine(
+                    Brush.horizontalGradient(listOf(Color.Transparent, accent.copy(alpha = .58f * pulse), Color.Transparent)),
+                    Offset(w * .08f, h * .73f),
+                    Offset(w * .92f, h * .73f),
+                    strokeWidth = 1.5f
+                )
+            }
+
+            Row(
+                Modifier.align(Alignment.TopStart).fillMaxWidth().padding(10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Surface(
+                    color = Color(0xD9101C2B),
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, accent.copy(alpha = .78f))
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RpgIcon("temple", Modifier.size(22.dp))
+                        Spacer(Modifier.width(7.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Text("ЛИЧНАЯ ОБИТЕЛЬ", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            Text(sectionTitle, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                Surface(
+                    color = Color(0xD9101C2B),
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, Gold.copy(alpha = .62f))
+                ) {
+                    Text(
+                        "УР. $level  ·  $world",
+                        color = Jade,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 8.dp)
+                    )
+                }
+            }
+
+            Row(
+                Modifier.align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 7.dp, vertical = 7.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                locations.forEach { (key, label, icon) ->
+                    val selected = section == key
+                    Surface(
+                        modifier = Modifier.clickable { onSectionSelected(key) },
+                        color = if (selected) Color(0xE83D4A55) else Color(0xD9101B2A),
+                        shape = CircleShape,
+                        border = BorderStroke(
+                            if (selected) 1.6.dp else 1.dp,
+                            if (selected) accent else Gold.copy(alpha = .48f)
+                        )
+                    ) {
+                        Row(
+                            Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RpgIcon(icon, Modifier.size(21.dp))
+                            Spacer(Modifier.width(5.dp))
+                            Text(
+                                label,
+                                color = if (selected) Color.White else Color(0xFFD8E0E9),
+                                fontSize = 10.sp,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Text(
+        "Обитель · уровень $level · $world",
+        color = Gold,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold
+    )
 }
 
 @Composable

@@ -284,6 +284,7 @@ private fun CultivateApp() {
     var selectedMenu by remember { mutableIntStateOf(0) }
     var showExitDialog by remember { mutableStateOf(false) }
     var inventoryFilter by remember { mutableIntStateOf(0) }
+    var petFilter by remember { mutableIntStateOf(0) }
     var selectedTownBuilding by remember { mutableStateOf("") }
     val pageScrollState = rememberScrollState()
     LaunchedEffect(selectedMenu, selectedTownBuilding) { pageScrollState.animateScrollTo(0) }
@@ -1796,8 +1797,8 @@ private fun CultivateApp() {
                 }, enabled = chosenSect >= 0 && !dailyClanDonated && stones >= 50, modifier = Modifier.fillMaxWidth()) { Text(if (chosenSect < 0) "Сначала вступи в клан / секту" else if (dailyClanDonated) "Вклад сегодня внесён" else "Внести ежедневный вклад · 50 камней") }
             }
 
-            if (selectedMenu == 7) GameCard("Духовный зверинец", "Семь духовных спутников · активен: " + activePet.name) {
-                Text("Выбирай спутника под свой стиль боя, укрепляй связь и пробуждай скрытую силу древних зверей.", color = Color(0xFFD2DCEB), fontSize = 11.sp)
+            if (selectedMenu == 7) GameCard("Духовный зверинец", "Активный спутник · " + activePet.name) {
+                Text("Собирай древних зверей, открывай их резонанс с классом и укрепляй связь в личном святилище.", color = Color(0xFFD2DCEB), fontSize = 11.sp)
                 PetCompanionArt()
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     PetResourceBadge("qi", "Эссенция", petEssence.toString(), Modifier.weight(1f))
@@ -1854,47 +1855,48 @@ private fun CultivateApp() {
                         }
                     }
                 }
-                val ownedPetCount = petCatalog.count { it.id in ownedPetIds.split("|") }
-                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("КОЛЛЕКЦИЯ ДУХОВНЫХ ЗВЕРЕЙ", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                            Text("$ownedPetCount / ${petCatalog.size} спутников пробуждено", color = Color(0xFFBFC9D8), fontSize = 8.sp)
-                        }
-                        Text("КАТАЛОГ", color = Jade, fontSize = 8.sp, fontWeight = FontWeight.Black)
-                    }
-                    LinearProgressIndicator(
-                        progress = { ownedPetCount.toFloat() / petCatalog.size.coerceAtLeast(1) },
-                        modifier = Modifier.fillMaxWidth().height(4.dp),
-                        color = Jade,
-                        trackColor = Color(0xFF34445A)
-                    )
+                val ownedPetIdsSet = ownedPetIds.split("|").filter { it.isNotBlank() }.toSet()
+                val ownedPetCount = petCatalog.count { it.id in ownedPetIdsSet }
+                InventorySectionHeading("Бестиарий духовных зверей", "${ownedPetCount} / ${petCatalog.size} приручено", "pets")
+                LinearProgressIndicator(
+                    progress = { ownedPetCount.toFloat() / petCatalog.size.coerceAtLeast(1) },
+                    modifier = Modifier.fillMaxWidth().height(5.dp),
+                    color = Jade,
+                    trackColor = Color(0xFF34445A)
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    InventoryCategoryTab("ВСЕ · ${petCatalog.size}", "pets", petFilter == 0, Modifier.weight(1f)) { petFilter = 0 }
+                    InventoryCategoryTab("МОИ · $ownedPetCount", "check", petFilter == 1, Modifier.weight(1f)) { petFilter = 1 }
+                    InventoryCategoryTab("ПОИСК · ${petCatalog.size - ownedPetCount}", "chest", petFilter == 2, Modifier.weight(1f)) { petFilter = 2 }
                 }
-                petCatalog.withIndex().toList().chunked(2).forEach { rowPets ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        rowPets.forEach { (index, pet) ->
-                            val owned = pet.id in ownedPetIds.split("|")
-                            val isActive = pet.id == activePetId
-                            Box(Modifier.weight(1f)) {
-                                PetCollectionTile(
-                                    pet = pet,
-                                    owned = owned,
-                                    active = isActive,
-                                    level = petLevels[index],
-                                    bondXp = petBondXp[index],
-                                    onClick = {
-                                        if (owned) {
-                                            activePetId = pet.id
-                                            message = pet.name + " теперь твой спутник."
-                                        } else {
-                                            message = "След: ${pet.dropHint}."
-                                        }
-                                    }
-                                )
+                val visiblePetEntries = petCatalog.withIndex().filter { (_, pet) ->
+                    when (petFilter) {
+                        1 -> pet.id in ownedPetIdsSet
+                        2 -> pet.id !in ownedPetIdsSet
+                        else -> true
+                    }
+                }
+                visiblePetEntries.forEach { (index, pet) ->
+                    val owned = pet.id in ownedPetIdsSet
+                    val isActive = pet.id == activePetId
+                    PetCompanionCard(
+                        pet = pet,
+                        owned = owned,
+                        active = isActive,
+                        level = petLevels[index],
+                        bondXp = petBondXp[index],
+                        ascension = petAscensions[index],
+                        onSelect = {
+                            if (owned && !isActive) {
+                                activePetId = pet.id
+                                message = pet.name + " теперь твой спутник."
+                            } else if (!owned) {
+                                message = "След: ${pet.dropHint}."
+                            } else {
+                                message = pet.name + " уже сопровождает тебя."
                             }
                         }
-                        if (rowPets.size == 1) Spacer(Modifier.weight(1f))
-                    }
+                    )
                 }
             }
 
@@ -3602,7 +3604,7 @@ private fun PetCompanionCard(
     val nextBondCost = 100 + level * 75
     val bondProgress = if (level >= 30) 1f else (bondXp.toFloat() / nextBondCost.coerceAtLeast(1)).coerceIn(0f, 1f)
     Surface(
-        modifier = Modifier.fillMaxWidth().clickable(enabled = owned && !active, onClick = onSelect),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onSelect),
         color = when {
             active -> Color(0xE52B4A4C)
             owned -> Color(0xE51A2C43)
@@ -3617,7 +3619,7 @@ private fun PetCompanionCard(
         shadowElevation = if (active) 8.dp else 3.dp
     ) {
         Row(Modifier.fillMaxWidth().padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
-            PetPortraitMedallion(pet.id, 88.dp, active)
+            PetPortraitMedallion(pet.id, 98.dp, active)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

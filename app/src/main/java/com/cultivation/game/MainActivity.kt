@@ -1988,68 +1988,97 @@ private fun HomeNavItem(title: String, symbol: String, target: Int, onNavigate: 
 }
 
 @Composable
-private fun CultivationPanel(
-    stage: Int,
-    qi: Int,
-    cost: Int,
-    bossRank: Int,
-    bossLevel: Int,
-    onBreakthrough: () -> Unit
-) {
+private fun CultivationPanel(stage: Int, qi: Int, cost: Int, bossRank: Int, bossLevel: Int, onBreakthrough: () -> Unit) {
     val progress = (qi.toFloat() / cost.coerceAtLeast(1)).coerceIn(0f, 1f)
-    val transition = rememberInfiniteTransition(label = "cultivation-core")
-    val pulse by transition.animateFloat(.78f, 1.08f, infiniteRepeatable(tween(1800), RepeatMode.Reverse), label = "core-pulse")
-    Surface(
-        color = Color(0xE7192A42),
-        shape = MaterialTheme.shapes.extraLarge,
-        tonalElevation = 10.dp,
-        shadowElevation = 8.dp
-    ) {
-        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(126.dp), contentAlignment = Alignment.Center) {
-                    Canvas(Modifier.fillMaxSize()) {
-                        val c = Offset(size.width * .5f, size.height * .5f)
-                        drawCircle(Brush.radialGradient(listOf(Color(0x6685D9C4), Color(0x001D3550))), size.minDimension * .48f * pulse, c)
-                        drawCircle(Color(0xFFE5BD72).copy(alpha = .42f), size.minDimension * .43f, c, style = androidx.compose.ui.graphics.drawscope.Stroke(size.minDimension * .018f))
-                        drawCircle(Color(0xFF85D9C4).copy(alpha = .55f), size.minDimension * .34f, c, style = androidx.compose.ui.graphics.drawscope.Stroke(size.minDimension * .012f))
-                        for (i in 0..7) {
-                            val angle = i * (Math.PI / 4.0)
-                            val x = c.x + kotlin.math.cos(angle).toFloat() * size.minDimension * .39f
-                            val y = c.y + kotlin.math.sin(angle).toFloat() * size.minDimension * .39f
-                            drawCircle(Color(0xFFFFE5A5).copy(alpha = .5f * pulse), size.minDimension * .018f, Offset(x, y))
+    val worldIndex = when { stage >= 19 -> 3; stage >= 13 -> 2; stage >= 7 -> 1; else -> 0 }
+    val background = when (worldIndex) { 0 -> R.drawable.world_mortal_bg; 1 -> R.drawable.world_spiritual_bg; 2 -> R.drawable.world_immortal_bg; else -> R.drawable.world_chaos_bg }
+    val transition = rememberInfiniteTransition(label = "cultivation-sanctuary")
+    val pulse by transition.animateFloat(.82f, 1.12f, infiniteRepeatable(tween(2100), RepeatMode.Reverse), label = "core-pulse")
+    val rotation by transition.animateFloat(0f, 360f, infiniteRepeatable(tween(26000), RepeatMode.Restart), label = "meridian-rotation")
+    val flow by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(3200), RepeatMode.Restart), label = "qi-flow")
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.fillMaxWidth().height(286.dp), contentAlignment = Alignment.Center) {
+            Image(painter = painterResource(background), contentDescription = "Пейзаж " + worldName(stage), modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xB9081423), Color(0x54101B2D), Color(0xE9081423)))))
+            Canvas(Modifier.fillMaxSize()) {
+                val center = Offset(size.width * .5f, size.height * .53f)
+                val radius = size.minDimension * .34f
+                drawCircle(Brush.radialGradient(listOf(Color(0x6659D8B4), Color(0x223D9DAB), Color.Transparent), center, radius * 1.8f), radius * 1.8f, center)
+                drawCircle(Color(0x99E5BD72), radius, center, style = Stroke(1.4.dp.toPx()))
+                drawCircle(Color(0x9978C6A3), radius * .82f, center, style = Stroke(1.dp.toPx()))
+                drawCircle(Color(0x66E5BD72), radius * .61f, center, style = Stroke(1.dp.toPx()))
+                drawCircle(Color(0x6678C6A3), radius * .43f, center, style = Stroke(1.dp.toPx()))
+                for (i in 0..7) {
+                    val angle = (i * 45.0 + rotation) * (Math.PI / 180.0)
+                    val inner = radius * .68f
+                    val outer = radius * 1.04f
+                    val p1 = Offset(center.x + kotlin.math.cos(angle).toFloat() * inner, center.y + kotlin.math.sin(angle).toFloat() * inner)
+                    val p2 = Offset(center.x + kotlin.math.cos(angle).toFloat() * outer, center.y + kotlin.math.sin(angle).toFloat() * outer)
+                    drawLine(Color(0x8878C6A3), p1, p2, 1.dp.toPx())
+                    drawCircle(Color(0xCCFFE3A0), 2.2.dp.toPx(), p2)
+                }
+                drawArc(Color(0xFFE5BD72), -90f, 360f * progress, false, Offset(center.x - radius, center.y - radius), Size(radius * 2f, radius * 2f), style = Stroke(4.dp.toPx()))
+                for (i in 0..11) {
+                    val phase = (i / 12f + flow) % 1f
+                    val angle = (phase * 360f - 90f) * (Math.PI / 180.0)
+                    val orbit = radius * (.48f + (i % 3) * .12f)
+                    val point = Offset(center.x + kotlin.math.cos(angle).toFloat() * orbit, center.y + kotlin.math.sin(angle).toFloat() * orbit)
+                    drawCircle(Color(0x9978E3C0).copy(alpha = .35f + .5f * pulse), (1.5f + (i % 3) * .6f).dp.toPx(), point)
+                }
+                drawCircle(Color(0x55FFE3A0), radius * .13f * pulse, center)
+            }
+            Column(Modifier.align(Alignment.TopCenter).padding(top = 13.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(worldName(stage).uppercase(), color = Color(0xFFFFD995), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                Text("СВЯЩЕННОЕ МЕСТО КУЛЬТИВАЦИИ", color = Color(0xFFD9E7E8), fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
+            }
+            Box(Modifier.align(Alignment.Center).size(116.dp), contentAlignment = Alignment.Center) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val c = Offset(size.width / 2f, size.height / 2f)
+                    drawCircle(Brush.radialGradient(listOf(Color(0xAA79E2C0), Color(0x4478C6A3), Color.Transparent)), size.minDimension * .49f * pulse, c)
+                    drawCircle(Color(0xCCFFE3A0).copy(alpha = .75f), size.minDimension * .39f, c, style = Stroke(1.5.dp.toPx()))
+                    drawCircle(Color(0x8878C6A3), size.minDimension * .31f, c, style = Stroke(1.dp.toPx()))
+                }
+                RpgIcon("lotus", Modifier.size(82.dp))
+            }
+            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("СТУПЕНЬ $stage", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                        Text(stageName(stage), color = Color(0xFF9CE0C5), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Text("$qi / $cost Ци", color = Color(0xFFFFE5AE), fontSize = 12.sp, fontWeight = FontWeight.Black)
+                }
+                LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(7.dp), color = Color(0xFF8BE0BC), trackColor = Color(0x88445468))
+            }
+        }
+        Surface(modifier = Modifier.fillMaxWidth(), color = Color(0xE9192A3D), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, Color(0x5578C6A3)), tonalElevation = 5.dp) {
+            Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        RpgIcon("lotus", Modifier.size(25.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Text("ВНУТРЕННЕЕ ЯДРО", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                            Text("Поток духовной энергии", color = Color(0xFFDCE7F0), fontSize = 10.sp)
                         }
                     }
-                    RpgIcon("lotus", Modifier.size(102.dp))
-                }
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text("СЕРДЦЕ КУЛЬТИВАЦИИ", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                    Text("Ступень $stage", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                    Text(stageName(stage), color = Jade, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Text("Накоплено Ци · $qi / $cost", color = Color(0xFFE3EAF3), fontSize = 10.sp)
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier.fillMaxWidth().height(7.dp),
-                        color = Jade,
-                        trackColor = Color(0xFF34445A)
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        RpgIcon("tower", Modifier.size(22.dp))
-                        Text("Страж $bossLevel / $bossRank", color = if (bossLevel >= bossRank) Jade else Color(0xFFFFC978), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("\${(progress * 100).toInt()}%", color = Jade, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                        Text("НАКОПЛЕНИЕ", color = Color(0xFF9EADBD), fontSize = 7.sp, fontWeight = FontWeight.Bold)
                     }
                 }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    RpgIcon("tower", Modifier.size(23.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Text("Испытание стража", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text("Требуется ранг $bossRank · Побеждён ранг $bossLevel", color = if (bossLevel >= bossRank) Jade else Color(0xFFFFC978), fontSize = 9.sp)
+                    }
+                    RpgIcon(if (bossLevel >= bossRank) "check" else "lock", Modifier.size(19.dp))
+                }
+                InventoryActionButton(label = if (qi < cost) "НАКОПИТЬ ЕЩЁ \${cost - qi} ЦИ" else if (bossLevel < bossRank) "ОДОЛЕТЬ СТРАЖА · РАНГ $bossRank" else "СОВЕРШИТЬ ПРОРЫВ", selected = false, enabled = qi >= cost && bossLevel >= bossRank, onClick = onBreakthrough)
             }
-            InventoryActionButton(
-                label = if (qi < cost) "НАКОПИТЬ ЕЩЁ ${cost - qi} ЦИ" else if (bossLevel < bossRank) "ОДОЛЕТЬ СТРАЖА · РАНГ $bossRank" else "СОВЕРШИТЬ ПРОРЫВ",
-                selected = false,
-                enabled = qi >= cost && bossLevel >= bossRank,
-                onClick = onBreakthrough
-            )
         }
     }
 }
-
 @Composable
 private fun DailyTaskCard(
     title: String,

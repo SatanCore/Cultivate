@@ -88,6 +88,24 @@ private fun CultivateApp() {
     var springReadyAt by remember { mutableLongStateOf(prefs.getLong("abode_spring_ready", 0L)) }
     var abodeSection by remember { mutableStateOf("sanctuary") }
     var selectedWorldIndex by remember { mutableIntStateOf(prefs.getInt("selected_world_index", worldIndexForStage(stage)).coerceIn(0, 3)) }
+    var explorationEnergy by remember { mutableIntStateOf(if (dailyReset) 6 else prefs.getInt("world_exploration_energy", 6).coerceIn(0, 6)) }
+    val explorationProgress = remember {
+        mutableStateListOf<Int>().apply {
+            val saved = (prefs.getString("world_exploration_progress", "") ?: "")
+                .split(",").mapNotNull { it.toIntOrNull() }
+            repeat(worldLocationCatalog.size) { add(saved.getOrElse(it) { 0 }.coerceIn(0, 3)) }
+        }
+    }
+    val worldFragments = remember {
+        mutableStateListOf<Int>().apply {
+            val saved = (prefs.getString("world_fragments", "0,0,0,0") ?: "0,0,0,0")
+                .split(",").mapNotNull { it.toIntOrNull() }
+            repeat(4) { add(saved.getOrElse(it) { 0 }.coerceAtLeast(0)) }
+        }
+    }
+    var defeatedWorldBossIds by remember { mutableStateOf(prefs.getString("world_bosses_defeated", "") ?: "") }
+    var pendingWorldBossId by remember { mutableStateOf(prefs.getString("pending_world_boss", "") ?: "") }
+    var selectedLocationId by remember { mutableStateOf(prefs.getString("world_selected_location", "mortal_valley") ?: "mortal_valley") }
     var ownedPetIds by remember { mutableStateOf(prefs.getString("owned_pet_ids", "jade_fox") ?: "jade_fox") }
     var activePetId by remember { mutableStateOf(prefs.getString("active_pet_id", "jade_fox") ?: "jade_fox") }
     val petLevels = remember { mutableStateListOf<Int>().apply { petCatalog.forEachIndexed { index, pet -> add(prefs.getInt("pet_level_${pet.id}", if (index == 0) prefs.getInt("pet", 1) else 1).coerceIn(1, 30)) } } }
@@ -313,6 +331,16 @@ private fun CultivateApp() {
             if (rareSkillFound) rareSkill = rareArts[chosenClass]
             message = "Победа! Получено $reward камней, 5 Ци, опыт связи питомца и железная руда ×$oreFound.$weaponText$gearText$petDropText" +
                 if (rareSkillFound) " Редкое наследие: $rareSkill!" else ""
+            if (pendingWorldBossId.isNotBlank()) {
+                val defeated = defeatedWorldBossIds.split("|").filter { it.isNotBlank() }
+                val worldBoss = worldLocationCatalog.firstOrNull { it.id == pendingWorldBossId && it.isBoss }
+                if (worldBoss != null && worldBoss.id !in defeated) {
+                    defeatedWorldBossIds = (defeated + worldBoss.id).distinct().joinToString("|")
+                    worldFragments[worldBoss.worldIndex] = worldFragments[worldBoss.worldIndex] + 5
+                    message += " Хранитель ${worldBoss.title} повержен: получено 5 фрагментов мира."
+                }
+                pendingWorldBossId = ""
+            }
         } else if (playerHp <= 0) {
             autoBattle = false
             message = "Ты пал в бою. Восстановись за 40 камней духа, чтобы продолжить."
@@ -325,6 +353,102 @@ private fun CultivateApp() {
             }
             message = (if (critical) "КРИТИЧЕСКИЙ УДАР! " else "") + "$actionName · урон $damage."
         }
+    }
+
+    fun exploreWorldLocation(locationId: String) {
+        val location = worldLocationCatalog.firstOrNull { it.id == locationId } ?: return
+        if (pendingWorldBossId.isNotBlank()) {
+            if (pendingWorldBossId == location.id) {
+                selectedMenu = 2
+                message = "Битва с хранителем ещё не завершена. Продолжай испытание на арене."
+            } else {
+                message = "Сначала заверши начатое испытание хранителя."
+            }
+            return
+        }
+        if (stage < location.requiredStage) {
+            message = "Путь запечатан. Для территории «${location.title}» нужна ступень ${location.requiredStage}."
+            return
+        }
+        if (location.isBoss) {
+            if (location.id in defeatedWorldBossIds.split("|")) {
+                message = "Хранитель этой территории уже повержен."
+                return
+            }
+            val prerequisites = worldLocationCatalog.filter { it.worldIndex == location.worldIndex && !it.isBoss }
+            val allExplored = prerequisites.all { prerequisite ->
+                val index = worldLocationCatalog.indexOfFirst { it.id == prerequisite.id }
+                explorationProgress.getOrElse(index) { 0 } >= prerequisite.progressGoal
+            }
+            if (!allExplored) {
+                message = "Сначала заверши исследование всех трёх территорий этого мира."
+                return
+            }
+            if (explorationEnergy < 3) {
+                message = "Для вызова хранителя нужны 3 единицы энергии экспедиции."
+                return
+            }
+            explorationEnergy -= 3
+            pendingWorldBossId = location.id
+            bossLevel = maxOf(bossLevel, location.bossRank)
+            enemyHp = bossMaxHp(bossLevel)
+            playerHp = playerMaxHp
+            autoBattle = false
+            selectedMenu = 2
+            message = "Ты призвал хранителя «${location.title}». Победи его на арене, чтобы получить фрагменты мира."
+            return
+        }
+
+        val index = worldLocationCatalog.indexOfFirst { it.id == location.id }
+        if (index < 0) return
+        if (explorationProgress[index] >= location.progressGoal) {
+            message = "Территория «${location.title}» уже полностью исследована."
+            return
+        }
+        if (explorationEnergy <= 0) {
+            message = "Энергия экспедиции исчерпана. Она восстановится при следующем ежедневном обновлении."
+            return
+        }
+
+        explorationEnergy--
+        val combatPower = (classBonus + classDefense + playerMaxHp).coerceAtLeast(1)
+        val powerRatio = combatPower.toFloat() / location.recommendedPower.toFloat().coerceAtLeast(1f)
+        val successChance = (50f + powerRatio.coerceIn(0f, 1f) * 45f).toInt().coerceIn(50, 95)
+        if (Random.nextInt(100) < successChance) {
+            explorationProgress[index] = (explorationProgress[index] + 1).coerceAtMost(location.progressGoal)
+            stones += location.stoneReward
+            qi = (qi + location.qiReward).coerceAtMost(9999)
+            when (location.resourceKind) {
+                "ore" -> ironOre += location.resourceAmount
+                "herbs" -> spiritHerbs += location.resourceAmount
+                "water" -> spiritWater += location.resourceAmount
+                "material" -> {
+                    val tier = location.materialTier.coerceIn(0, skillMaterials.lastIndex)
+                    skillMaterials[tier] = skillMaterials[tier] + location.resourceAmount
+                }
+            }
+            worldFragments[location.worldIndex] = worldFragments[location.worldIndex] + 1
+            message = "Экспедиция завершена: ${location.title}. Получено ${location.stoneReward} камней, ${location.qiReward} Ци и ${location.resourceLabel} ×${location.resourceAmount}. Успех $successChance%."
+        } else {
+            message = "Разведка «${location.title}» оказалась опаснее ожиданий. Энергия потрачена, но отряд вернулся без добычи. Шанс успеха был $successChance%."
+        }
+    }
+
+    fun exchangeWorldFragments(worldIndex: Int) {
+        if (worldIndex !in 0..3) return
+        if (worldFragments[worldIndex] < 5) {
+            message = "Для обмена нужно 5 фрагментов этого мира."
+            return
+        }
+        val materialTier = when (worldIndex) {
+            0 -> 0
+            1 -> 1
+            2 -> 3
+            else -> 5
+        }
+        worldFragments[worldIndex] -= 5
+        skillMaterials[materialTier] = skillMaterials[materialTier] + 1
+        message = "Пять фрагментов ${daoWorldCatalog[worldIndex].title} обменяны на ${skillMaterialNames[materialTier]}."
     }
 
     fun upgradeTechnique(level: Int, setLevel: (Int) -> Unit) {
@@ -366,12 +490,24 @@ private fun CultivateApp() {
         if (selectedWorldIndex < unlockedWorldIndex) selectedWorldIndex = unlockedWorldIndex
     }
 
-    LaunchedEffect(qi, stones, stage, selectedWorldIndex, abodeLevel, ironOre, spiritHerbs, spiritWater, qiPills, bodyPills, bodyPillBonus, forgeTemper, alchemyRank, gardenReadyAt, springReadyAt, ownedPetIds, activePetId, petLevels.toList(), petBondXp.toList(), petAscensions.toList(), petEssence, petCores, petPity, dailyWins, dailyGardenCollected, dailyMeditated, dailyClanDonated, dailyClaims, clanReputation, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, ownedGearIds, equippedGearIds.toList(), questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
+    LaunchedEffect(selectedWorldIndex) {
+        if (worldLocationCatalog.none { it.id == selectedLocationId && it.worldIndex == selectedWorldIndex }) {
+            selectedLocationId = worldLocationCatalog.firstOrNull { it.worldIndex == selectedWorldIndex }?.id ?: "mortal_valley"
+        }
+    }
+
+    LaunchedEffect(qi, stones, stage, selectedWorldIndex, explorationEnergy, explorationProgress.toList(), worldFragments.toList(), defeatedWorldBossIds, pendingWorldBossId, selectedLocationId, abodeLevel, ironOre, spiritHerbs, spiritWater, qiPills, bodyPills, bodyPillBonus, forgeTemper, alchemyRank, gardenReadyAt, springReadyAt, ownedPetIds, activePetId, petLevels.toList(), petBondXp.toList(), petAscensions.toList(), petEssence, petCores, petPity, dailyWins, dailyGardenCollected, dailyMeditated, dailyClanDonated, dailyClaims, clanReputation, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, ownedGearIds, equippedGearIds.toList(), questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
         prefs.edit()
             .putInt("qi", qi)
             .putInt("stones", stones)
             .putInt("stage", stage)
             .putInt("selected_world_index", selectedWorldIndex)
+            .putInt("world_exploration_energy", explorationEnergy)
+            .putString("world_exploration_progress", explorationProgress.joinToString(","))
+            .putString("world_fragments", worldFragments.joinToString(","))
+            .putString("world_bosses_defeated", defeatedWorldBossIds)
+            .putString("pending_world_boss", pendingWorldBossId)
+            .putString("world_selected_location", selectedLocationId)
             .putString("owned_pet_ids", ownedPetIds)
             .putString("active_pet_id", activePetId)
             .putInt("pet_essence", petEssence)
@@ -474,6 +610,7 @@ private fun CultivateApp() {
                 HomeNavItem(if (stage < 7) "Кланы" else "Секты", "clan", 6) { selectedMenu = 6; selectedTownBuilding = "" }
                 HomeNavItem("Питомцы", "pets", 7) { selectedMenu = 7; selectedTownBuilding = "" }
                 HomeNavItem("Обитель", "abode", 8) { selectedMenu = 8; selectedTownBuilding = "" }
+                HomeNavItem("Миры", "worlds", 9) { selectedMenu = 9; selectedTownBuilding = "" }
             }
 
             if (selectedMenu == 0) {
@@ -869,6 +1006,28 @@ private fun CultivateApp() {
                         }
                     )
                 }
+            }
+
+            if (selectedMenu == 9) {
+                WorldExplorationScreen(
+                    stage = stage,
+                    combatPower = classBonus + classDefense + playerMaxHp,
+                    selectedWorldIndex = selectedWorldIndex,
+                    onSelectWorld = { index ->
+                        selectedWorldIndex = index
+                        selectedLocationId = worldLocationCatalog.firstOrNull { it.worldIndex == index }?.id ?: "mortal_valley"
+                        message = "Открыта карта экспедиций: ${daoWorldCatalog[index].title}."
+                    },
+                    explorationEnergy = explorationEnergy,
+                    locationProgress = explorationProgress,
+                    worldFragments = worldFragments,
+                    defeatedBossIds = defeatedWorldBossIds.split("|").filter { it.isNotBlank() }.toSet(),
+                    pendingBossId = pendingWorldBossId,
+                    selectedLocationId = selectedLocationId,
+                    onSelectLocation = { selectedLocationId = it },
+                    onExplore = { exploreWorldLocation(it) },
+                    onExchangeFragments = { exchangeWorldFragments(it) }
+                )
             }
 
             if (selectedMenu == 2) {
@@ -1399,7 +1558,7 @@ private fun CinematicHomeScreen(
             HomeNavItem("Навыки", "skills", 5, onNavigate)
             HomeNavItem("Питомцы", "pets", 7, onNavigate)
             HomeNavItem("Инвентарь", "inventory", 4, onNavigate)
-            HomeNavItem("Миры", "worlds", 8, onNavigate)
+            HomeNavItem("Миры", "worlds", 9, onNavigate)
         }
     }
 }

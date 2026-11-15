@@ -1,6 +1,15 @@
 package com.cultivation.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -105,6 +114,59 @@ val worldLocationCatalog = listOf(
     ExplorationLocation("chaos_guardian", 3, "Печать Хаоса", "Хранитель · босс мира", "За печатью скрывается древний хранитель разлома. Победа приносит фрагменты первозданного мира.", 24, 7100, R.drawable.world_location_guardian, "material", "ядро Хаоса", 3, materialTier = 5, stoneReward = 600, qiReward = 65, isBoss = true, bossRank = 25, battlePortraitRes = R.drawable.boss_chaos_overlord)
 )
 
+
+@Composable
+private fun WorldAmbientEffects(accent: Color, modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "world_ambient")
+    val phase = transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 6200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "world_particle_drift"
+    ).value
+    val glow = transition.animateFloat(
+        initialValue = 0.10f,
+        targetValue = 0.30f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1900, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "world_glow_pulse"
+    ).value
+
+    Canvas(modifier) {
+        val w = size.width
+        val h = size.height
+        for (i in 0 until 22) {
+            val base = i / 22f
+            val x = ((base * w + phase * w * 0.34f) % w)
+            val yFactor = 0.12f + ((i * 29) % 76) / 100f
+            val y = h * yFactor
+            val radius = (1.2f + (i % 4) * 0.65f).dp.toPx()
+            drawCircle(
+                color = accent.copy(alpha = glow * (0.55f + (i % 3) * 0.18f)),
+                radius = radius,
+                center = Offset(x, y)
+            )
+        }
+        drawCircle(
+            color = accent.copy(alpha = glow * 0.42f),
+            radius = size.minDimension * 0.22f,
+            center = Offset(w * 0.82f, h * 0.27f),
+            style = Stroke(width = 1.2.dp.toPx())
+        )
+        drawCircle(
+            color = accent.copy(alpha = glow * 0.22f),
+            radius = size.minDimension * 0.29f,
+            center = Offset(w * 0.82f, h * 0.27f),
+            style = Stroke(width = 0.7.dp.toPx())
+        )
+    }
+}
+
 fun worldEncounterMaxHp(location: ExplorationLocation): Int {
     val eliteScale = if (location.isElite) 1.45f else 1f
     return ((180f + location.requiredStage * 45f) * location.enemyHpMultiplier * eliteScale)
@@ -178,13 +240,14 @@ fun WorldExplorationScreen(
             border = BorderStroke(1.dp, worldAccent.copy(alpha = .72f)),
             shadowElevation = 8.dp
         ) {
-            Box(Modifier.fillMaxWidth().height(172.dp)) {
+            Box(Modifier.fillMaxWidth().height(224.dp)) {
                 Image(
                     painter = painterResource(world.backgroundRes),
                     contentDescription = world.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
+                WorldAmbientEffects(worldAccent, Modifier.fillMaxSize())
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
                     0f to Color(0x44101A2D),
                     .48f to Color(0x55101A2D),
@@ -209,7 +272,7 @@ fun WorldExplorationScreen(
                 val unlocked = stage >= realm.requiredStage
                 val selected = realm.index == safeWorldIndex
                 Surface(
-                    modifier = Modifier.width(145.dp).height(83.dp).clickable { onSelectWorld(realm.index) },
+                    modifier = Modifier.width(156.dp).height(100.dp).clickable { onSelectWorld(realm.index) },
                     color = Color(0xFF14243A),
                     shape = MaterialTheme.shapes.large,
                     border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) realm.accent else Color(0x557F91A8))

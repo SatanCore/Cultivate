@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -3460,6 +3461,33 @@ private fun BattleScene(
     enemyTitle: String
 ) {
     val transition = rememberInfiniteTransition(label = "cinematic-battle")
+    val impactProgress = remember { Animatable(1f) }
+    val combatAction = actionText.contains("урон", ignoreCase = true) ||
+        actionText.contains("КРИТИЧЕСКИЙ УДАР", ignoreCase = true) ||
+        actionText.contains("Рёв Каменного Тигра", ignoreCase = true) ||
+        actionText.contains("Корни Нефритового Пика", ignoreCase = true) ||
+        actionText.contains("Приговор Небесного Дракона", ignoreCase = true) ||
+        actionText.contains("Разлом Пустоты", ignoreCase = true)
+    val impactRes = when {
+        actionText.contains("Разлом Пустоты", ignoreCase = true) -> R.drawable.battle_impact_chaos
+        actionText.contains("Корни Нефритового Пика", ignoreCase = true) -> R.drawable.battle_impact_spirit
+        actionText.contains("Приговор Небесного Дракона", ignoreCase = true) -> R.drawable.battle_impact_critical
+        actionText.contains("Рёв Каменного Тигра", ignoreCase = true) -> R.drawable.battle_impact_iron
+        actionText.contains("КРИТИЧЕСКИЙ УДАР", ignoreCase = true) -> R.drawable.battle_impact_critical
+        playerPortraitRes == R.drawable.class_portrait_ironbody -> R.drawable.battle_impact_iron
+        playerPortraitRes == R.drawable.class_portrait_elementalist -> R.drawable.battle_impact_elemental
+        playerPortraitRes == R.drawable.class_portrait_spiritmystic -> R.drawable.battle_impact_spirit
+        else -> R.drawable.battle_impact_blade
+    }
+    val impactDamage = Regex("урон\\s+(\\d+)").find(actionText)?.groupValues?.getOrNull(1).orEmpty()
+    LaunchedEffect(actionText, enemyHp, playerHp) {
+        if (combatAction) {
+            impactProgress.snapTo(0f)
+            impactProgress.animateTo(1f, tween(620))
+        } else {
+            impactProgress.snapTo(1f)
+        }
+    }
     val pulse by transition.animateFloat(
         .38f, 1f,
         infiniteRepeatable(tween(if (autoBattle) 520 else 1050), RepeatMode.Reverse),
@@ -3657,6 +3685,43 @@ private fun BattleScene(
             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFD98C).copy(alpha = .75f))
         ) {
             Text("VS", Modifier.padding(horizontal = 10.dp, vertical = 5.dp), color = Color(0xFFFFE3A0), fontSize = 12.sp, fontWeight = FontWeight.Black)
+        }
+
+        if (combatAction && impactProgress.value < .96f) {
+            val progress = impactProgress.value
+            Image(
+                painter = painterResource(id = impactRes),
+                contentDescription = "Эффект боевого удара",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .offset(x = 42.dp, y = 28.dp)
+                    .size(188.dp)
+                    .graphicsLayer {
+                        alpha = (1f - progress).coerceIn(0f, 1f)
+                        scaleX = .58f + progress * .86f
+                        scaleY = .58f + progress * .86f
+                        rotationZ = -14f + progress * 28f
+                    }
+            )
+            if (impactDamage.isNotBlank()) {
+                Text(
+                    "−$impactDamage",
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 25.dp)
+                        .offset(y = (-30).dp)
+                        .graphicsLayer {
+                            alpha = (1f - progress).coerceIn(0f, 1f)
+                            translationY = -progress * 42f
+                            scaleX = .85f + (1f - progress) * .25f
+                            scaleY = .85f + (1f - progress) * .25f
+                        },
+                    color = if (actionText.contains("КРИТИЧЕСКИЙ УДАР", ignoreCase = true)) Color(0xFFFFE08A) else Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Black
+                )
+            }
         }
 
         Surface(

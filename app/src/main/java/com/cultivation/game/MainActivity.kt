@@ -1346,14 +1346,30 @@ private fun HomeHotspot(title: String, subtitle: String, symbol: String, modifie
     Surface(
         modifier = modifier.clickable(onClick = onClick),
         color = Color(0xE91A2740), contentColor = Color.White,
-        shape = MaterialTheme.shapes.large, tonalElevation = 9.dp, shadowElevation = 7.dp
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.dp, Gold.copy(alpha = .42f)),
+        tonalElevation = 9.dp, shadowElevation = 7.dp
     ) {
-        Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            RpgIcon(symbol, Modifier.size(34.dp))
-            Spacer(Modifier.width(6.dp))
+        Row(Modifier.padding(horizontal = 7.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(48.dp, 42.dp), contentAlignment = Alignment.Center) {
+                Canvas(Modifier.fillMaxSize()) {
+                    drawCircle(
+                        Brush.radialGradient(listOf(Color(0x6689D9C5), Color(0x001A2D42))),
+                        size.minDimension * .48f,
+                        Offset(size.width / 2f, size.height / 2f)
+                    )
+                }
+                Image(
+                    painter = painterResource(townBuildingResource(symbol)),
+                    contentDescription = "$title — иллюстрация здания",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+            }
+            Spacer(Modifier.width(5.dp))
             Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Text(title, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text(subtitle, color = Color(0xFFE3C98F), fontSize = 8.sp)
+                Text(title, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(subtitle, color = Color(0xFFE3C98F), fontSize = 8.sp, maxLines = 2, lineHeight = 10.sp)
             }
         }
     }
@@ -3622,18 +3638,79 @@ private fun WorldLandscapeArt(index: Int, modifier: Modifier = Modifier) {
     }
 }
 
+private fun townBuildingResource(symbol: String): Int = when (symbol) {
+    "shop" -> R.drawable.town_building_shop
+    "auction" -> R.drawable.town_building_auction
+    "forge" -> R.drawable.town_building_forge
+    "quests" -> R.drawable.town_building_quests
+    "cultivation" -> R.drawable.town_building_cultivation
+    "arena" -> R.drawable.town_building_arena
+    "skills" -> R.drawable.town_building_skills
+    "clan" -> R.drawable.town_building_clan
+    "pets" -> R.drawable.town_building_pets
+    "inventory" -> R.drawable.town_building_inventory
+    "abode" -> R.drawable.town_building_abode
+    "tower" -> R.drawable.town_building_tower
+    "alchemy" -> R.drawable.town_building_alchemy
+    else -> R.drawable.town_building_cultivation
+}
+
 @Composable
 private fun TownBuilding(name: String, description: String, symbol: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Surface(modifier = modifier.heightIn(min = 104.dp).clickable(onClick = onClick), color = Color(0xFF1B3035), shape = MaterialTheme.shapes.large, border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.42f)), shadowElevation = 7.dp) {
+    val transition = rememberInfiniteTransition(label = "town-building-$symbol")
+    val pulse by transition.animateFloat(
+        initialValue = .18f,
+        targetValue = .42f,
+        animationSpec = infiniteRepeatable(tween(1700), RepeatMode.Reverse),
+        label = "town-building-glow-$symbol"
+    )
+    Surface(
+        modifier = modifier.heightIn(min = 146.dp).clickable(onClick = onClick),
+        color = Color(0xFF172A38),
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.dp, Gold.copy(alpha = .52f)),
+        shadowElevation = 8.dp,
+        tonalElevation = 5.dp
+    ) {
         Box {
             Canvas(Modifier.matchParentSize()) {
-                drawRect(brush = Brush.verticalGradient(listOf(Color(0xFF31504A).copy(alpha=.55f), Color(0xFF17262D))))
-                drawCircle(Color(0xFFE5BD72).copy(alpha=.08f), size.minDimension*.48f, Offset(size.width*.5f,size.height*.18f))
+                drawRect(brush = Brush.verticalGradient(listOf(Color(0xFF263E4A), Color(0xFF101D2B))))
+                val center = Offset(size.width * .5f, size.height * .37f)
+                drawCircle(
+                    Brush.radialGradient(
+                        listOf(Color(0xFF8CDCC6).copy(alpha = pulse), Color(0x00B5DCCB)),
+                        center = center,
+                        radius = size.minDimension * .68f
+                    ),
+                    size.minDimension * .68f,
+                    center
+                )
+                drawLine(
+                    Gold.copy(alpha = .16f),
+                    Offset(size.width * .12f, size.height * .72f),
+                    Offset(size.width * .88f, size.height * .72f),
+                    1.dp.toPx()
+                )
             }
-            Column(Modifier.fillMaxWidth().padding(horizontal=8.dp, vertical=9.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                RpgIcon(symbol, Modifier.size(42.dp))
-                Text(name, color = Gold, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                Text(description, color = Color(0xFFB5C9C0), fontSize = 9.sp, lineHeight = 12.sp)
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 7.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Image(
+                    painter = painterResource(townBuildingResource(symbol)),
+                    contentDescription = "$name — иллюстрация здания",
+                    modifier = Modifier.fillMaxWidth().height(82.dp),
+                    contentScale = ContentScale.Fit
+                )
+                Text(name, color = Gold, fontWeight = FontWeight.Black, fontSize = 12.sp, maxLines = 1)
+                Text(
+                    description,
+                    color = Color(0xFFC1D3D0),
+                    fontSize = 9.sp,
+                    lineHeight = 11.sp,
+                    maxLines = 2
+                )
             }
         }
     }

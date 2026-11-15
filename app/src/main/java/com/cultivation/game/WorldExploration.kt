@@ -86,10 +86,10 @@ data class ExplorationLocation(
 )
 
 val daoWorldCatalog = listOf(
-    DaoWorldInfo(0, "Смертный мир", "Горные долины, древние святилища и первые испытания пути Дао.", 1, R.drawable.world_mortal_landscape, Color(0xFFE8BD78)),
-    DaoWorldInfo(1, "Духовный мир", "Нефритовые леса, водопады Ци и забытые владения духовных зверей.", 7, R.drawable.world_spiritual_landscape, Color(0xFF7DE0C1)),
-    DaoWorldInfo(2, "Бессмертный мир", "Парящие небесные острова, золотые дворцы и наследие древних бессмертных.", 13, R.drawable.world_immortal_landscape, Color(0xFFFFD98A)),
-    DaoWorldInfo(3, "Мир Хаоса", "Разломы пространства, осколки первозданного мира и печати Хаоса.", 19, R.drawable.world_chaos_landscape, Color(0xFFC69AFF))
+    DaoWorldInfo(0, "Смертный мир", "Горные долины, древние святилища и первые испытания пути Дао.", 1, R.drawable.world_mortal_bg, Color(0xFFE8BD78)),
+    DaoWorldInfo(1, "Духовный мир", "Нефритовые леса, водопады Ци и забытые владения духовных зверей.", 7, R.drawable.world_spiritual_bg, Color(0xFF7DE0C1)),
+    DaoWorldInfo(2, "Бессмертный мир", "Парящие небесные острова, золотые дворцы и наследие древних бессмертных.", 13, R.drawable.world_immortal_bg, Color(0xFFFFD98A)),
+    DaoWorldInfo(3, "Мир Хаоса", "Разломы пространства, осколки первозданного мира и печати Хаоса.", 19, R.drawable.world_chaos_bg, Color(0xFFC69AFF))
 )
 
 val worldLocationCatalog = listOf(

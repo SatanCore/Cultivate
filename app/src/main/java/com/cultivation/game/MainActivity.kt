@@ -758,12 +758,100 @@ private fun CultivateApp() {
             )
         }
         if (selectedMenu == 0) {
-            CinematicHomeScreen(
-                stage = stage, qi = qi, stones = stones, wins = wins,
-                storyChapter = storyChapter, combatPower = classBonus + classDefense + playerMaxHp,
-                onNavigate = { target -> selectedMenu = target; selectedTownBuilding = "" },
-                onBuilding = { building -> selectedTownBuilding = building; selectedMenu = if (building == "quests") 2 else 4 }
-            )
+            Box(Modifier.fillMaxSize()) {
+                CinematicHomeScreen(
+                    stage = stage, qi = qi, stones = stones, wins = wins,
+                    storyChapter = storyChapter, combatPower = classBonus + classDefense + playerMaxHp,
+                    onNavigate = { target -> selectedMenu = target; selectedTownBuilding = "" },
+                    onBuilding = { building -> selectedTownBuilding = building }
+                )
+                if (selectedTownBuilding.isNotBlank()) {
+                    Column(
+                        Modifier.align(Alignment.BottomCenter)
+                            .padding(start = 12.dp, end = 12.dp, bottom = 78.dp)
+                            .fillMaxWidth()
+                            .heightIn(max = 430.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .background(Color(0xEE142238), MaterialTheme.shapes.large)
+                                .padding(horizontal = 12.dp, vertical = 5.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("ЛУННАЯ ГАВАНЬ  ·  ${selectedTownBuilding.uppercase()}", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                            TextButton(onClick = { selectedTownBuilding = "" }) { Text("ЗАКРЫТЬ", color = Jade, fontSize = 10.sp) }
+                        }
+                when (selectedTownBuilding) {
+                    "shop" -> GameCard("Лавка Мэй", "Торговка материалов") {
+                        Text("Мэй продаёт простые осколки духа для развития техник выше 20-го уровня.", color = Color.LightGray)
+                        Text("Осколок духа: 200 камней · в наличии: ${skillMaterials[0]}", color = Jade)
+                        Button(onClick = { if (stones >= 200) { stones -= 200; skillMaterials[0]++; message = "Куплен осколок духа." } else message = "Не хватает камней духа." }, enabled = stones >= 200, modifier = Modifier.fillMaxWidth()) { Text("Купить осколок · 200") }
+                        OutlinedButton(onClick = { selectedTownBuilding = "" }) { Text("Назад на площадь") }
+                    }
+                    "auction" -> GameCard("Аукционный павильон", "Предложения странствующих культиваторов") {
+                        val listings = weaponCatalog.filter { it.requiredStage <= stage }.sortedByDescending { weaponPowerScore(it) }.take(4)
+                        listings.forEach { listing ->
+                            val price = 250 + weaponPowerScore(listing) * 18
+                            Text("${listing.name} · ${listing.rarity.title}", color = weaponRarityColor(listing.rarity), fontWeight = FontWeight.Bold)
+                            Text("Рейтинг ${weaponPowerScore(listing)} · цена $price камней", color = Color.LightGray, fontSize = 11.sp)
+                            OutlinedButton(onClick = {
+                                if (stones >= price) { stones -= price; ownedWeaponIds = (ownedWeaponList + encodeWeaponInstance(listing)).joinToString("|"); message = "На аукционе приобретено: ${listing.name}." }
+                                else message = "Недостаточно камней для ставки."
+                            }, enabled = stones >= price, modifier = Modifier.fillMaxWidth()) { Text("Купить лот · $price") }
+                        }
+                        Divider(color = Color(0xFF3B4B4F))
+                        Text("Редкие предметы экипировки", color = Gold, fontWeight = FontWeight.Bold)
+                        gearCatalog.filter { it.requiredStage <= stage }.sortedByDescending { gearPowerScore(it) }.take(3).forEach { listing ->
+                            val price = 350 + gearPowerScore(listing) * 16
+                            Text("${listing.name} · ${listing.rarity.title}", color = weaponRarityColor(listing.rarity), fontWeight = FontWeight.Bold)
+                            Text("${listing.slot.title} · набор «${gearSetNames[listing.setId]}» · рейтинг ${gearPowerScore(listing)} · $price камней", color = Color.LightGray, fontSize = 11.sp)
+                            OutlinedButton(onClick = {
+                                if (stones >= price) {
+                                    stones -= price
+                                    ownedGearIds = (ownedGearList + encodeGearInstance(listing)).joinToString("|")
+                                    message = "На аукционе приобретено: ${listing.name}."
+                                } else message = "Недостаточно камней для покупки."
+                            }, enabled = stones >= price, modifier = Modifier.fillMaxWidth()) { Text("Купить экипировку · $price") }
+                        }
+                        OutlinedButton(onClick = { selectedTownBuilding = "" }) { Text("Назад на площадь") }
+                    }
+                    "forge" -> GameCard("Кузница Чэня", "Мастерская оружейника") {
+                        Text("Чэнь изучает найденное оружие и помогает подготовить его к бою. Выбери предмет в инвентаре, чтобы сравнить характеристики и экипировать его.", color = Color.LightGray)
+                        Button(onClick = { selectedMenu = 4; selectedTownBuilding = "" }, modifier = Modifier.fillMaxWidth()) { Text("Открыть склад оружия") }
+                        OutlinedButton(onClick = { selectedTownBuilding = "" }) { Text("Назад на площадь") }
+                    }
+                    "event" -> GameCard("Юнь · посыльный ярмарки", "События и вести из соседних долин") {
+                        Text("«На площади сегодня ярмарка духовных огней. Торговцы привезли редкие находки, а вечером у восточных ворот появится странствующий рассказчик».", color = Color.LightGray)
+                        Text("Текущая история: глава ${storyChapter + 1} из 4", color = Gold)
+                        Text("Награда участника ярмарки", color = Jade, fontWeight = FontWeight.Bold)
+                        Button(onClick = {
+                            if (prefs.getBoolean("lantern_event_claimed", false)) message = "Подарок ярмарки уже получен."
+                            else {
+                                stones += 75
+                                prefs.edit().putBoolean("lantern_event_claimed", true).apply()
+                                message = "За участие в ярмарке получено 75 камней духа."
+                            }
+                        }, modifier = Modifier.fillMaxWidth()) { Text(if (prefs.getBoolean("lantern_event_claimed", false)) "Подарок получен" else "Получить подарок · 75 камней") }
+                        OutlinedButton(onClick = { selectedTownBuilding = "" }) { Text("Вернуться на площадь") }
+                    }
+                    "quests" -> GameCard("Доска поручений", "Старейшина Ли ждёт помощи") {
+                        Text("Старейшина Ли: «Страж святилища снова тревожит долину. Одолей его хотя бы один раз и принеси весть о победе».", color = Color.LightGray)
+                        Text("Поручение: победить стража · прогресс ${wins.coerceAtMost(1)}/1", color = Jade)
+                        LinearProgressIndicator(progress = { if (wins > 0) 1f else 0f }, modifier = Modifier.fillMaxWidth(), color = Jade)
+                        Button(onClick = {
+                            if (wins > 0 && !questClaimed) { stones += 180; skillMaterials[0] += 2; questClaimed = true; storyChapter = 1; message = "Поручение выполнено! Получено 180 камней и 2 осколка духа." }
+                            else if (questClaimed) message = "Старейшина уже наградил тебя. Скоро появится новое поручение."
+                            else message = "Сначала одолей стража на арене."
+                        }, enabled = wins > 0 && !questClaimed, modifier = Modifier.fillMaxWidth()) { Text(if (questClaimed) "Поручение выполнено" else "Получить награду") }
+                        OutlinedButton(onClick = { selectedTownBuilding = "" }) { Text("Назад на площадь") }
+                    }
+                }
+                    }
+                }
+            }
         } else {
         Column(
             Modifier.fillMaxSize().background(Ink).verticalScroll(pageScrollState).padding(18.dp),
@@ -825,103 +913,7 @@ private fun CultivateApp() {
                 }
             }
 
-            if (selectedMenu == 0) {
-                GameCard("Городок Лунной Гавани", "Тихая долина у подножия духовных гор · ступень $stage") {
-                    TownScene(stage, storyChapter)
-                    Text("Главная площадь освещена фонарями Ци. Каждое здание — отдельное место, где живут торговцы, мастера и искатели приключений.", color = Color.LightGray)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TownBuilding("Лавка", "Расходники и материалы", "shop", Modifier.weight(1f)) { selectedTownBuilding = "shop" }
-                        TownBuilding("Аукцион", "Торги между искателями", "auction", Modifier.weight(1f)) { selectedTownBuilding = "auction" }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TownBuilding("Кузница", "Оружие и мастерство", "forge", Modifier.weight(1f)) { selectedTownBuilding = "forge" }
-                        TownBuilding("Доска заданий", "Поручения и награды", "quests", Modifier.weight(1f)) { selectedTownBuilding = "quests" }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TownBuilding("Павильон культивации", "Медитация и прорыв", "cultivation", Modifier.weight(1f)) { selectedMenu = 1 }
-                        TownBuilding("Арена", "Испытания и добыча", "arena", Modifier.weight(1f)) { selectedMenu = 2 }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TownBuilding("Зал навыков", "Изучение боевых искусств", "skills", Modifier.weight(1f)) { selectedMenu = 5 }
-                        TownBuilding(if (stage < 7) "Кланы" else "Секты", if (stage < 7) "Дома и союзы долин" else "Искусства и наставники", "clan", Modifier.weight(1f)) { selectedMenu = 6 }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TownBuilding("Зверинец", "Поиск и воспитание питомцев", "pets", Modifier.weight(1f)) { selectedMenu = 7 }
-                        TownBuilding("Склад", "Экипировка и находки", "inventory", Modifier.weight(1f)) { selectedMenu = 4 }
-                    }
-                    TownBuilding("Личная обитель", "Медитация · кузница · алхимия", "abode", Modifier.fillMaxWidth()) { selectedMenu = 8; abodeSection = "sanctuary" }
-                }
-                when (selectedTownBuilding) {
-                    "shop" -> GameCard("Лавка Мэй", "Торговка материалов") {
-                        Text("Мэй продаёт простые осколки духа для развития техник выше 20-го уровня.", color = Color.LightGray)
-                        Text("Осколок духа: 200 камней · в наличии: ${skillMaterials[0]}", color = Jade)
-                        Button(onClick = { if (stones >= 200) { stones -= 200; skillMaterials[0]++; message = "Куплен осколок духа." } else message = "Не хватает камней духа." }, enabled = stones >= 200, modifier = Modifier.fillMaxWidth()) { Text("Купить осколок · 200") }
-                        OutlinedButton(onClick = { selectedTownBuilding = "" }) { Text("Назад на площадь") }
-                    }
-                    "auction" -> GameCard("Аукционный павильон", "Предложения странствующих культиваторов") {
-                        val listings = weaponCatalog.filter { it.requiredStage <= stage }.sortedByDescending { weaponPowerScore(it) }.take(4)
-                        listings.forEach { listing ->
-                            val price = 250 + weaponPowerScore(listing) * 18
-                            Text("${listing.name} · ${listing.rarity.title}", color = weaponRarityColor(listing.rarity), fontWeight = FontWeight.Bold)
-                            Text("Рейтинг ${weaponPowerScore(listing)} · цена $price камней", color = Color.LightGray, fontSize = 11.sp)
-                            OutlinedButton(onClick = {
-                                if (stones >= price) { stones -= price; ownedWeaponIds = (ownedWeaponList + encodeWeaponInstance(listing)).joinToString("|"); message = "На аукционе приобретено: ${listing.name}." }
-                                else message = "Недостаточно камней для ставки."
-                            }, enabled = stones >= price, modifier = Modifier.fillMaxWidth()) { Text("Купить лот · $price") }
-                        }
-                        Divider(color = Color(0xFF3B4B4F))
-                        Text("Редкие предметы экипировки", color = Gold, fontWeight = FontWeight.Bold)
-                        gearCatalog.filter { it.requiredStage <= stage }.sortedByDescending { gearPowerScore(it) }.take(3).forEach { listing ->
-                            val price = 350 + gearPowerScore(listing) * 16
-                            Text("${listing.name} · ${listing.rarity.title}", color = weaponRarityColor(listing.rarity), fontWeight = FontWeight.Bold)
-                            Text("${listing.slot.title} · набор «${gearSetNames[listing.setId]}» · рейтинг ${gearPowerScore(listing)} · $price камней", color = Color.LightGray, fontSize = 11.sp)
-                            OutlinedButton(onClick = {
-                                if (stones >= price) {
-                                    stones -= price
-                                    ownedGearIds = (ownedGearList + encodeGearInstance(listing)).joinToString("|")
-                                    message = "На аукционе приобретено: ${listing.name}."
-                                } else message = "Недостаточно камней для покупки."
-                            }, enabled = stones >= price, modifier = Modifier.fillMaxWidth()) { Text("Купить экипировку · $price") }
-                        }
-                        OutlinedButton(onClick = { selectedTownBuilding = "" }) { Text("Назад на площадь") }
-                    }
-                    "forge" -> GameCard("Кузница Чэня", "Мастерская оружейника") {
-                        Text("Чэнь изучает найденное оружие и помогает подготовить его к бою. Выбери предмет в инвентаре, чтобы сравнить характеристики и экипировать его.", color = Color.LightGray)
-                        Button(onClick = { selectedMenu = 4; selectedTownBuilding = "" }, modifier = Modifier.fillMaxWidth()) { Text("Открыть склад оружия") }
-                        OutlinedButton(onClick = { selectedTownBuilding = "" }) { Text("Назад на площадь") }
-                    }
-                    "event" -> GameCard("Юнь · посыльный ярмарки", "События и вести из соседних долин") {
-                        Text("«На площади сегодня ярмарка духовных огней. Торговцы привезли редкие находки, а вечером у восточных ворот появится странствующий рассказчик».", color = Color.LightGray)
-                        Text("Текущая история: глава ${storyChapter + 1} из 4", color = Gold)
-                        OutlinedButton(onClick = { selectedTownBuilding = ""; message = "Юнь обещал сообщить, когда начнётся новое событие." }) { Text("Вернуться к жителям") }
-                    }
-                    "quests" -> GameCard("Доска поручений", "Старейшина Ли ждёт помощи") {
-                        Text("Старейшина Ли: «Страж святилища снова тревожит долину. Одолей его хотя бы один раз и принеси весть о победе».", color = Color.LightGray)
-                        Text("Поручение: победить стража · прогресс ${wins.coerceAtMost(1)}/1", color = Jade)
-                        LinearProgressIndicator(progress = { if (wins > 0) 1f else 0f }, modifier = Modifier.fillMaxWidth(), color = Jade)
-                        Button(onClick = {
-                            if (wins > 0 && !questClaimed) { stones += 180; skillMaterials[0] += 2; questClaimed = true; storyChapter = 1; message = "Поручение выполнено! Получено 180 камней и 2 осколка духа." }
-                            else if (questClaimed) message = "Старейшина уже наградил тебя. Скоро появится новое поручение."
-                            else message = "Сначала одолей стража на арене."
-                        }, enabled = wins > 0 && !questClaimed, modifier = Modifier.fillMaxWidth()) { Text(if (questClaimed) "Поручение выполнено" else "Получить награду") }
-                        OutlinedButton(onClick = { selectedTownBuilding = "" }) { Text("Назад на площадь") }
-                    }
-                }
-                GameCard("Жители Лунной Гавани", "Люди, у которых начинается твоя история") {
-                    Text("Старейшина Ли · наставник долины", color = Gold, fontWeight = FontWeight.Bold)
-                    Text(if (storyChapter == 0) "«Докажи, что способен защитить этот город. Тогда я расскажу, почему древние врата вновь подают знаки»." else "«Ты помог нашей долине. За северными воротами пробуждается древний путь — это только начало твоего странствия».", color = Color.LightGray)
-                    OutlinedButton(onClick = { message = if (storyChapter == 0) "Старейшина Ли: начни с поручения на доске заданий." else "Старейшина Ли: северные врата откроются в следующей главе."; selectedTownBuilding = "quests" }, modifier = Modifier.fillMaxWidth()) { Text("Старейшина Ли · сюжет и задания") }
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        OutlinedButton(onClick = { selectedTownBuilding = "shop"; message = "Мэй: «Загляни в мою лавку, путник. У меня есть полезные осколки Ци»." }, modifier = Modifier.weight(1f)) { Text("Мэй · торговка") }
-                        OutlinedButton(onClick = { selectedTownBuilding = "forge"; message = "Чэнь: «Покажи оружие и доспехи — подскажу, что лучше надеть»." }, modifier = Modifier.weight(1f)) { Text("Чэнь · кузнец") }
-                    }
-                    OutlinedButton(onClick = { selectedTownBuilding = "event"; message = "Юнь: «У меня свежие вести о событиях долины!»." }, modifier = Modifier.fillMaxWidth()) { Text("Юнь · посыльный событий") }
-                }
-                GameCard("Событие долины", "Ярмарка духовных огней") {
-                    Text("Сегодня на площади проходит небольшая ярмарка. Забери разовый подарок для путника.", color = Color.LightGray)
-                    Button(onClick = { if (prefs.getBoolean("lantern_event_claimed", false)) message = "Подарок ярмарки уже получен." else { stones += 75; prefs.edit().putBoolean("lantern_event_claimed", true).apply(); message = "За участие в ярмарке получено 75 камней духа." } }, modifier = Modifier.fillMaxWidth()) { Text("Получить подарок события · 75 камней") }
-                }
-            }
+
 
             if (selectedMenu == 8) {
                 val currentWorld = worldName(stage)
@@ -1809,7 +1801,7 @@ private fun CinematicHomeScreen(
         }
 
         Surface(
-            Modifier.align(Alignment.CenterStart).padding(start = 12.dp).width(174.dp),
+            Modifier.align(Alignment.CenterStart).padding(start = 12.dp).width(174.dp).clickable { onBuilding("quests") },
             color = Color(0xE8172238), shape = MaterialTheme.shapes.large, tonalElevation = 10.dp
         ) {
             Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -1838,6 +1830,7 @@ private fun CinematicHomeScreen(
         HomeHotspot("Аукцион", "Торговля и редкости", "auction", Modifier.align(Alignment.Center).offset(x = maxWidth * .37f, y = maxHeight * .17f)) { onBuilding("auction") }
         HomeHotspot("Доска заданий", "Поручения долины", "quests", Modifier.align(Alignment.Center).offset(x = maxWidth * .13f, y = maxHeight * .20f)) { onBuilding("quests") }
         HomeHotspot("Лавка", "Предметы и ресурсы", "shop", Modifier.align(Alignment.Center).offset(x = maxWidth * .38f, y = maxHeight * .21f)) { onBuilding("shop") }
+        HomeHotspot("Ярмарка", "Событие долины", "quests", Modifier.align(Alignment.TopEnd).padding(top = 78.dp, end = 12.dp)) { onBuilding("event") }
 
         Row(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth()

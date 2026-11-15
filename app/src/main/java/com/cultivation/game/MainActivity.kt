@@ -1794,7 +1794,11 @@ private fun CultivateApp() {
                             activeNode = activeSkillNode,
                             characterLevel = stage.coerceAtMost(20),
                             onLearn = { learnSkillNode(inspectedSkillNode) },
-                            onSetActive = { activeSkillNode = inspectedSkillNode }
+                            onSetActive = {
+                                activeSkillNode = inspectedSkillNode
+                                rotationOrder.remove(inspectedSkillNode)
+                                rotationOrder.add(0, inspectedSkillNode)
+                            }
                         )
                         Text(
                             "Боевой слот: ${skillDefinitions[chosenClass][activeSkillNode].name} · перезарядка ${skillCooldowns[activeSkillNode]} хода",

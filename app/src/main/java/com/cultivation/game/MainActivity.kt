@@ -1,7 +1,11 @@
 package com.cultivation.game
 
 import android.os.Bundle
+import android.os.Build
+import android.view.View
+import android.view.WindowInsets
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Animatable
@@ -49,7 +53,33 @@ private const val OFFLINE_CAP_SECONDS = 8L * 60L * 60L
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyImmersiveMode()
         setContent { CultivateApp() }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) applyImmersiveMode()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun applyImmersiveMode() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.insetsController?.let { controller ->
+                controller.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
+                controller.systemBarsBehavior =
+                    android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        } else {
+            window.decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_FULLSCREEN
+                )
+        }
     }
 }
 
@@ -145,6 +175,7 @@ private fun CultivateApp() {
     } }
     var selectedWeapon by remember { mutableIntStateOf(prefs.getInt("weapon_type",0).coerceIn(0,3)) }
     var selectedMenu by remember { mutableIntStateOf(0) }
+    var showExitDialog by remember { mutableStateOf(false) }
     var inventoryFilter by remember { mutableIntStateOf(0) }
     var selectedTownBuilding by remember { mutableStateOf("") }
     val pageScrollState = rememberScrollState()
@@ -701,6 +732,31 @@ private fun CultivateApp() {
             onSurface = Color(0xFFF0E8D8)
         )
     ) {
+        BackHandler {
+            when {
+                selectedTownBuilding.isNotBlank() -> selectedTownBuilding = ""
+                selectedMenu != 0 -> { selectedMenu = 0; selectedTownBuilding = "" }
+                else -> showExitDialog = true
+            }
+        }
+        if (showExitDialog) {
+            AlertDialog(
+                onDismissRequest = { showExitDialog = false },
+                title = { Text("Покинуть мир Дао?") },
+                text = { Text("Игра сохранит прогресс. Действительно выйти из Cultivate?") },
+                confirmButton = {
+                    TextButton(onClick = { showExitDialog = false; (context as? android.app.Activity)?.finish() }) {
+                        Text("Выйти")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showExitDialog = false }) { Text("Остаться") }
+                },
+                containerColor = Color(0xFF1B2A32),
+                titleContentColor = Gold,
+                textContentColor = Color(0xFFE0E6EF)
+            )
+        }
         if (selectedMenu == 0) {
             CinematicHomeScreen(
                 stage = stage, qi = qi, stones = stones, wins = wins,
@@ -725,17 +781,48 @@ private fun CultivateApp() {
                 }
             }
 
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                HomeNavItem("Город", "worlds", 0) { selectedMenu = 0; selectedTownBuilding = "" }
-                HomeNavItem("Путь", "cultivation", 1) { selectedMenu = 1; selectedTownBuilding = "" }
-                HomeNavItem("Арена", "arena", 2) { selectedMenu = 2; selectedTownBuilding = "" }
-                HomeNavItem("Персонаж", "character", 3) { selectedMenu = 3; selectedTownBuilding = "" }
-                HomeNavItem("Склад", "inventory", 4) { selectedMenu = 4; selectedTownBuilding = "" }
-                HomeNavItem("Навыки", "skills", 5) { selectedMenu = 5; selectedTownBuilding = "" }
-                HomeNavItem(if (stage < 7) "Кланы" else "Секты", "clan", 6) { selectedMenu = 6; selectedTownBuilding = "" }
-                HomeNavItem("Питомцы", "pets", 7) { selectedMenu = 7; selectedTownBuilding = "" }
-                HomeNavItem("Обитель", "abode", 8) { selectedMenu = 8; selectedTownBuilding = "" }
-                HomeNavItem("Миры", "worlds", 9) { selectedMenu = 9; selectedTownBuilding = "" }
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color(0xCC17263A),
+                shape = MaterialTheme.shapes.large,
+                border = BorderStroke(1.dp, Gold.copy(alpha = .34f))
+            ) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                        HomeNavItem("Город", "worlds", 0) { selectedMenu = 0; selectedTownBuilding = "" }
+                        HomeNavItem("Путь", "cultivation", 1) { selectedMenu = 1; selectedTownBuilding = "" }
+                        HomeNavItem("Арена", "arena", 2) { selectedMenu = 2; selectedTownBuilding = "" }
+                        HomeNavItem("Персонаж", "character", 3) { selectedMenu = 3; selectedTownBuilding = "" }
+                        HomeNavItem("Склад", "inventory", 4) { selectedMenu = 4; selectedTownBuilding = "" }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                        HomeNavItem("Навыки", "skills", 5) { selectedMenu = 5; selectedTownBuilding = "" }
+                        HomeNavItem(if (stage < 7) "Кланы" else "Секты", "clan", 6) { selectedMenu = 6; selectedTownBuilding = "" }
+                        HomeNavItem("Питомцы", "pets", 7) { selectedMenu = 7; selectedTownBuilding = "" }
+                        HomeNavItem("Обитель", "abode", 8) { selectedMenu = 8; selectedTownBuilding = "" }
+                        HomeNavItem("Миры", "worlds", 9) { selectedMenu = 9; selectedTownBuilding = "" }
+                    }
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    when (selectedMenu) {
+                        1 -> "ПУТЬ КУЛЬТИВАЦИИ"
+                        2 -> "АРЕНА И ИСПЫТАНИЯ"
+                        3 -> "ПЕРСОНАЖ"
+                        4 -> "ХРАНИЛИЩЕ СОКРОВИЩ"
+                        5 -> "БОЕВЫЕ ТЕХНИКИ"
+                        6 -> if (stage < 7) "КЛАНЫ" else "СЕКТЫ"
+                        7 -> "ДУХОВНЫЙ ЗВЕРИНЕЦ"
+                        8 -> "ЛИЧНАЯ ОБИТЕЛЬ"
+                        9 -> "ЧЕТЫРЕ МИРА ДАО"
+                        else -> "ЛУННАЯ ГАВАНЬ"
+                    },
+                    color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black
+                )
+                TextButton(onClick = { selectedMenu = 0; selectedTownBuilding = "" }) {
+                    Text("‹  В ГОРОД", color = Jade, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
             }
 
             if (selectedMenu == 0) {

@@ -2111,10 +2111,10 @@ private fun CharacterArmoryScreen(
     val selected = classIndex.coerceIn(0, classNames.lastIndex)
     val profile = classCombatProfiles[selected]
     val portrait = when (selected) {
-        0 -> R.drawable.character_full_blademaster
-        1 -> R.drawable.character_full_ironbody
-        2 -> R.drawable.character_full_elementalist
-        else -> R.drawable.character_full_spiritmystic
+        0 -> R.drawable.character_blademaster
+        1 -> R.drawable.character_ironbody
+        2 -> R.drawable.character_elementalist
+        else -> R.drawable.character_spiritmystic
     }
     val gearBySlot = equippedGear.associateBy { it.slot }
     val hpProgress = if (maxHp <= 0) 0f else (currentHp.toFloat() / maxHp).coerceIn(0f, 1f)
@@ -2207,30 +2207,48 @@ private fun CharacterArmoryScreen(
                         modifier = Modifier.fillMaxSize().graphicsLayer {
                             scaleX = auraPulse
                             scaleY = auraPulse
+                            alpha = .72f
                         }
                     )
-                    Image(
-                        painter = painterResource(portrait),
-                        contentDescription = "Образ класса: ${classNames[selected]}",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxWidth(.98f).fillMaxHeight(.92f)
-                    )
-                    CharacterEquipmentOverlay(
-                        weapon = equippedWeapon,
-                        gearBySlot = gearBySlot,
-                        modifier = Modifier.fillMaxWidth(.98f).fillMaxHeight(.92f)
-                    )
+                    Surface(
+                        modifier = Modifier.fillMaxHeight(.94f).aspectRatio(2f / 3f),
+                        color = Color(0xFF111A2B),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.5.dp, Gold.copy(alpha = .88f)),
+                        tonalElevation = 8.dp,
+                        shadowElevation = 7.dp
+                    ) {
+                        Box(Modifier.fillMaxSize()) {
+                            Image(
+                                painter = painterResource(portrait),
+                                contentDescription = "Полноценный образ класса: ${classNames[selected]}",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            Box(
+                                Modifier.align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .height(42.dp)
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(Color.Transparent, Color(0xDD081321))
+                                        )
+                                    )
+                            )
+                        }
+                    }
                     Surface(
                         modifier = Modifier.align(Alignment.BottomCenter),
-                        color = Color(0xE91A2A40),
+                        color = Color(0xF01A2A40),
                         shape = CircleShape,
-                        border = BorderStroke(1.dp, Gold.copy(alpha = .85f))
+                        border = BorderStroke(1.dp, Gold.copy(alpha = .92f)),
+                        shadowElevation = 5.dp
                     ) {
                         Text(
                             "УР. $stage",
-                            Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            Modifier.padding(horizontal = 11.dp, vertical = 5.dp),
                             color = Color(0xFFFFE4A0),
-                            fontSize = 8.sp,
+                            fontSize = 9.sp,
                             fontWeight = FontWeight.Black
                         )
                     }
@@ -2329,10 +2347,10 @@ private fun CharacterArmoryScreen(
                 CharacterClassTile(
                     name = name,
                     portraitRes = when (index) {
-                        0 -> R.drawable.class_portrait_blademaster
-                        1 -> R.drawable.class_portrait_ironbody
-                        2 -> R.drawable.class_portrait_elementalist
-                        else -> R.drawable.class_portrait_spiritmystic
+                        0 -> R.drawable.character_blademaster
+                        1 -> R.drawable.character_ironbody
+                        2 -> R.drawable.character_elementalist
+                        else -> R.drawable.character_spiritmystic
                     },
                     selected = classIndex == index,
                     onClick = { onSelectClass(index) }
@@ -2542,7 +2560,7 @@ private fun CharacterClassTile(
     onClick: () -> Unit
 ) {
     Surface(
-        modifier = Modifier.width(116.dp).clickable(onClick = onClick),
+        modifier = Modifier.width(150.dp).clickable(onClick = onClick),
         color = if (selected) Color(0xE13D4C5A) else Color(0xD916263B),
         shape = MaterialTheme.shapes.large,
         border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) Gold else Color(0x665E7897)),
@@ -2557,12 +2575,12 @@ private fun CharacterClassTile(
                 painter = painterResource(portraitRes),
                 contentDescription = name,
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxWidth().height(112.dp)
+                modifier = Modifier.fillMaxWidth().height(168.dp)
             )
             Text(
                 name,
                 color = if (selected) Color(0xFFFFE5A5) else Color(0xFFD5DFEC),
-                fontSize = 8.sp,
+                fontSize = 9.sp,
                 fontWeight = FontWeight.Black,
                 maxLines = 2,
                 minLines = 2

@@ -60,7 +60,7 @@ private fun CultivateApp() {
     val previousVisit = remember { prefs.getLong("last_seen", now) }
     val offlineSeconds = ((now - previousVisit) / 1000L).coerceIn(0L, OFFLINE_CAP_SECONDS)
     val savedAbodeLevel = prefs.getInt("abode_level", 1).coerceIn(1, 20)
-    val todayKey = System.currentTimeMillis() / 86_400_000L
+    var todayKey by remember { mutableLongStateOf(System.currentTimeMillis() / 86_400_000L) }
     val dailyReset = prefs.getLong("daily_day", todayKey) != todayKey
     val restoredQi = (offlineSeconds / qiIntervalForAbode(savedAbodeLevel)).toInt()
 
@@ -105,6 +105,7 @@ private fun CultivateApp() {
     }
     var defeatedWorldBossIds by remember { mutableStateOf(prefs.getString("world_bosses_defeated", "") ?: "") }
     var pendingWorldBossId by remember { mutableStateOf(prefs.getString("pending_world_boss", "") ?: "") }
+    var worldBossTurnCount by remember { mutableIntStateOf(prefs.getInt("world_boss_turn_count", 0).coerceAtLeast(0)) }
     var selectedLocationId by remember { mutableStateOf(prefs.getString("world_selected_location", "mortal_valley") ?: "mortal_valley") }
     var ownedPetIds by remember { mutableStateOf(prefs.getString("owned_pet_ids", "jade_fox") ?: "jade_fox") }
     var activePetId by remember { mutableStateOf(prefs.getString("active_pet_id", "jade_fox") ?: "jade_fox") }
@@ -284,14 +285,34 @@ private fun CultivateApp() {
         weaponCooldown = if (action == 10) 6 else weaponCd
         val weaponHealing = equippedWeapon.healOnHit + activePet.healing + (if (chosenClass == 3) classProfile.healingBonus else 0) + if (petSynergy) 2 else 0
         if (weaponHealing > 0) playerHp = (playerHp + weaponHealing).coerceAtMost(playerMaxHp)
+        var worldBossAbilityMessage = ""
         if (enemyHp > 0) {
-            var incoming = (12 + bossLevel * 3 - classDefense).coerceAtLeast(2)
+            val activeWorldBoss = worldLocationCatalog.firstOrNull { it.id == pendingWorldBossId && it.isBoss }
+            val nextWorldBossTurn = if (activeWorldBoss != null) worldBossTurnCount + 1 else 0
+            val specialStrike = activeWorldBoss != null && nextWorldBossTurn % 3 == 0
+            val specialBonus = when (activeWorldBoss?.worldIndex) {
+                0 -> 6 + bossLevel
+                1 -> 8 + bossLevel
+                2 -> 10 + bossLevel * 2
+                3 -> 14 + bossLevel * 2
+                else -> 0
+            }
+            val abilityName = when (activeWorldBoss?.worldIndex) {
+                0 -> "Рёв Каменного Тигра"
+                1 -> "Корни Нефритового Пика"
+                2 -> "Приговор Небесного Дракона"
+                3 -> "Разлом Пустоты"
+                else -> ""
+            }
+            var incoming = (12 + bossLevel * 3 + (if (specialStrike) specialBonus else 0) - classDefense).coerceAtLeast(2)
             if (activePet.id == "stone_tortoise") incoming = (incoming * 80 / 100).coerceAtLeast(1)
             if (action != null && action in 0..8) {
                 incoming = when (chosenClass) { 0 -> incoming * 55 / 100; 1 -> incoming * 25 / 100; 2 -> 0; else -> incoming * 70 / 100 }
                 if (chosenClass == 3) playerHp = (playerHp + 45).coerceAtMost(playerMaxHp)
             }
             playerHp = (playerHp - incoming).coerceAtLeast(0)
+            if (activeWorldBoss != null) worldBossTurnCount = nextWorldBossTurn
+            if (specialStrike) worldBossAbilityMessage = "$abilityName · дополнительный урон +$specialBonus."
         }
         if (enemyHp == 0) {
             autoBattle = false
@@ -340,10 +361,11 @@ private fun CultivateApp() {
                     message += " Хранитель ${worldBoss.title} повержен: получено 5 фрагментов мира."
                 }
                 pendingWorldBossId = ""
+                worldBossTurnCount = 0
             }
         } else if (playerHp <= 0) {
             autoBattle = false
-            message = "Ты пал в бою. Восстановись за 40 камней духа, чтобы продолжить."
+            message = "Ты пал в бою. Восстановись за 40 камней духа, чтобы продолжить." + if (worldBossAbilityMessage.isNotBlank()) " $worldBossAbilityMessage" else ""
         } else {
             val actionName = when {
                 action != null && action in 0..8 -> skillDefinitions[chosenClass][action].name
@@ -351,7 +373,7 @@ private fun CultivateApp() {
                 action == 10 -> "Способность оружия: ${equippedWeapon.name}"
                 else -> "Обычная атака"
             }
-            message = (if (critical) "КРИТИЧЕСКИЙ УДАР! " else "") + "$actionName · урон $damage."
+            message = (if (critical) "КРИТИЧЕСКИЙ УДАР! " else "") + "$actionName · урон $damage." + if (worldBossAbilityMessage.isNotBlank()) " $worldBossAbilityMessage" else ""
         }
     }
 
@@ -390,6 +412,7 @@ private fun CultivateApp() {
             }
             explorationEnergy -= 3
             pendingWorldBossId = location.id
+            worldBossTurnCount = 0
             bossLevel = maxOf(bossLevel, location.bossRank)
             enemyHp = bossMaxHp(bossLevel)
             playerHp = playerMaxHp
@@ -496,7 +519,24 @@ private fun CultivateApp() {
         }
     }
 
-    LaunchedEffect(qi, stones, stage, selectedWorldIndex, explorationEnergy, explorationProgress.toList(), worldFragments.toList(), defeatedWorldBossIds, pendingWorldBossId, selectedLocationId, abodeLevel, ironOre, spiritHerbs, spiritWater, qiPills, bodyPills, bodyPillBonus, forgeTemper, alchemyRank, gardenReadyAt, springReadyAt, ownedPetIds, activePetId, petLevels.toList(), petBondXp.toList(), petAscensions.toList(), petEssence, petCores, petPity, dailyWins, dailyGardenCollected, dailyMeditated, dailyClanDonated, dailyClaims, clanReputation, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, ownedGearIds, equippedGearIds.toList(), questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000L)
+            val currentDayKey = System.currentTimeMillis() / 86_400_000L
+            if (currentDayKey != todayKey) {
+                todayKey = currentDayKey
+                dailyWins = 0
+                dailyGardenCollected = false
+                dailyMeditated = false
+                dailyClanDonated = false
+                dailyClaims = 0
+                explorationEnergy = 6
+                message = "Наступил новый день. Энергия экспедиций и ежедневные поручения восстановлены."
+            }
+        }
+    }
+
+    LaunchedEffect(qi, stones, stage, selectedWorldIndex, todayKey, explorationEnergy, explorationProgress.toList(), worldFragments.toList(), defeatedWorldBossIds, pendingWorldBossId, worldBossTurnCount, selectedLocationId, abodeLevel, ironOre, spiritHerbs, spiritWater, qiPills, bodyPills, bodyPillBonus, forgeTemper, alchemyRank, gardenReadyAt, springReadyAt, ownedPetIds, activePetId, petLevels.toList(), petBondXp.toList(), petAscensions.toList(), petEssence, petCores, petPity, dailyWins, dailyGardenCollected, dailyMeditated, dailyClanDonated, dailyClaims, clanReputation, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, ownedGearIds, equippedGearIds.toList(), questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
         prefs.edit()
             .putInt("qi", qi)
             .putInt("stones", stones)
@@ -507,6 +547,7 @@ private fun CultivateApp() {
             .putString("world_fragments", worldFragments.joinToString(","))
             .putString("world_bosses_defeated", defeatedWorldBossIds)
             .putString("pending_world_boss", pendingWorldBossId)
+            .putInt("world_boss_turn_count", worldBossTurnCount)
             .putString("world_selected_location", selectedLocationId)
             .putString("owned_pet_ids", ownedPetIds)
             .putString("active_pet_id", activePetId)
@@ -1031,7 +1072,10 @@ private fun CultivateApp() {
             }
 
             if (selectedMenu == 2) {
-                GameCard("Арена испытаний", "Страж святилища · ранг $bossLevel") {
+                val activeWorldBoss = worldLocationCatalog.firstOrNull { it.id == pendingWorldBossId && it.isBoss }
+                val arenaBackgroundRes = activeWorldBoss?.let { daoWorldCatalog[it.worldIndex].backgroundRes } ?: R.drawable.lunar_harbor_bg
+                val enemyAccent = activeWorldBoss?.let { daoWorldCatalog[it.worldIndex].accent } ?: Color(0xFFE47A73)
+                GameCard("Арена испытаний", activeWorldBoss?.title ?: "Страж святилища · ранг $bossLevel") {
                     BattleScene(
                         autoBattle = autoBattle,
                         actionText = message,
@@ -1048,7 +1092,11 @@ private fun CultivateApp() {
                             else -> R.drawable.class_portrait_blademaster
                         },
                         petName = activePet.name,
-                        petPortraitRes = petPortraitResource(activePet.id)
+                        petPortraitRes = petPortraitResource(activePet.id),
+                        enemyPortraitRes = activeWorldBoss?.battlePortraitRes ?: R.drawable.boss_mountain_lord,
+                        arenaBackgroundRes = arenaBackgroundRes,
+                        enemyAccent = enemyAccent,
+                        enemyTitle = activeWorldBoss?.title.orEmpty()
                     )
 
                     Row(
@@ -3371,7 +3419,11 @@ private fun BattleScene(
     enemyMaxHp: Int,
     playerPortraitRes: Int,
     petName: String,
-    petPortraitRes: Int
+    petPortraitRes: Int,
+    enemyPortraitRes: Int,
+    arenaBackgroundRes: Int,
+    enemyAccent: Color,
+    enemyTitle: String
 ) {
     val transition = rememberInfiniteTransition(label = "cinematic-battle")
     val pulse by transition.animateFloat(
@@ -3391,16 +3443,18 @@ private fun BattleScene(
     )
     val playerRatio = (playerHp.toFloat() / playerMaxHp.coerceAtLeast(1)).coerceIn(0f, 1f)
     val enemyRatio = (enemyHp.toFloat() / enemyMaxHp.coerceAtLeast(1)).coerceIn(0f, 1f)
-    val bossName = when {
-        bossLevel >= 20 -> "Владыка Разлома"
-        bossLevel >= 10 -> "Демон Горного Пика"
-        bossLevel >= 5 -> "Древний Страж"
-        else -> "Страж Святилища"
+    val bossName = enemyTitle.ifBlank {
+        when {
+            bossLevel >= 20 -> "Владыка Разлома"
+            bossLevel >= 10 -> "Демон Горного Пика"
+            bossLevel >= 5 -> "Древний Страж"
+            else -> "Страж Святилища"
+        }
     }
 
     Box(Modifier.fillMaxWidth().height(326.dp)) {
         Image(
-            painter = painterResource(id = R.drawable.lunar_harbor_bg),
+            painter = painterResource(id = arenaBackgroundRes),
             contentDescription = "Лунная арена у горного святилища",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize().graphicsLayer {
@@ -3494,7 +3548,7 @@ private fun BattleScene(
                 current = enemyHp,
                 maximum = enemyMaxHp,
                 ratio = enemyRatio,
-                barColor = Color(0xFFE47A73),
+                barColor = enemyAccent,
                 isDefeated = enemyHp <= 0
             )
         }
@@ -3511,8 +3565,24 @@ private fun BattleScene(
                 .graphicsLayer { translationY = -pulse * 2.5f }
         )
 
+        Box(
+            Modifier.align(Alignment.BottomEnd)
+                .padding(end = 1.dp, bottom = 15.dp)
+                .size(174.dp)
+                .background(
+                    Brush.radialGradient(
+                        listOf(
+                            enemyAccent.copy(alpha = .34f * pulse),
+                            enemyAccent.copy(alpha = .12f * pulse),
+                            Color.Transparent
+                        )
+                    ),
+                    CircleShape
+                )
+        )
+
         Image(
-            painter = painterResource(id = R.drawable.boss_mountain_lord),
+            painter = painterResource(id = enemyPortraitRes),
             contentDescription = bossName,
             contentScale = ContentScale.Fit,
             modifier = Modifier

@@ -66,7 +66,8 @@ data class ExplorationLocation(
     val qiReward: Int,
     val isBoss: Boolean = false,
     val bossRank: Int = 0,
-    val progressGoal: Int = 3
+    val progressGoal: Int = 3,
+    val battlePortraitRes: Int = R.drawable.boss_mountain_lord
 )
 
 val daoWorldCatalog = listOf(
@@ -80,22 +81,22 @@ val worldLocationCatalog = listOf(
     ExplorationLocation("mortal_valley", 0, "Долина Туманов", "Разведка · каменные тропы", "Безопасные тропы вокруг Лунной Гавани. Здесь можно найти железную руду и следы старых караванов.", 1, 650, R.drawable.world_location_valley, "ore", "железная руда", 1, stoneReward = 70, qiReward = 8),
     ExplorationLocation("mortal_bamboo", 0, "Бамбуковый лес", "Сбор · духовные травы", "Тихий лес скрывает лекарственные растения и небольшие потоки природной Ци.", 2, 800, R.drawable.world_location_forest, "herbs", "духовные травы", 2, stoneReward = 80, qiReward = 10),
     ExplorationLocation("mortal_ruins", 0, "Забытое святилище", "Руины · осколки духа", "Разрушенный храм хранит остатки печатей. В глубине можно найти материалы для развития боевых техник.", 4, 1050, R.drawable.world_location_ruins, "material", "осколок духа", 1, materialTier = 0, stoneReward = 95, qiReward = 12),
-    ExplorationLocation("mortal_guardian", 0, "Страж долины", "Хранитель · босс мира", "Древний страж проверяет тех, кто исследовал все окрестные земли. Победа открывает путь к редким фрагментам мира.", 6, 1350, R.drawable.world_location_guardian, "material", "осколок духа", 2, materialTier = 0, stoneReward = 250, qiReward = 30, isBoss = true, bossRank = 7),
+    ExplorationLocation("mortal_guardian", 0, "Страж долины", "Хранитель · босс мира", "Древний страж проверяет тех, кто исследовал все окрестные земли. Победа открывает путь к редким фрагментам мира.", 6, 1350, R.drawable.world_location_guardian, "material", "осколок духа", 2, materialTier = 0, stoneReward = 250, qiReward = 30, isBoss = true, bossRank = 7, battlePortraitRes = R.drawable.boss_mortal_guardian),
 
     ExplorationLocation("spirit_jade_forest", 1, "Нефритовый лес", "Сбор · духовные травы", "Древние деревья впитали чистую Ци. Среди корней растут редкие травы духовного мира.", 7, 1650, R.drawable.world_location_forest, "herbs", "духовные травы", 3, stoneReward = 120, qiReward = 15),
     ExplorationLocation("spirit_waterfall", 1, "Водопад Небесной Росы", "Родник · духовная вода", "Вода падает с парящих скал и собирает энергию нефритовых жил.", 8, 1900, R.drawable.world_location_valley, "water", "духовная вода", 2, stoneReward = 140, qiReward = 18),
     ExplorationLocation("spirit_ruins", 1, "Руины Древней Секты", "Руины · нефритовая эссенция", "Заброшенные залы всё ещё хранят следы древних техник и редкие материалы для навыков.", 10, 2250, R.drawable.world_location_ruins, "material", "нефритовая эссенция", 1, materialTier = 1, stoneReward = 165, qiReward = 20),
-    ExplorationLocation("spirit_guardian", 1, "Страж Нефритового Пика", "Хранитель · босс мира", "Духовный зверь охраняет путь к небесным островам. Чтобы вызвать его, исследуй все три территории мира.", 12, 2700, R.drawable.world_location_guardian, "material", "нефритовая эссенция", 2, materialTier = 1, stoneReward = 320, qiReward = 40, isBoss = true, bossRank = 13),
+    ExplorationLocation("spirit_guardian", 1, "Страж Нефритового Пика", "Хранитель · босс мира", "Духовный зверь охраняет путь к небесным островам. Чтобы вызвать его, исследуй все три территории мира.", 12, 2700, R.drawable.world_location_guardian, "material", "нефритовая эссенция", 2, materialTier = 1, stoneReward = 320, qiReward = 40, isBoss = true, bossRank = 13, battlePortraitRes = R.drawable.boss_spirit_stag),
 
     ExplorationLocation("immortal_isles", 2, "Парящие острова", "Разведка · небесные жилы", "На островах среди облаков встречаются кристаллы, из которых рождаются бессмертные артефакты.", 13, 3150, R.drawable.world_location_celestial, "material", "сердце зверя", 1, materialTier = 2, stoneReward = 195, qiReward = 24),
     ExplorationLocation("immortal_lake", 2, "Золотое озеро", "Родник · чистая вода", "Вода озера отражает небесные дворцы и насыщена энергией золотого лотоса.", 14, 3500, R.drawable.world_location_valley, "water", "духовная вода", 3, stoneReward = 220, qiReward = 27),
     ExplorationLocation("immortal_archive", 2, "Архив Бессмертных", "Руины · кристаллы души", "В древнем архиве сохранились фрагменты техник, которые усиливают высокие ступени культивации.", 16, 3950, R.drawable.world_location_ruins, "material", "кристалл души", 1, materialTier = 3, stoneReward = 255, qiReward = 31),
-    ExplorationLocation("immortal_guardian", 2, "Небесный Страж", "Хранитель · босс мира", "Страж небесного дворца не пропустит путника без доказательства силы. Исследуй все три острова, прежде чем бросить вызов.", 18, 4550, R.drawable.world_location_guardian, "material", "кристалл души", 2, materialTier = 3, stoneReward = 420, qiReward = 50, isBoss = true, bossRank = 19),
+    ExplorationLocation("immortal_guardian", 2, "Небесный Страж", "Хранитель · босс мира", "Страж небесного дворца не пропустит путника без доказательства силы. Исследуй все три острова, прежде чем бросить вызов.", 18, 4550, R.drawable.world_location_guardian, "material", "кристалл души", 2, materialTier = 3, stoneReward = 420, qiReward = 50, isBoss = true, bossRank = 19, battlePortraitRes = R.drawable.boss_immortal_dragon),
 
     ExplorationLocation("chaos_shore", 3, "Берег Пустоты", "Разведка · осколки Хаоса", "На краю разлома оседают обломки первозданной материи. Их энергия опасна, но ценна.", 19, 5200, R.drawable.world_location_chaos, "material", "печать бессмертия", 2, materialTier = 4, stoneReward = 275, qiReward = 34),
     ExplorationLocation("chaos_ruins", 3, "Расколотая цитадель", "Руины · железная руда", "Разрушенная крепость парит над бездной. В её основании сохранились жилы прочного чёрного металла.", 20, 5750, R.drawable.world_location_ruins, "ore", "железная руда", 4, stoneReward = 305, qiReward = 37),
     ExplorationLocation("chaos_garden", 3, "Сад Первозданной Тьмы", "Сбор · редкие травы", "В саду растут растения, питающиеся энергией разломов. Их нельзя найти ни в одном другом мире.", 22, 6400, R.drawable.world_location_forest, "herbs", "духовные травы", 4, stoneReward = 345, qiReward = 42),
-    ExplorationLocation("chaos_guardian", 3, "Печать Хаоса", "Хранитель · босс мира", "За печатью скрывается древний хранитель разлома. Победа приносит фрагменты первозданного мира.", 24, 7100, R.drawable.world_location_guardian, "material", "ядро Хаоса", 3, materialTier = 5, stoneReward = 600, qiReward = 65, isBoss = true, bossRank = 25)
+    ExplorationLocation("chaos_guardian", 3, "Печать Хаоса", "Хранитель · босс мира", "За печатью скрывается древний хранитель разлома. Победа приносит фрагменты первозданного мира.", 24, 7100, R.drawable.world_location_guardian, "material", "ядро Хаоса", 3, materialTier = 5, stoneReward = 600, qiReward = 65, isBoss = true, bossRank = 25, battlePortraitRes = R.drawable.boss_chaos_overlord)
 )
 
 @Composable
@@ -251,7 +252,7 @@ fun WorldExplorationScreen(
             Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
-                        painter = painterResource(selectedLocation.iconRes),
+                        painter = painterResource(if (selectedLocation.isBoss) selectedLocation.battlePortraitRes else selectedLocation.iconRes),
                         contentDescription = selectedLocation.title,
                         modifier = Modifier.size(52.dp),
                         contentScale = ContentScale.Fit
@@ -341,7 +342,7 @@ private fun WorldLocationCard(
                 contentAlignment = Alignment.Center
             ) {
                 Image(
-                    painter = painterResource(location.iconRes),
+                    painter = painterResource(if (location.isBoss) location.battlePortraitRes else location.iconRes),
                     contentDescription = location.title,
                     modifier = Modifier.fillMaxSize().padding(5.dp),
                     contentScale = ContentScale.Fit

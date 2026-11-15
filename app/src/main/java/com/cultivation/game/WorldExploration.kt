@@ -67,7 +67,13 @@ data class ExplorationLocation(
     val isBoss: Boolean = false,
     val bossRank: Int = 0,
     val progressGoal: Int = 3,
-    val battlePortraitRes: Int = R.drawable.boss_mountain_lord
+    val battlePortraitRes: Int = R.drawable.boss_mountain_lord,
+    val enemyName: String = "Дикий дух",
+    val enemyPortraitRes: Int = R.drawable.enemy_mortal_wolf,
+    val isElite: Boolean = false,
+    val eliteAbilityName: String = "",
+    val enemyDamageBonus: Int = 0,
+    val enemyHpMultiplier: Float = 1f
 )
 
 val daoWorldCatalog = listOf(
@@ -78,26 +84,32 @@ val daoWorldCatalog = listOf(
 )
 
 val worldLocationCatalog = listOf(
-    ExplorationLocation("mortal_valley", 0, "Долина Туманов", "Разведка · каменные тропы", "Безопасные тропы вокруг Лунной Гавани. Здесь можно найти железную руду и следы старых караванов.", 1, 650, R.drawable.world_location_valley, "ore", "железная руда", 1, stoneReward = 70, qiReward = 8),
-    ExplorationLocation("mortal_bamboo", 0, "Бамбуковый лес", "Сбор · духовные травы", "Тихий лес скрывает лекарственные растения и небольшие потоки природной Ци.", 2, 800, R.drawable.world_location_forest, "herbs", "духовные травы", 2, stoneReward = 80, qiReward = 10),
-    ExplorationLocation("mortal_ruins", 0, "Забытое святилище", "Руины · осколки духа", "Разрушенный храм хранит остатки печатей. В глубине можно найти материалы для развития боевых техник.", 4, 1050, R.drawable.world_location_ruins, "material", "осколок духа", 1, materialTier = 0, stoneReward = 95, qiReward = 12),
+    ExplorationLocation("mortal_valley", 0, "Долина Туманов", "Разведка · каменные тропы", "Безопасные тропы вокруг Лунной Гавани. Здесь можно найти железную руду и следы старых караванов.", 1, 650, R.drawable.world_location_valley, "ore", "железная руда", 1, stoneReward = 70, qiReward = 8, enemyName = "Волк туманных троп", enemyPortraitRes = R.drawable.enemy_mortal_wolf),
+    ExplorationLocation("mortal_bamboo", 0, "Бамбуковый лес", "Сбор · духовные травы", "Тихий лес скрывает лекарственные растения и небольшие потоки природной Ци.", 2, 800, R.drawable.world_location_forest, "herbs", "духовные травы", 2, stoneReward = 80, qiReward = 10, enemyName = "Клыкастый вепрь", enemyPortraitRes = R.drawable.enemy_mortal_boar),
+    ExplorationLocation("mortal_ruins", 0, "Забытое святилище", "Руины · осколки духа", "Разрушенный храм хранит остатки печатей. В глубине можно найти материалы для развития боевых техник.", 4, 1050, R.drawable.world_location_ruins, "material", "осколок духа", 1, materialTier = 0, stoneReward = 95, qiReward = 12, enemyName = "Смотритель святилища", enemyPortraitRes = R.drawable.enemy_mortal_boar, isElite = true, eliteAbilityName = "Каменный натиск", enemyDamageBonus = 12),
     ExplorationLocation("mortal_guardian", 0, "Страж долины", "Хранитель · босс мира", "Древний страж проверяет тех, кто исследовал все окрестные земли. Победа открывает путь к редким фрагментам мира.", 6, 1350, R.drawable.world_location_guardian, "material", "осколок духа", 2, materialTier = 0, stoneReward = 250, qiReward = 30, isBoss = true, bossRank = 7, battlePortraitRes = R.drawable.boss_mortal_guardian),
 
-    ExplorationLocation("spirit_jade_forest", 1, "Нефритовый лес", "Сбор · духовные травы", "Древние деревья впитали чистую Ци. Среди корней растут редкие травы духовного мира.", 7, 1650, R.drawable.world_location_forest, "herbs", "духовные травы", 3, stoneReward = 120, qiReward = 15),
-    ExplorationLocation("spirit_waterfall", 1, "Водопад Небесной Росы", "Родник · духовная вода", "Вода падает с парящих скал и собирает энергию нефритовых жил.", 8, 1900, R.drawable.world_location_valley, "water", "духовная вода", 2, stoneReward = 140, qiReward = 18),
-    ExplorationLocation("spirit_ruins", 1, "Руины Древней Секты", "Руины · нефритовая эссенция", "Заброшенные залы всё ещё хранят следы древних техник и редкие материалы для навыков.", 10, 2250, R.drawable.world_location_ruins, "material", "нефритовая эссенция", 1, materialTier = 1, stoneReward = 165, qiReward = 20),
+    ExplorationLocation("spirit_jade_forest", 1, "Нефритовый лес", "Сбор · духовные травы", "Древние деревья впитали чистую Ци. Среди корней растут редкие травы духовного мира.", 7, 1650, R.drawable.world_location_forest, "herbs", "духовные травы", 3, stoneReward = 120, qiReward = 15, enemyName = "Нефритовый лис", enemyPortraitRes = R.drawable.enemy_spirit_fox),
+    ExplorationLocation("spirit_waterfall", 1, "Водопад Небесной Росы", "Родник · духовная вода", "Вода падает с парящих скал и собирает энергию нефритовых жил.", 8, 1900, R.drawable.world_location_valley, "water", "духовная вода", 2, stoneReward = 140, qiReward = 18, enemyName = "Страж водопада", enemyPortraitRes = R.drawable.enemy_spirit_fox),
+    ExplorationLocation("spirit_ruins", 1, "Руины Древней Секты", "Руины · нефритовая эссенция", "Заброшенные залы всё ещё хранят следы древних техник и редкие материалы для навыков.", 10, 2250, R.drawable.world_location_ruins, "material", "нефритовая эссенция", 1, materialTier = 1, stoneReward = 165, qiReward = 20, enemyName = "Древесный хранитель", enemyPortraitRes = R.drawable.enemy_spirit_tree, isElite = true, eliteAbilityName = "Корни древней секты", enemyDamageBonus = 18),
     ExplorationLocation("spirit_guardian", 1, "Страж Нефритового Пика", "Хранитель · босс мира", "Духовный зверь охраняет путь к небесным островам. Чтобы вызвать его, исследуй все три территории мира.", 12, 2700, R.drawable.world_location_guardian, "material", "нефритовая эссенция", 2, materialTier = 1, stoneReward = 320, qiReward = 40, isBoss = true, bossRank = 13, battlePortraitRes = R.drawable.boss_spirit_stag),
 
-    ExplorationLocation("immortal_isles", 2, "Парящие острова", "Разведка · небесные жилы", "На островах среди облаков встречаются кристаллы, из которых рождаются бессмертные артефакты.", 13, 3150, R.drawable.world_location_celestial, "material", "сердце зверя", 1, materialTier = 2, stoneReward = 195, qiReward = 24),
-    ExplorationLocation("immortal_lake", 2, "Золотое озеро", "Родник · чистая вода", "Вода озера отражает небесные дворцы и насыщена энергией золотого лотоса.", 14, 3500, R.drawable.world_location_valley, "water", "духовная вода", 3, stoneReward = 220, qiReward = 27),
-    ExplorationLocation("immortal_archive", 2, "Архив Бессмертных", "Руины · кристаллы души", "В древнем архиве сохранились фрагменты техник, которые усиливают высокие ступени культивации.", 16, 3950, R.drawable.world_location_ruins, "material", "кристалл души", 1, materialTier = 3, stoneReward = 255, qiReward = 31),
+    ExplorationLocation("immortal_isles", 2, "Парящие острова", "Разведка · небесные жилы", "На островах среди облаков встречаются кристаллы, из которых рождаются бессмертные артефакты.", 13, 3150, R.drawable.world_location_celestial, "material", "сердце зверя", 1, materialTier = 2, stoneReward = 195, qiReward = 24, enemyName = "Небесный журавль", enemyPortraitRes = R.drawable.enemy_immortal_crane),
+    ExplorationLocation("immortal_lake", 2, "Золотое озеро", "Родник · чистая вода", "Вода озера отражает небесные дворцы и насыщена энергией золотого лотоса.", 14, 3500, R.drawable.world_location_valley, "water", "духовная вода", 3, stoneReward = 220, qiReward = 27, enemyName = "Золотой карп-хранитель", enemyPortraitRes = R.drawable.enemy_immortal_crane),
+    ExplorationLocation("immortal_archive", 2, "Архив Бессмертных", "Руины · кристаллы души", "В древнем архиве сохранились фрагменты техник, которые усиливают высокие ступени культивации.", 16, 3950, R.drawable.world_location_ruins, "material", "кристалл души", 1, materialTier = 3, stoneReward = 255, qiReward = 31, enemyName = "Страж золотого архива", enemyPortraitRes = R.drawable.enemy_immortal_sentinel, isElite = true, eliteAbilityName = "Золотая печать", enemyDamageBonus = 24),
     ExplorationLocation("immortal_guardian", 2, "Небесный Страж", "Хранитель · босс мира", "Страж небесного дворца не пропустит путника без доказательства силы. Исследуй все три острова, прежде чем бросить вызов.", 18, 4550, R.drawable.world_location_guardian, "material", "кристалл души", 2, materialTier = 3, stoneReward = 420, qiReward = 50, isBoss = true, bossRank = 19, battlePortraitRes = R.drawable.boss_immortal_dragon),
 
-    ExplorationLocation("chaos_shore", 3, "Берег Пустоты", "Разведка · осколки Хаоса", "На краю разлома оседают обломки первозданной материи. Их энергия опасна, но ценна.", 19, 5200, R.drawable.world_location_chaos, "material", "печать бессмертия", 2, materialTier = 4, stoneReward = 275, qiReward = 34),
-    ExplorationLocation("chaos_ruins", 3, "Расколотая цитадель", "Руины · железная руда", "Разрушенная крепость парит над бездной. В её основании сохранились жилы прочного чёрного металла.", 20, 5750, R.drawable.world_location_ruins, "ore", "железная руда", 4, stoneReward = 305, qiReward = 37),
-    ExplorationLocation("chaos_garden", 3, "Сад Первозданной Тьмы", "Сбор · редкие травы", "В саду растут растения, питающиеся энергией разломов. Их нельзя найти ни в одном другом мире.", 22, 6400, R.drawable.world_location_forest, "herbs", "духовные травы", 4, stoneReward = 345, qiReward = 42),
+    ExplorationLocation("chaos_shore", 3, "Берег Пустоты", "Разведка · осколки Хаоса", "На краю разлома оседают обломки первозданной материи. Их энергия опасна, но ценна.", 19, 5200, R.drawable.world_location_chaos, "material", "печать бессмертия", 2, materialTier = 4, stoneReward = 275, qiReward = 34, enemyName = "Осколочный призрак", enemyPortraitRes = R.drawable.enemy_chaos_wraith),
+    ExplorationLocation("chaos_ruins", 3, "Расколотая цитадель", "Руины · железная руда", "Разрушенная крепость парит над бездной. В её основании сохранились жилы прочного чёрного металла.", 20, 5750, R.drawable.world_location_ruins, "ore", "железная руда", 4, stoneReward = 305, qiReward = 37, enemyName = "Колосс цитадели", enemyPortraitRes = R.drawable.enemy_chaos_colossus, isElite = true, eliteAbilityName = "Разлом бездны", enemyDamageBonus = 30),
+    ExplorationLocation("chaos_garden", 3, "Сад Первозданной Тьмы", "Сбор · редкие травы", "В саду растут растения, питающиеся энергией разломов. Их нельзя найти ни в одном другом мире.", 22, 6400, R.drawable.world_location_forest, "herbs", "духовные травы", 4, stoneReward = 345, qiReward = 42, enemyName = "Пожиратель Ци", enemyPortraitRes = R.drawable.enemy_chaos_wraith),
     ExplorationLocation("chaos_guardian", 3, "Печать Хаоса", "Хранитель · босс мира", "За печатью скрывается древний хранитель разлома. Победа приносит фрагменты первозданного мира.", 24, 7100, R.drawable.world_location_guardian, "material", "ядро Хаоса", 3, materialTier = 5, stoneReward = 600, qiReward = 65, isBoss = true, bossRank = 25, battlePortraitRes = R.drawable.boss_chaos_overlord)
 )
+
+fun worldEncounterMaxHp(location: ExplorationLocation): Int {
+    val eliteScale = if (location.isElite) 1.45f else 1f
+    return ((260f + location.recommendedPower * 1.15f) * location.enemyHpMultiplier * eliteScale)
+        .toInt().coerceIn(450, 18_000)
+}
 
 @Composable
 fun WorldExplorationScreen(
@@ -110,6 +122,8 @@ fun WorldExplorationScreen(
     worldFragments: List<Int>,
     defeatedBossIds: Set<String>,
     pendingBossId: String,
+    pendingEncounterId: String,
+    statusMessage: String,
     selectedLocationId: String,
     onSelectLocation: (String) -> Unit,
     onExplore: (String) -> Unit,
@@ -127,7 +141,7 @@ fun WorldExplorationScreen(
         locationProgress.getOrElse(index) { 0 } >= location.progressGoal
     }
     val selectedDefeated = selectedLocation.isBoss && selectedLocation.id in defeatedBossIds
-    val selectedPending = selectedLocation.isBoss && pendingBossId == selectedLocation.id
+    val selectedPending = pendingBossId == selectedLocation.id || pendingEncounterId == selectedLocation.id
     val selectedLocked = stage < selectedLocation.requiredStage || (selectedLocation.isBoss && !bossUnlocked)
     val selectedComplete = !selectedLocation.isBoss && selectedProgress >= selectedLocation.progressGoal
     val canExplore = when {
@@ -144,11 +158,20 @@ fun WorldExplorationScreen(
         selectedLocked -> "ТРЕБУЕТСЯ СТУПЕНЬ ${selectedLocation.requiredStage}"
         selectedLocation.isBoss -> "ВЫЗВАТЬ ХРАНИТЕЛЯ · 3 ЭНЕРГИИ"
         explorationEnergy <= 0 -> "ЭНЕРГИЯ ИСЧЕРПАНА"
-        else -> "ОТПРАВИТЬСЯ · 1 ЭНЕРГИЯ"
+        else -> if (selectedLocation.isElite) "ВСТУПИТЬ В ЭЛИТНЫЙ БОЙ · 1 ЭНЕРГИЯ" else "ВСТУПИТЬ В БОЙ · 1 ЭНЕРГИЯ"
     }
     val nextWorld = daoWorldCatalog.getOrNull(safeWorldIndex + 1)
     val worldAccent = world.accent
     Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
+        if (statusMessage.isNotBlank()) {
+            Surface(
+                color = Color(0xCC17263A),
+                shape = MaterialTheme.shapes.large,
+                border = BorderStroke(1.dp, worldAccent.copy(alpha = .35f))
+            ) {
+                Text(statusMessage, Modifier.fillMaxWidth().padding(9.dp), color = Color(0xFFE8D8B7), fontSize = 9.sp, maxLines = 3)
+            }
+        }
         Surface(
             color = Color(0xEE14253B),
             shape = MaterialTheme.shapes.extraLarge,
@@ -238,7 +261,7 @@ fun WorldExplorationScreen(
                 locked = locked,
                 completed = completed,
                 selected = selectedLocation.id == location.id,
-                pending = location.id == pendingBossId,
+                pending = location.id == pendingBossId || location.id == pendingEncounterId,
                 onClick = { onSelectLocation(location.id) }
             )
         }
@@ -252,16 +275,19 @@ fun WorldExplorationScreen(
             Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
-                        painter = painterResource(if (selectedLocation.isBoss) selectedLocation.battlePortraitRes else selectedLocation.iconRes),
+                        painter = painterResource(if (selectedLocation.isBoss) selectedLocation.battlePortraitRes else selectedLocation.enemyPortraitRes),
                         contentDescription = selectedLocation.title,
                         modifier = Modifier.size(52.dp),
                         contentScale = ContentScale.Fit
                     )
                     Spacer(Modifier.width(9.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(if (selectedLocation.isBoss) "ХРАНИТЕЛЬ МИРА" else "ВЫБРАННАЯ ТЕРРИТОРИЯ", color = worldAccent, fontSize = 8.sp, fontWeight = FontWeight.Black)
-                        Text(selectedLocation.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Black)
-                        Text(selectedLocation.subtitle, color = Color(0xFFC9D5E4), fontSize = 9.sp)
+                        Text(
+                            if (selectedLocation.isBoss) "ХРАНИТЕЛЬ МИРА" else if (selectedLocation.isElite) "ЭЛИТНЫЙ ПРОТИВНИК" else "ПРОТИВНИК ТЕРРИТОРИИ",
+                            color = worldAccent, fontSize = 8.sp, fontWeight = FontWeight.Black
+                        )
+                        Text(if (selectedLocation.isBoss) selectedLocation.title else selectedLocation.enemyName, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                        Text(if (selectedLocation.isBoss) selectedLocation.subtitle else "${selectedLocation.title} · ${selectedLocation.subtitle}", color = Color(0xFFC9D5E4), fontSize = 9.sp)
                     }
                 }
                 Text(selectedLocation.description, color = Color(0xFFE0E8F2), fontSize = 10.sp)
@@ -272,7 +298,7 @@ fun WorldExplorationScreen(
                 }
                 Text(
                     if (selectedLocation.isBoss) "Победа над хранителем: фрагменты мира ×5 · ранг стража ${selectedLocation.bossRank}"
-                    else "Награда за поход: ${selectedLocation.resourceLabel} ×${selectedLocation.resourceAmount} · прогресс ${selectedProgress}/${selectedLocation.progressGoal}",
+                    else "Победа над ${selectedLocation.enemyName}: ${selectedLocation.resourceLabel} ×${selectedLocation.resourceAmount} · прогресс ${selectedProgress}/${selectedLocation.progressGoal}",
                     color = ExpeditionJade,
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold
@@ -342,7 +368,7 @@ private fun WorldLocationCard(
                 contentAlignment = Alignment.Center
             ) {
                 Image(
-                    painter = painterResource(if (location.isBoss) location.battlePortraitRes else location.iconRes),
+                    painter = painterResource(if (location.isBoss) location.battlePortraitRes else location.enemyPortraitRes),
                     contentDescription = location.title,
                     modifier = Modifier.fillMaxSize().padding(5.dp),
                     contentScale = ContentScale.Fit
@@ -356,7 +382,7 @@ private fun WorldLocationCard(
             Spacer(Modifier.width(9.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(location.title, color = if (completed) ExpeditionJade else Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1)
-                Text(location.subtitle, color = Color(0xFFC7D4E3), fontSize = 8.sp, maxLines = 1)
+                Text(if (location.isBoss) location.subtitle else "${location.enemyName} · ${location.subtitle}", color = Color(0xFFC7D4E3), fontSize = 8.sp, maxLines = 1)
                 LinearProgressIndicator(
                     progress = { value },
                     modifier = Modifier.fillMaxWidth().height(4.dp),
@@ -366,7 +392,7 @@ private fun WorldLocationCard(
                 Text(
                     when {
                         completed -> "ЗАВЕРШЕНО"
-                        pending -> "БИТВА ОЖИДАЕТ ПРОДОЛЖЕНИЯ"
+                        pending -> "БОЙ ОЖИДАЕТ ПРОДОЛЖЕНИЯ"
                         locked && location.isBoss -> "НУЖНО ЗАВЕРШИТЬ 3 ТЕРРИТОРИИ"
                         locked -> "ОТКРЫВАЕТСЯ НА СТУПЕНИ ${location.requiredStage}"
                         location.isBoss -> "ХРАНИТЕЛЬ · РАНГ ${location.bossRank}"

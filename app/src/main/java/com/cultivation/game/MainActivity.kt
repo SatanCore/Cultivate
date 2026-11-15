@@ -105,6 +105,7 @@ private fun CultivateApp() {
     }
     var defeatedWorldBossIds by remember { mutableStateOf(prefs.getString("world_bosses_defeated", "") ?: "") }
     var pendingWorldBossId by remember { mutableStateOf(prefs.getString("pending_world_boss", "") ?: "") }
+    var pendingWorldEncounterId by remember { mutableStateOf(prefs.getString("pending_world_encounter", "") ?: "") }
     var worldBossTurnCount by remember { mutableIntStateOf(prefs.getInt("world_boss_turn_count", 0).coerceAtLeast(0)) }
     var selectedLocationId by remember { mutableStateOf(prefs.getString("world_selected_location", "mortal_valley") ?: "mortal_valley") }
     var ownedPetIds by remember { mutableStateOf(prefs.getString("owned_pet_ids", "jade_fox") ?: "jade_fox") }
@@ -191,7 +192,10 @@ private fun CultivateApp() {
         )
     }
 
-    val enemyMaxHp = bossMaxHp(bossLevel)
+    val activeWorldBoss = worldLocationCatalog.firstOrNull { it.id == pendingWorldBossId && it.isBoss }
+    val activeWorldEncounter = worldLocationCatalog.firstOrNull { it.id == pendingWorldEncounterId && !it.isBoss }
+    val activeWorldOpponent = activeWorldBoss ?: activeWorldEncounter
+    val enemyMaxHp = activeWorldEncounter?.let { worldEncounterMaxHp(it) } ?: bossMaxHp(bossLevel)
     val maxAbodeLevel = abodeMaxLevel(stage)
     val maxAlchemyRank = alchemyMaxRank(stage)
     val classProfile = if (chosenClass >= 0) classCombatProfiles[chosenClass] else classCombatProfiles[0]
@@ -287,9 +291,9 @@ private fun CultivateApp() {
         if (weaponHealing > 0) playerHp = (playerHp + weaponHealing).coerceAtMost(playerMaxHp)
         var worldBossAbilityMessage = ""
         if (enemyHp > 0) {
-            val activeWorldBoss = worldLocationCatalog.firstOrNull { it.id == pendingWorldBossId && it.isBoss }
-            val nextWorldBossTurn = if (activeWorldBoss != null) worldBossTurnCount + 1 else 0
+            val nextWorldBossTurn = if (activeWorldOpponent != null) worldBossTurnCount + 1 else 0
             val specialStrike = activeWorldBoss != null && nextWorldBossTurn % 3 == 0
+            val eliteStrike = activeWorldEncounter?.isElite == true && nextWorldBossTurn % 3 == 0
             val specialBonus = when (activeWorldBoss?.worldIndex) {
                 0 -> 6 + bossLevel
                 1 -> 8 + bossLevel
@@ -304,19 +308,23 @@ private fun CultivateApp() {
                 3 -> "Разлом Пустоты"
                 else -> ""
             }
-            var incoming = (12 + bossLevel * 3 + (if (specialStrike) specialBonus else 0) - classDefense).coerceAtLeast(2)
+            val eliteBonus = if (eliteStrike) activeWorldEncounter?.enemyDamageBonus ?: 0 else 0
+            val encounterBaseDamage = activeWorldEncounter?.let { 8 + it.recommendedPower / 90 + it.requiredStage * 2 } ?: (12 + bossLevel * 3)
+            var incoming = (encounterBaseDamage + (if (specialStrike) specialBonus else 0) + eliteBonus - classDefense).coerceAtLeast(2)
             if (activePet.id == "stone_tortoise") incoming = (incoming * 80 / 100).coerceAtLeast(1)
             if (action != null && action in 0..8) {
                 incoming = when (chosenClass) { 0 -> incoming * 55 / 100; 1 -> incoming * 25 / 100; 2 -> 0; else -> incoming * 70 / 100 }
                 if (chosenClass == 3) playerHp = (playerHp + 45).coerceAtMost(playerMaxHp)
             }
             playerHp = (playerHp - incoming).coerceAtLeast(0)
-            if (activeWorldBoss != null) worldBossTurnCount = nextWorldBossTurn
+            if (activeWorldOpponent != null) worldBossTurnCount = nextWorldBossTurn
             if (specialStrike) worldBossAbilityMessage = "$abilityName · дополнительный урон +$specialBonus."
+            if (eliteStrike) worldBossAbilityMessage = "${activeWorldEncounter?.eliteAbilityName ?: "Элитный натиск"} · дополнительный урон +$eliteBonus."
         }
         if (enemyHp == 0) {
             autoBattle = false
-            val reward = 80 + bossLevel * 15 + stage * 5
+            val encounterRank = activeWorldEncounter?.requiredStage ?: bossLevel
+            val reward = if (activeWorldEncounter != null) 20 + encounterRank * 7 else 80 + bossLevel * 15 + stage * 5
             stones += reward
             wins++
             dailyWins++
@@ -325,11 +333,11 @@ private fun CultivateApp() {
             if (Random.nextInt(100) < 25) petEssence++
             if (Random.nextInt(100) < 4) petCores++
             skillPoints++
-            val materialTier = ((bossLevel - 1) / 5).coerceIn(0, 5)
+            val materialTier = ((encounterRank - 1) / 5).coerceIn(0, 5)
             skillMaterials[materialTier] = skillMaterials[materialTier] + 1
             val weaponDrop = rollWeaponDrop(stage, ownedWeaponList)
             val gearDrop = if (Random.nextInt(100) < 35) rollGearDrop(stage) else null
-            val oreFound = 1 + (bossLevel / 5).coerceAtMost(3)
+            val oreFound = if (activeWorldEncounter != null) 0 else 1 + (bossLevel / 5).coerceAtMost(3)
             ironOre += oreFound
             val rareSkillFound = chosenClass >= 0 && rareSkill.isBlank() && Random.nextDouble() < 0.008
             val weaponText = if (weaponDrop != null) {
@@ -342,7 +350,7 @@ private fun CultivateApp() {
                 " Экипировка: ${gearDrop.name} · ${gearDrop.rarity.title}."
             } else ""
             petPity++
-            val petDropPool = petCatalog.filter { it.id !in ownedPetIds.split("|") && it.requiredBoss <= bossLevel && it.id != "moon_deer" && it.id != "river_koi" }
+            val petDropPool = petCatalog.filter { it.id !in ownedPetIds.split("|") && it.requiredBoss <= encounterRank && it.id != "moon_deer" && it.id != "river_koi" }
             val foundPet = if (petDropPool.isNotEmpty() && (Random.nextInt(100) < 5 || petPity >= 20)) petDropPool.random() else null
             val petDropText = if (foundPet != null) {
                 ownedPetIds = (ownedPetIds.split("|").filter { it.isNotBlank() } + foundPet.id).distinct().joinToString("|")
@@ -350,7 +358,8 @@ private fun CultivateApp() {
                 " Редкая находка! Приручён питомец: ${foundPet.name}."
             } else ""
             if (rareSkillFound) rareSkill = rareArts[chosenClass]
-            message = "Победа! Получено $reward камней, 5 Ци, опыт связи питомца и железная руда ×$oreFound.$weaponText$gearText$petDropText" +
+            val oreText = if (oreFound > 0) " и железная руда ×$oreFound" else ""
+            message = "Победа! Получено $reward камней, 5 Ци и опыт связи питомца$oreText.$weaponText$gearText$petDropText" +
                 if (rareSkillFound) " Редкое наследие: $rareSkill!" else ""
             if (pendingWorldBossId.isNotBlank()) {
                 val defeated = defeatedWorldBossIds.split("|").filter { it.isNotBlank() }
@@ -362,6 +371,36 @@ private fun CultivateApp() {
                 }
                 pendingWorldBossId = ""
                 worldBossTurnCount = 0
+            } else if (pendingWorldEncounterId.isNotBlank()) {
+                val location = activeWorldEncounter
+                if (location != null) {
+                    val locationIndex = worldLocationCatalog.indexOfFirst { it.id == location.id }
+                    if (locationIndex >= 0) {
+                        explorationProgress[locationIndex] = (explorationProgress[locationIndex] + 1).coerceAtMost(location.progressGoal)
+                    }
+                    stones += location.stoneReward
+                    qi = (qi + location.qiReward).coerceAtMost(9999)
+                    when (location.resourceKind) {
+                        "ore" -> ironOre += location.resourceAmount
+                        "herbs" -> spiritHerbs += location.resourceAmount
+                        "water" -> spiritWater += location.resourceAmount
+                        "material" -> {
+                            val tier = location.materialTier.coerceIn(0, skillMaterials.lastIndex)
+                            skillMaterials[tier] = skillMaterials[tier] + location.resourceAmount
+                        }
+                    }
+                    if (location.isElite) {
+                        val eliteTier = if (location.materialTier >= 0) location.materialTier.coerceIn(0, skillMaterials.lastIndex)
+                            else ((location.requiredStage - 1) / 5).coerceIn(0, skillMaterials.lastIndex)
+                        skillMaterials[eliteTier] = skillMaterials[eliteTier] + 1
+                    }
+                    worldFragments[location.worldIndex] = worldFragments[location.worldIndex] + 1
+                    val completedProgress = explorationProgress.getOrElse(locationIndex) { 0 }
+                    message += " Экспедиция «${location.title}»: ${location.resourceLabel} ×${location.resourceAmount}, +${location.stoneReward} камней, +${location.qiReward} Ци. Прогресс ${completedProgress}/${location.progressGoal}."
+                }
+                pendingWorldEncounterId = ""
+                worldBossTurnCount = 0
+                selectedMenu = 9
             }
         } else if (playerHp <= 0) {
             autoBattle = false
@@ -379,12 +418,13 @@ private fun CultivateApp() {
 
     fun exploreWorldLocation(locationId: String) {
         val location = worldLocationCatalog.firstOrNull { it.id == locationId } ?: return
-        if (pendingWorldBossId.isNotBlank()) {
-            if (pendingWorldBossId == location.id) {
+        val pendingBattleId = pendingWorldBossId.ifBlank { pendingWorldEncounterId }
+        if (pendingBattleId.isNotBlank()) {
+            if (pendingBattleId == location.id) {
                 selectedMenu = 2
-                message = "Битва с хранителем ещё не завершена. Продолжай испытание на арене."
+                message = "Сражение с «${location.title}» ещё не завершено. Продолжай бой на арене."
             } else {
-                message = "Сначала заверши начатое испытание хранителя."
+                message = "Сначала заверши начатое сражение."
             }
             return
         }
@@ -411,6 +451,7 @@ private fun CultivateApp() {
                 return
             }
             explorationEnergy -= 3
+            pendingWorldEncounterId = ""
             pendingWorldBossId = location.id
             worldBossTurnCount = 0
             bossLevel = maxOf(bossLevel, location.bossRank)
@@ -434,26 +475,16 @@ private fun CultivateApp() {
         }
 
         explorationEnergy--
-        val combatPower = (classBonus + classDefense + playerMaxHp).coerceAtLeast(1)
-        val powerRatio = combatPower.toFloat() / location.recommendedPower.toFloat().coerceAtLeast(1f)
-        val successChance = (50f + powerRatio.coerceIn(0f, 1f) * 45f).toInt().coerceIn(50, 95)
-        if (Random.nextInt(100) < successChance) {
-            explorationProgress[index] = (explorationProgress[index] + 1).coerceAtMost(location.progressGoal)
-            stones += location.stoneReward
-            qi = (qi + location.qiReward).coerceAtMost(9999)
-            when (location.resourceKind) {
-                "ore" -> ironOre += location.resourceAmount
-                "herbs" -> spiritHerbs += location.resourceAmount
-                "water" -> spiritWater += location.resourceAmount
-                "material" -> {
-                    val tier = location.materialTier.coerceIn(0, skillMaterials.lastIndex)
-                    skillMaterials[tier] = skillMaterials[tier] + location.resourceAmount
-                }
-            }
-            worldFragments[location.worldIndex] = worldFragments[location.worldIndex] + 1
-            message = "Экспедиция завершена: ${location.title}. Получено ${location.stoneReward} камней, ${location.qiReward} Ци и ${location.resourceLabel} ×${location.resourceAmount}. Успех $successChance%."
+        pendingWorldEncounterId = location.id
+        worldBossTurnCount = 0
+        enemyHp = worldEncounterMaxHp(location)
+        playerHp = playerMaxHp
+        autoBattle = false
+        selectedMenu = 2
+        message = if (location.isElite) {
+            "Элитный противник «${location.enemyName}» преградил путь! Его особая техника: ${location.eliteAbilityName}."
         } else {
-            message = "Разведка «${location.title}» оказалась опаснее ожиданий. Энергия потрачена, но отряд вернулся без добычи. Шанс успеха был $successChance%."
+            "На территории «${location.title}» появился противник: ${location.enemyName}. Победи его, чтобы завершить часть исследования."
         }
     }
 
@@ -536,7 +567,7 @@ private fun CultivateApp() {
         }
     }
 
-    LaunchedEffect(qi, stones, stage, selectedWorldIndex, todayKey, explorationEnergy, explorationProgress.toList(), worldFragments.toList(), defeatedWorldBossIds, pendingWorldBossId, worldBossTurnCount, selectedLocationId, abodeLevel, ironOre, spiritHerbs, spiritWater, qiPills, bodyPills, bodyPillBonus, forgeTemper, alchemyRank, gardenReadyAt, springReadyAt, ownedPetIds, activePetId, petLevels.toList(), petBondXp.toList(), petAscensions.toList(), petEssence, petCores, petPity, dailyWins, dailyGardenCollected, dailyMeditated, dailyClanDonated, dailyClaims, clanReputation, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, ownedGearIds, equippedGearIds.toList(), questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
+    LaunchedEffect(qi, stones, stage, selectedWorldIndex, todayKey, explorationEnergy, explorationProgress.toList(), worldFragments.toList(), defeatedWorldBossIds, pendingWorldBossId, pendingWorldEncounterId, worldBossTurnCount, selectedLocationId, abodeLevel, ironOre, spiritHerbs, spiritWater, qiPills, bodyPills, bodyPillBonus, forgeTemper, alchemyRank, gardenReadyAt, springReadyAt, ownedPetIds, activePetId, petLevels.toList(), petBondXp.toList(), petAscensions.toList(), petEssence, petCores, petPity, dailyWins, dailyGardenCollected, dailyMeditated, dailyClanDonated, dailyClaims, clanReputation, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, ownedGearIds, equippedGearIds.toList(), questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
         prefs.edit()
             .putInt("qi", qi)
             .putInt("stones", stones)
@@ -547,6 +578,7 @@ private fun CultivateApp() {
             .putString("world_fragments", worldFragments.joinToString(","))
             .putString("world_bosses_defeated", defeatedWorldBossIds)
             .putString("pending_world_boss", pendingWorldBossId)
+            .putString("pending_world_encounter", pendingWorldEncounterId)
             .putInt("world_boss_turn_count", worldBossTurnCount)
             .putString("world_selected_location", selectedLocationId)
             .putString("owned_pet_ids", ownedPetIds)
@@ -1064,6 +1096,8 @@ private fun CultivateApp() {
                     worldFragments = worldFragments,
                     defeatedBossIds = defeatedWorldBossIds.split("|").filter { it.isNotBlank() }.toSet(),
                     pendingBossId = pendingWorldBossId,
+                    pendingEncounterId = pendingWorldEncounterId,
+                    statusMessage = message,
                     selectedLocationId = selectedLocationId,
                     onSelectLocation = { selectedLocationId = it },
                     onExplore = { exploreWorldLocation(it) },
@@ -1072,10 +1106,10 @@ private fun CultivateApp() {
             }
 
             if (selectedMenu == 2) {
-                val activeWorldBoss = worldLocationCatalog.firstOrNull { it.id == pendingWorldBossId && it.isBoss }
-                val arenaBackgroundRes = activeWorldBoss?.let { daoWorldCatalog[it.worldIndex].backgroundRes } ?: R.drawable.lunar_harbor_bg
-                val enemyAccent = activeWorldBoss?.let { daoWorldCatalog[it.worldIndex].accent } ?: Color(0xFFE47A73)
-                GameCard("Арена испытаний", activeWorldBoss?.title ?: "Страж святилища · ранг $bossLevel") {
+                val arenaBackgroundRes = activeWorldOpponent?.let { daoWorldCatalog[it.worldIndex].backgroundRes } ?: R.drawable.lunar_harbor_bg
+                val enemyAccent = activeWorldOpponent?.let { daoWorldCatalog[it.worldIndex].accent } ?: Color(0xFFE47A73)
+                val arenaTitle = activeWorldBoss?.title ?: activeWorldEncounter?.enemyName ?: "Страж святилища · ранг $bossLevel"
+                GameCard("Арена испытаний", arenaTitle) {
                     BattleScene(
                         autoBattle = autoBattle,
                         actionText = message,
@@ -1093,10 +1127,10 @@ private fun CultivateApp() {
                         },
                         petName = activePet.name,
                         petPortraitRes = petPortraitResource(activePet.id),
-                        enemyPortraitRes = activeWorldBoss?.battlePortraitRes ?: R.drawable.boss_mountain_lord,
+                        enemyPortraitRes = activeWorldBoss?.battlePortraitRes ?: activeWorldEncounter?.enemyPortraitRes ?: R.drawable.boss_mountain_lord,
                         arenaBackgroundRes = arenaBackgroundRes,
                         enemyAccent = enemyAccent,
-                        enemyTitle = activeWorldBoss?.title.orEmpty()
+                        enemyTitle = activeWorldBoss?.title ?: activeWorldEncounter?.enemyName.orEmpty()
                     )
 
                     Row(

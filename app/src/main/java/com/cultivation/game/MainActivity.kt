@@ -1026,7 +1026,7 @@ private fun CultivateApp() {
                                     } else message = "Набрана духовная вода из родника."
                                 } else message = "Родник ещё не восстановился."
                             }, enabled = springReadyAt <= nowMillis, modifier = Modifier.fillMaxWidth()) {
-                                Text(if (springReadyAt <= nowMillis) "Набрать духовную воду · \${1 + abodeLevel / 3}" else "Родник восстанавливается")
+                                Text(if (springReadyAt <= nowMillis) "Набрать духовную воду · ${1 + abodeLevel / 3}" else "Родник восстанавливается")
                             }
                         }
                         "worlds" -> {
@@ -2062,7 +2062,7 @@ private fun CultivationPanel(stage: Int, qi: Int, cost: Int, bossRank: Int, boss
                         }
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("\${(progress * 100).toInt()}%", color = Jade, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                        Text("${(progress * 100).toInt()}%", color = Jade, fontSize = 17.sp, fontWeight = FontWeight.Black)
                         Text("НАКОПЛЕНИЕ", color = Color(0xFF9EADBD), fontSize = 7.sp, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -2074,7 +2074,7 @@ private fun CultivationPanel(stage: Int, qi: Int, cost: Int, bossRank: Int, boss
                     }
                     RpgIcon(if (bossLevel >= bossRank) "check" else "lock", Modifier.size(19.dp))
                 }
-                InventoryActionButton(label = if (qi < cost) "НАКОПИТЬ ЕЩЁ \${cost - qi} ЦИ" else if (bossLevel < bossRank) "ОДОЛЕТЬ СТРАЖА · РАНГ $bossRank" else "СОВЕРШИТЬ ПРОРЫВ", selected = false, enabled = qi >= cost && bossLevel >= bossRank, onClick = onBreakthrough)
+                InventoryActionButton(label = if (qi < cost) "НАКОПИТЬ ЕЩЁ ${cost - qi} ЦИ" else if (bossLevel < bossRank) "ОДОЛЕТЬ СТРАЖА · РАНГ $bossRank" else "СОВЕРШИТЬ ПРОРЫВ", selected = false, enabled = qi >= cost && bossLevel >= bossRank, onClick = onBreakthrough)
             }
         }
     }

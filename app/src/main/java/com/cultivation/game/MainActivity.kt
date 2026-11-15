@@ -889,46 +889,41 @@ private fun CultivateApp() {
                 }
             }
 
-            if (selectedMenu == 3) GameCard("Персонаж", if (chosenClass < 0) "Выбери свой путь культивации" else classNames[chosenClass]) {
-                Text("Характеристики и экипировка находятся здесь. Коллекция предметов — в отдельном инвентаре.", color = Color.LightGray)
-                Text("Атака с экипировкой: +$classBonus · защита: +$classDefense · здоровье: $playerMaxHp", color = Jade, fontWeight = FontWeight.Bold)
-                gearSlots.forEachIndexed { index, slot ->
-                    val item = equippedGear.firstOrNull { it.slot == slot }
-                    Text("${slot.title}: ${item?.name ?: "Пусто"}", color = if (item == null) Color.LightGray else weaponRarityColor(item.rarity), fontSize = 12.sp)
-                }
-                Text(activeSetBonus.description.ifBlank { "Бонус комплекта: не активен · собери 2 или 4 предмета одного набора." }, color = Gold, fontSize = 11.sp)
-                classNames.forEachIndexed { i, n ->
-                    val profile = classCombatProfiles[i]
-                    ClassPortraitCard(
-                        name = n,
-                        description = classDescriptions[i],
-                        profile = profile,
-                        portraitRes = when (i) {
-                            0 -> R.drawable.class_portrait_blademaster
-                            1 -> R.drawable.class_portrait_ironbody
-                            2 -> R.drawable.class_portrait_elementalist
-                            else -> R.drawable.class_portrait_spiritmystic
-                        },
-                        selected = chosenClass == i,
-                        onSelect = {
-                            chosenClass = i
-                            rotationOrder.clear()
-                            (0..8).filter { skillTreeLevels[i*9+it] == 1 && skillDefinitions[i][it].active }.forEach { rotationOrder.add(it) }
-                            rotationOrder.add(9)
-                            rotationOrder.add(10)
-                            if (skillTreeLevels[i*9+activeSkillNode] == 0 || !skillDefinitions[i][activeSkillNode].active) activeSkillNode = 0
-                            playerHp = playerHp.coerceAtMost(500 + stage*30 + profile.bonusHp)
-                            message = "Выбран класс: $n"
+            if (selectedMenu == 3) {
+                CharacterArmoryScreen(
+                    stage = stage,
+                    classIndex = chosenClass,
+                    attack = classBonus,
+                    defense = classDefense,
+                    currentHp = playerHp,
+                    maxHp = playerMaxHp,
+                    equippedWeapon = equippedWeapon,
+                    equippedGear = equippedGear,
+                    setBonus = activeSetBonus,
+                    onOpenWeapons = {
+                        inventoryFilter = 1
+                        selectedTownBuilding = ""
+                        selectedMenu = 4
+                    },
+                    onOpenGear = {
+                        inventoryFilter = 2
+                        selectedTownBuilding = ""
+                        selectedMenu = 4
+                    },
+                    onSelectClass = { i ->
+                        chosenClass = i
+                        rotationOrder.clear()
+                        (0..8).filter { skillTreeLevels[i * 9 + it] == 1 && skillDefinitions[i][it].active }
+                            .forEach { rotationOrder.add(it) }
+                        rotationOrder.add(9)
+                        rotationOrder.add(10)
+                        if (skillTreeLevels[i * 9 + activeSkillNode] == 0 || !skillDefinitions[i][activeSkillNode].active) {
+                            activeSkillNode = 0
                         }
-                    )
-                }
-                Text("Снаряжение персонажа", color = Gold, fontWeight = FontWeight.Bold)
-                Text("Слот: основное оружие", color = Color.LightGray, fontSize = 11.sp)
-                Text(equippedWeapon.name, color = weaponRarityColor(equippedWeapon.rarity), fontWeight = FontWeight.Bold)
-                Text("${equippedWeapon.rarity.title} · ${weaponNames[equippedWeapon.type]} · требуемая ступень ${equippedWeapon.requiredStage}", color = Color.LightGray, fontSize = 12.sp)
-                Text("Атака +${equippedWeapon.attackBonus} · доп. урон +${equippedWeapon.bonusDamage} · защита +${equippedWeapon.defenseBonus} · лечение +${equippedWeapon.healOnHit}", color = Jade, fontSize = 12.sp)
-                Text("Боевые показатели: атака ${classBonus} · защита ${classDefense} · здоровье ${playerMaxHp}", color = Gold, fontSize = 12.sp)
-                Text("Для смены экипировки перейди в «Инвентарь» и выбери предмет.", color = Color.LightGray, fontSize = 11.sp)
+                        playerHp = playerHp.coerceAtMost(500 + stage * 30 + classCombatProfiles[i].bonusHp)
+                        message = "Выбран класс: ${classNames[i]}"
+                    }
+                )
             }
 
             if (selectedMenu == 4) GameCard(
@@ -1421,6 +1416,354 @@ private fun DailyTaskCard(
                     onClick = onClaim
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun CharacterArmoryScreen(
+    stage: Int,
+    classIndex: Int,
+    attack: Int,
+    defense: Int,
+    currentHp: Int,
+    maxHp: Int,
+    equippedWeapon: WeaponDefinition,
+    equippedGear: List<GearDefinition>,
+    setBonus: GearSetBonus,
+    onOpenWeapons: () -> Unit,
+    onOpenGear: () -> Unit,
+    onSelectClass: (Int) -> Unit
+) {
+    val selected = classIndex.coerceIn(0, classNames.lastIndex)
+    val profile = classCombatProfiles[selected]
+    val portrait = when (selected) {
+        0 -> R.drawable.class_portrait_blademaster
+        1 -> R.drawable.class_portrait_ironbody
+        2 -> R.drawable.class_portrait_elementalist
+        else -> R.drawable.class_portrait_spiritmystic
+    }
+    val gearBySlot = equippedGear.associateBy { it.slot }
+    val hpProgress = if (maxHp <= 0) 0f else (currentHp.toFloat() / maxHp).coerceIn(0f, 1f)
+    val aura = rememberInfiniteTransition(label = "character-armory-aura")
+    val auraPulse by aura.animateFloat(
+        initialValue = .88f,
+        targetValue = 1.06f,
+        animationSpec = infiniteRepeatable(tween(1900), RepeatMode.Reverse),
+        label = "character-armory-pulse"
+    )
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Surface(
+            color = Color(0xEE17263D),
+            shape = MaterialTheme.shapes.extraLarge,
+            border = BorderStroke(1.5.dp, Gold.copy(alpha = .82f)),
+            tonalElevation = 10.dp,
+            shadowElevation = 8.dp
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RpgIcon("character", Modifier.size(34.dp))
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("ЗАЛ ВОСХОЖДЕНИЯ", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Text(classNames[selected], color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    Text("${worldName(stage)} · ${stageName(stage)} · ступень $stage", color = Jade, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                }
+                Surface(
+                    color = Color(0xFF594329),
+                    shape = MaterialTheme.shapes.medium,
+                    border = BorderStroke(1.dp, Color(0xFFFFD98C))
+                ) {
+                    Text("БОЕВОЙ ДУХ", Modifier.padding(horizontal = 8.dp, vertical = 6.dp), color = Color(0xFFFFE5A5), fontSize = 7.sp, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+
+        Surface(
+            color = Color(0xE9101C30),
+            shape = MaterialTheme.shapes.extraLarge,
+            border = BorderStroke(1.dp, Color(0x887E9BB8)),
+            tonalElevation = 7.dp
+        ) {
+            Row(
+                Modifier.fillMaxWidth().height(258.dp).padding(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    Modifier.weight(.25f).fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    CharacterEquipmentSlot(
+                        "ОРУЖИЕ",
+                        equippedWeapon.name,
+                        weaponDrawable(equippedWeapon.type),
+                        weaponRarityColor(equippedWeapon.rarity),
+                        Modifier.weight(1f),
+                        onOpenWeapons
+                    )
+                    CharacterEquipmentSlot(
+                        "ШЛЕМ",
+                        gearBySlot[GearSlot.HELMET]?.name ?: "Пусто",
+                        gearDrawable(GearSlot.HELMET),
+                        gearBySlot[GearSlot.HELMET]?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF66758B),
+                        Modifier.weight(1f),
+                        onOpenGear
+                    )
+                    CharacterEquipmentSlot(
+                        "БРОНЯ",
+                        gearBySlot[GearSlot.ARMOR]?.name ?: "Пусто",
+                        gearDrawable(GearSlot.ARMOR),
+                        gearBySlot[GearSlot.ARMOR]?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF66758B),
+                        Modifier.weight(1f),
+                        onOpenGear
+                    )
+                }
+
+                Box(
+                    Modifier.weight(.50f).fillMaxHeight(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.character_halo_frame),
+                        contentDescription = null,
+                        contentScale = ContentScale.FillBounds,
+                        modifier = Modifier.fillMaxSize().graphicsLayer {
+                            scaleX = auraPulse
+                            scaleY = auraPulse
+                        }
+                    )
+                    Image(
+                        painter = painterResource(portrait),
+                        contentDescription = "Образ класса: ${classNames[selected]}",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxWidth(.96f).fillMaxHeight(.86f)
+                    )
+                    Surface(
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                        color = Color(0xE91A2A40),
+                        shape = CircleShape,
+                        border = BorderStroke(1.dp, Gold.copy(alpha = .85f))
+                    ) {
+                        Text(
+                            "УР. $stage",
+                            Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            color = Color(0xFFFFE4A0),
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+                }
+
+                Column(
+                    Modifier.weight(.25f).fillMaxHeight(),
+                    verticalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    CharacterEquipmentSlot(
+                        "КОЛЬЦО",
+                        gearBySlot[GearSlot.RING]?.name ?: "Пусто",
+                        gearDrawable(GearSlot.RING),
+                        gearBySlot[GearSlot.RING]?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF66758B),
+                        Modifier.fillMaxWidth().weight(1f),
+                        onOpenGear
+                    )
+                    Spacer(Modifier.weight(.35f))
+                    CharacterEquipmentSlot(
+                        "АРТЕФАКТ",
+                        gearBySlot[GearSlot.ARTIFACT]?.name ?: "Пусто",
+                        gearDrawable(GearSlot.ARTIFACT),
+                        gearBySlot[GearSlot.ARTIFACT]?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF66758B),
+                        Modifier.fillMaxWidth().weight(1f),
+                        onOpenGear
+                    )
+                }
+            }
+        }
+
+        Surface(
+            color = Color(0xD91B2B42),
+            shape = MaterialTheme.shapes.large,
+            border = BorderStroke(1.dp, Color(0x887F9BB8))
+        ) {
+            Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RpgIcon("health", Modifier.size(20.dp))
+                    Text("ЖИЗНЕННАЯ СИЛА", color = Color(0xFFFFD99A), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    Spacer(Modifier.weight(1f))
+                    Text("$currentHp / $maxHp", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+                LinearProgressIndicator(
+                    progress = { hpProgress },
+                    modifier = Modifier.fillMaxWidth().height(7.dp),
+                    color = if (hpProgress < .3f) Color(0xFFE17B69) else Jade,
+                    trackColor = Color(0xFF35445A)
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    CharacterStatCard("weapon", "АТАКА", attack.toString(), Modifier.weight(1f))
+                    CharacterStatCard("shield", "ЗАЩИТА", defense.toString(), Modifier.weight(1f))
+                    CharacterStatCard("health", "ЗАПАС HP", maxHp.toString(), Modifier.weight(1f))
+                    CharacterStatCard("critical", "КРИТ", "${profile.criticalChance}%", Modifier.weight(1f))
+                }
+            }
+        }
+
+        Surface(
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenGear),
+            color = Color(0xE522344A),
+            shape = MaterialTheme.shapes.large,
+            border = BorderStroke(1.dp, Gold.copy(alpha = .62f))
+        ) {
+            Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                RpgIcon("equipment", Modifier.size(32.dp))
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("НАСЛЕДИЕ СНАРЯЖЕНИЯ", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        setBonus.description.ifBlank { "Собери части одного набора, чтобы пробудить общий эффект" },
+                        color = Color(0xFFD5DFEC),
+                        fontSize = 9.sp,
+                        maxLines = 2
+                    )
+                    Text(
+                        "Бонусы комплекта · атака +${setBonus.attack} · защита +${setBonus.defense} · здоровье +${setBonus.hp}",
+                        color = Jade,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                RpgIcon("chevron-right", Modifier.size(22.dp))
+            }
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("ВЫБОР ПУТИ", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.weight(1f))
+            Text("Нажми на образ, чтобы сменить класс", color = Color(0xFFB7C5D6), fontSize = 8.sp)
+        }
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            classNames.forEachIndexed { index, name ->
+                CharacterClassTile(
+                    name = name,
+                    portraitRes = when (index) {
+                        0 -> R.drawable.class_portrait_blademaster
+                        1 -> R.drawable.class_portrait_ironbody
+                        2 -> R.drawable.class_portrait_elementalist
+                        else -> R.drawable.class_portrait_spiritmystic
+                    },
+                    selected = classIndex == index,
+                    onClick = { onSelectClass(index) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CharacterEquipmentSlot(
+    title: String,
+    itemName: String,
+    iconRes: Int,
+    rarityColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
+        color = Color(0xE91A2A40),
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(1.dp, rarityColor.copy(alpha = .82f)),
+        tonalElevation = 4.dp,
+        shadowElevation = 3.dp
+    ) {
+        Column(
+            Modifier.fillMaxSize().padding(horizontal = 2.dp, vertical = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Image(
+                painter = painterResource(iconRes),
+                contentDescription = title,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(35.dp)
+            )
+            Text(title, color = Gold, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            Text(
+                itemName,
+                color = if (itemName == "Пусто") Color(0xFF9BA9BB) else rarityColor,
+                fontSize = 6.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                lineHeight = 8.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun CharacterStatCard(icon: String, label: String, value: String, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        color = Color(0xFF14243A),
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(1.dp, Color(0x557D9AB7))
+    ) {
+        Column(
+            Modifier.padding(vertical = 6.dp, horizontal = 2.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            RpgIcon(icon, Modifier.size(20.dp))
+            Text(label, color = Color(0xFFB8C6D8), fontSize = 6.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            Text(value, color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun CharacterClassTile(
+    name: String,
+    portraitRes: Int,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.width(116.dp).clickable(onClick = onClick),
+        color = if (selected) Color(0xE13D4C5A) else Color(0xD916263B),
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) Gold else Color(0x665E7897)),
+        tonalElevation = if (selected) 8.dp else 2.dp
+    ) {
+        Column(
+            Modifier.padding(5.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Image(
+                painter = painterResource(portraitRes),
+                contentDescription = name,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxWidth().height(102.dp)
+            )
+            Text(
+                name,
+                color = if (selected) Color(0xFFFFE5A5) else Color(0xFFD5DFEC),
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 2,
+                minLines = 2
+            )
+            Text(
+                if (selected) "ТЕКУЩИЙ ПУТЬ" else "ВЫБРАТЬ",
+                color = if (selected) Jade else Color(0xFFC5A46B),
+                fontSize = 7.sp,
+                fontWeight = FontWeight.Black
+            )
         }
     }
 }

@@ -5791,6 +5791,7 @@ private fun SkillTreeConstellation(
         8 to .5f
     )
     BoxWithConstraints(Modifier.fillMaxWidth().height(568.dp)) {
+        val nodeCardWidth = maxWidth * .47f
         Canvas(Modifier.fillMaxSize()) {
             val edges = listOf(0 to 1, 0 to 4, 1 to 2, 4 to 5, 2 to 3, 5 to 6, 3 to 7, 6 to 7, 7 to 8)
             edges.forEach { (from, to) ->
@@ -5833,16 +5834,16 @@ private fun SkillTreeConstellation(
 
         nodeCard(0, Modifier.align(Alignment.TopCenter).fillMaxWidth(.47f).height(82.dp))
         Row(Modifier.fillMaxWidth().offset(y = 96.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            nodeCard(1, Modifier.width(maxWidth * .47f).height(82.dp))
-            nodeCard(4, Modifier.width(maxWidth * .47f).height(82.dp))
+            nodeCard(1, Modifier.width(nodeCardWidth).height(82.dp))
+            nodeCard(4, Modifier.width(nodeCardWidth).height(82.dp))
         }
         Row(Modifier.fillMaxWidth().offset(y = 192.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            nodeCard(2, Modifier.width(maxWidth * .47f).height(82.dp))
-            nodeCard(5, Modifier.width(maxWidth * .47f).height(82.dp))
+            nodeCard(2, Modifier.width(nodeCardWidth).height(82.dp))
+            nodeCard(5, Modifier.width(nodeCardWidth).height(82.dp))
         }
         Row(Modifier.fillMaxWidth().offset(y = 288.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            nodeCard(3, Modifier.width(maxWidth * .47f).height(82.dp))
-            nodeCard(6, Modifier.width(maxWidth * .47f).height(82.dp))
+            nodeCard(3, Modifier.width(nodeCardWidth).height(82.dp))
+            nodeCard(6, Modifier.width(nodeCardWidth).height(82.dp))
         }
         nodeCard(7, Modifier.align(Alignment.TopCenter).offset(y = 384.dp).fillMaxWidth(.47f).height(82.dp))
         nodeCard(8, Modifier.align(Alignment.TopCenter).offset(y = 480.dp).fillMaxWidth(.47f).height(82.dp))

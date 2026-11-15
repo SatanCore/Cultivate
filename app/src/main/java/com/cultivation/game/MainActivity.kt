@@ -1578,9 +1578,28 @@ private fun CultivateApp() {
             }
 
             if (selectedMenu == 5) {
-                GameCard("Боевые техники", "Выбранная техника: $activeTechniqueName · мастерство $activeTechniqueLevel") {
-                    Text("Уровни 1–20 повышаются за камни духа. Начиная с 21-го уровня нужны материалы; каждые пять уровней открывается следующий, более редкий ресурс. На 50-м уровне техника получает дополнительный эффект +20%.", color = Color.LightGray)
-                    Text("Материалы: " + skillMaterialNames.indices.joinToString(" · ") { "${skillMaterialNames[it]}: ${skillMaterials[it]}" }, color = Jade, fontSize = 11.sp)
+                GameCard("Арсенал боевых искусств", "Выбери духовную технику и пробуди её силу") {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RpgIcon("qi", Modifier.size(25.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("МАСТЕРСТВО ТЕХНИКИ", color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            Text("$activeTechniqueName · $activeTechniqueLevel / 50", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Surface(color = Color(0xFF183B36), shape = CircleShape, border = BorderStroke(1.dp, Jade.copy(alpha = .65f))) {
+                            Text("+$techniqueDamage УРОН", Modifier.padding(horizontal = 8.dp, vertical = 6.dp), color = Jade, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
+                    Text("Материалы пробуждения", color = Color(0xFFD5DFE8), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        skillMaterialNames.indices.forEach { materialIndex ->
+                            Surface(Modifier.weight(1f), color = Color(0xFF142333), shape = MaterialTheme.shapes.medium, border = BorderStroke(1.dp, Color(0x334E718E))) {
+                                Column(Modifier.padding(vertical = 7.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    RpgIcon("potion", Modifier.size(21.dp))
+                                    Text("×${skillMaterials[materialIndex]}", color = Jade, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                                }
+                            }
+                        }
+                    }
                     TechniqueRow("Меч рассекающей Ци", "Сильный прямой удар", "weapon", selectedTechnique == 0, swordLevel, techniqueUpgradeCost(swordLevel), stones,
                         onSelect = { selectedTechnique = 0 },
                         onUpgrade = { upgradeTechnique(swordLevel) { swordLevel = it } }
@@ -1595,19 +1614,47 @@ private fun CultivateApp() {
                     )
                     Text("Дополнительный урон выбранной техники: +$techniqueDamage", color = Gold, fontWeight = FontWeight.Bold)
                 }
-                GameCard("Ротация автобоя", "Порядок автоматического применения навыков, техник и оружия") {
-                    Text("Все изученные активные навыки добавляются в очередь автоматически. Меняй приоритет стрелками: система применяет первое готовое действие.", color = Color.LightGray, fontSize = 11.sp)
-                    rotationOrder.forEachIndexed { index, action ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            val actionLabel = when {
-                                action in 0..8 && chosenClass >= 0 -> skillDefinitions[chosenClass][action].name + " · КД 4 сек"
-                                action == 9 -> "Техника · КД 3 сек"
-                                action == 10 -> "Активация оружия · КД 6 сек"
-                                else -> "Навык · КД 4 сек"
+                GameCard("Тактика автоматического боя", "Приоритет применения боевых действий") {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        listOf("ПРИОРИТЕТ", "ПЕРЕЗАРЯДКА", "АВТОБОЙ").forEachIndexed { index, label ->
+                            Surface(Modifier.weight(1f), color = Color(0xFF172839), shape = MaterialTheme.shapes.small) {
+                                Text(label, Modifier.padding(vertical = 6.dp), color = if (index == 0) Gold else Color(0xFF9DB0C3), fontSize = 7.sp, fontWeight = FontWeight.Black, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                             }
-                            Text(actionLabel, color = Gold, modifier = Modifier.weight(1f), fontSize = 11.sp)
-                            OutlinedButton(onClick = { if (index > 0) { val v = rotationOrder[index-1]; rotationOrder[index-1] = rotationOrder[index]; rotationOrder[index] = v } }, enabled = index > 0) { Text("↑") }
-                            OutlinedButton(onClick = { if (index < rotationOrder.lastIndex) { val v = rotationOrder[index+1]; rotationOrder[index+1] = rotationOrder[index]; rotationOrder[index] = v } }, enabled = index < rotationOrder.lastIndex) { Text("↓") }
+                        }
+                    }
+                    rotationOrder.forEachIndexed { index, action ->
+                        val actionLabel = when {
+                            action in 0..8 && chosenClass >= 0 -> skillDefinitions[chosenClass][action].name
+                            action == 9 -> "Духовная техника"
+                            action == 10 -> "Пробуждение оружия"
+                            else -> "Боевой навык"
+                        }
+                        val iconKey = when (action) {
+                            9 -> when (selectedTechnique) { 0 -> "weapon"; 1 -> "lotus"; else -> "pet_fox" }
+                            10 -> "weapon"
+                            else -> if (chosenClass == 1) "shield" else if (chosenClass == 2) "magic" else "skill"
+                        }
+                        Surface(
+                            color = if (index == 0) Color(0xFF294238) else Color(0xE9162636),
+                            shape = MaterialTheme.shapes.large,
+                            border = BorderStroke(1.dp, if (index == 0) Gold.copy(alpha = .75f) else Color(0x335E7891))
+                        ) {
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("${index + 1}", color = if (index == 0) Gold else Color(0xFF8094A9), fontSize = 11.sp, fontWeight = FontWeight.Black)
+                                RpgIcon(iconKey, Modifier.size(34.dp))
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(actionLabel, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                    Text(if (action == 9) "ПЕРЕЗАРЯДКА · 3 СЕК" else if (action == 10) "ПЕРЕЗАРЯДКА · 6 СЕК" else "ПЕРЕЗАРЯДКА · 4 СЕК", color = Color(0xFF9FB1C3), fontSize = 7.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    IconButton(onClick = { if (index > 0) { val v = rotationOrder[index-1]; rotationOrder[index-1] = rotationOrder[index]; rotationOrder[index] = v } }, enabled = index > 0, modifier = Modifier.size(27.dp)) {
+                                        Text("▲", color = if (index > 0) Gold else Color(0xFF526173), fontSize = 10.sp)
+                                    }
+                                    IconButton(onClick = { if (index < rotationOrder.lastIndex) { val v = rotationOrder[index+1]; rotationOrder[index+1] = rotationOrder[index]; rotationOrder[index] = v } }, enabled = index < rotationOrder.lastIndex, modifier = Modifier.size(27.dp)) {
+                                        Text("▼", color = if (index < rotationOrder.lastIndex) Gold else Color(0xFF526173), fontSize = 10.sp)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -3627,38 +3674,67 @@ private fun TechniqueRow(
     onSelect: () -> Unit,
     onUpgrade: () -> Unit
 ) {
+    val progress = (level.coerceIn(0, 50) / 50f)
+    val accent = if (selected) Gold else Color(0xFF71869C)
     Surface(
-        color = if (selected) Color(0xFF29463F) else Color(0xFF24333B),
-        shape = MaterialTheme.shapes.large,
-        tonalElevation = if (selected) 7.dp else 3.dp
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onSelect),
+        color = if (selected) Color(0xFF263F46) else Color(0xE91A2938),
+        shape = MaterialTheme.shapes.extraLarge,
+        border = BorderStroke(if (selected) 1.6.dp else 1.dp, accent.copy(alpha = if (selected) .95f else .42f)),
+        tonalElevation = if (selected) 8.dp else 2.dp,
+        shadowElevation = if (selected) 7.dp else 1.dp
     ) {
         Row(
             Modifier.fillMaxWidth().padding(10.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(11.dp)
         ) {
-            RpgIcon(iconKey, Modifier.size(58.dp))
-            Spacer(Modifier.width(9.dp))
+            Box(Modifier.size(70.dp), contentAlignment = Alignment.Center) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = Color(0xFF101B2B),
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, accent.copy(alpha = .72f))
+                ) {}
+                RpgIcon(iconKey, Modifier.size(57.dp))
+                Surface(
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                    color = accent,
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, Color(0xFF101820))
+                ) {
+                    Text("$level", Modifier.padding(horizontal = 6.dp, vertical = 3.dp), color = Color(0xFF101820), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                }
+            }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text(name, color = if (selected) Gold else Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                Text("$description · уровень $level / 50", color = Color.LightGray, fontSize = 10.sp)
-                if (level == 20) Text("Рубеж достигнут · дальше нужны редкие материалы", color = Gold, fontSize = 9.sp)
-                if (level >= 50) Text("Предел · дополнительный эффект +20% к урону", color = Jade, fontSize = 9.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Box(Modifier.weight(1f)) {
-                        InventoryActionButton(
-                            label = if (selected) "ВЫБРАНА" else "ВЫБРАТЬ",
-                            selected = selected,
-                            enabled = !selected,
-                            onClick = onSelect
-                        )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(name, color = if (selected) Gold else Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                    if (selected) Text("АКТИВНА", color = Jade, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                }
+                Text(description, color = Color(0xFFB8C7D5), fontSize = 9.sp, maxLines = 2)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.weight(1f).height(5.dp),
+                        color = accent,
+                        trackColor = Color(0xFF101820)
+                    )
+                    Spacer(Modifier.width(7.dp))
+                    Text("$level / 50", color = Color(0xFFD5DFE8), fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Surface(color = Color(0xFF111F2D), shape = CircleShape) {
+                        Text(if (level >= 20) "РЕДКИЙ РЕСУРС" else "✦ $cost КАМНЕЙ", Modifier.padding(horizontal = 7.dp, vertical = 4.dp), color = Gold, fontSize = 7.sp, fontWeight = FontWeight.Bold)
                     }
-                    Box(Modifier.weight(1f)) {
-                        InventoryActionButton(
-                            label = when { level >= 50 -> "МАКСИМУМ"; level >= 20 -> "УЛУЧШИТЬ · РЕСУРС"; else -> "УЛУЧШИТЬ · $cost" },
-                            selected = false,
-                            enabled = stones >= cost && level < 50,
-                            onClick = onUpgrade
-                        )
+                    Spacer(Modifier.weight(1f))
+                    Button(
+                        onClick = onUpgrade,
+                        enabled = stones >= cost && level < 50,
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                        modifier = Modifier.height(29.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF80623B), contentColor = Color.White, disabledContainerColor = Color(0xFF35404B))
+                    ) {
+                        Text(if (level >= 50) "МАКС." else "УСИЛИТЬ", fontSize = 8.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }

@@ -9,11 +9,14 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.Image
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -118,6 +121,7 @@ private fun CultivateApp() {
     } }
     var selectedWeapon by remember { mutableIntStateOf(prefs.getInt("weapon_type",0).coerceIn(0,3)) }
     var selectedMenu by remember { mutableIntStateOf(0) }
+    var inventoryFilter by remember { mutableIntStateOf(0) }
     var selectedTownBuilding by remember { mutableStateOf("") }
     val pageScrollState = rememberScrollState()
     LaunchedEffect(selectedMenu, selectedTownBuilding) { pageScrollState.animateScrollTo(0) }
@@ -927,61 +931,80 @@ private fun CultivateApp() {
                 Text("Для смены экипировки перейди в «Инвентарь» и выбери предмет.", color = Color.LightGray, fontSize = 11.sp)
             }
 
-            if (selectedMenu == 4) GameCard("Инвентарь", "Оружие: ${ownedWeapons.size} · броня и артефакты: ${ownedGear.size}") {
-                Text("Оружие, броня, шлемы, кольца и артефакты хранятся отдельно от надетых предметов. Каждый экземпляр получает собственный разброс характеристик.", color = Color.LightGray, fontSize = 12.sp)
-                ownedWeapons.sortedByDescending { weaponPowerScore(it) }.forEach { item ->
-                    val powerDifference = weaponPowerScore(item) - weaponPowerScore(equippedWeapon)
-                    val comparison = when {
-                        encodeWeaponInstance(item) == encodeWeaponInstance(equippedWeapon) -> "Сейчас надето"
-                        powerDifference > 0 -> "Рейтинг на +$powerDifference выше текущего оружия"
-                        powerDifference < 0 -> "Рейтинг на ${-powerDifference} ниже текущего оружия"
-                        else -> "Рейтинг равен текущему оружию"
-                    }
-                    WeaponInventoryCard(
-                        item = item,
-                        weaponTypeName = weaponNames[item.type],
-                        iconKey = when (item.type) { 0 -> "weapon"; 1 -> "spear"; 2 -> "staff"; else -> "gauntlet" },
-                        score = weaponPowerScore(item),
-                        rarityColor = weaponRarityColor(item.rarity),
-                        comparison = comparison,
-                        comparisonPositive = powerDifference > 0,
-                        equipped = encodeWeaponInstance(item) == encodeWeaponInstance(equippedWeapon),
-                        canEquip = stage >= item.requiredStage,
-                        onEquip = { equippedWeaponId = encodeWeaponInstance(item); selectedWeapon = item.type; message = "Экипировано: ${item.name}" }
-                    )
+            if (selectedMenu == 4) GameCard(
+                "Хранилище сокровищ",
+                "${ownedWeapons.size + ownedGear.size} реликвий · ${ownedWeapons.count { encodeWeaponInstance(it) == encodeWeaponInstance(equippedWeapon) } + ownedGear.count { equippedGearIds.getOrElse(it.slot.ordinal) { "" } == encodeGearInstance(it) }} экипировано"
+            ) {
+                InventoryLoadoutRow(equippedWeapon = equippedWeapon, equippedGear = equippedGear)
+                Text(
+                    activeSetBonus.description.ifBlank { "Собери четыре части одного набора, чтобы пробудить полную силу комплекта." },
+                    color = Jade, fontSize = 10.sp, maxLines = 2
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    InventoryCategoryTab("ВСЁ", "inventory", inventoryFilter == 0, Modifier.weight(1f)) { inventoryFilter = 0 }
+                    InventoryCategoryTab("ОРУЖИЕ", "weapon", inventoryFilter == 1, Modifier.weight(1f)) { inventoryFilter = 1 }
+                    InventoryCategoryTab("ДОСПЕХИ", "equipment", inventoryFilter == 2, Modifier.weight(1f)) { inventoryFilter = 2 }
                 }
-                Divider(color = Color(0xFF3B4B4F))
-                Text("Броня, шлемы, кольца и артефакты", color = Gold, fontWeight = FontWeight.Bold)
-                Text(activeSetBonus.description.ifBlank { "Комплектные бонусы: 2 предмета дают малый бонус, 4 предмета — полный." }, color = Jade, fontSize = 11.sp)
-                ownedGear.sortedByDescending { gearPowerScore(it) }.forEach { item ->
-                    val currentSlotItem = equippedGear.firstOrNull { it.slot == item.slot }
-                    val comparison = if (currentSlotItem == null) "Слот свободен" else {
-                        val delta = gearPowerScore(item) - gearPowerScore(currentSlotItem)
-                        when { delta > 0 -> "Сильнее надетого предмета на $delta"; delta < 0 -> "Слабее надетого предмета на ${-delta}"; else -> "Рейтинг равен надетому предмету" }
+                if (inventoryFilter != 2) {
+                    InventorySectionHeading("Арсенал", "${ownedWeapons.size} предметов", "weapon")
+                    ownedWeapons.sortedByDescending { weaponPowerScore(it) }.forEach { item ->
+                        val powerDifference = weaponPowerScore(item) - weaponPowerScore(equippedWeapon)
+                        val comparison = when {
+                            encodeWeaponInstance(item) == encodeWeaponInstance(equippedWeapon) -> "Сейчас экипировано"
+                            powerDifference > 0 -> "Сильнее текущего оружия на $powerDifference"
+                            powerDifference < 0 -> "Слабее текущего оружия на ${-powerDifference}"
+                            else -> "Рейтинг равен текущему оружию"
+                        }
+                        WeaponInventoryCard(
+                            item = item,
+                            weaponTypeName = weaponNames[item.type],
+                            score = weaponPowerScore(item),
+                            rarityColor = weaponRarityColor(item.rarity),
+                            comparison = comparison,
+                            comparisonPositive = powerDifference > 0,
+                            equipped = encodeWeaponInstance(item) == encodeWeaponInstance(equippedWeapon),
+                            canEquip = stage >= item.requiredStage,
+                            onEquip = {
+                                equippedWeaponId = encodeWeaponInstance(item)
+                                selectedWeapon = item.type
+                                message = "Экипировано: ${item.name}"
+                            }
+                        )
                     }
-                    val equipped = equippedGearIds.getOrElse(item.slot.ordinal) { "" } == encodeGearInstance(item)
-                    GearInventoryCard(
-                        item = item,
-                        iconKey = when (item.slot) {
-                            GearSlot.HELMET -> "helmet"
-                            GearSlot.ARMOR -> "armor"
-                            GearSlot.RING -> "ring"
-                            GearSlot.ARTIFACT -> "artifact"
-                        },
-                        score = gearPowerScore(item),
-                        rarityColor = weaponRarityColor(item.rarity),
-                        setName = gearSetNames[item.setId] ?: item.setId,
-                        comparison = comparison,
-                        comparisonPositive = currentSlotItem == null || gearPowerScore(item) >= gearPowerScore(currentSlotItem),
-                        equipped = equipped,
-                        canEquip = stage >= item.requiredStage,
-                        onEquip = { equippedGearIds[item.slot.ordinal] = encodeGearInstance(item); message = "Экипировано: ${item.name}" }
-                    )
+                }
+                if (inventoryFilter != 1) {
+                    InventorySectionHeading("Доспехи и реликвии", "${ownedGear.size} предметов", "equipment")
+                    ownedGear.sortedByDescending { gearPowerScore(it) }.forEach { item ->
+                        val currentSlotItem = equippedGear.firstOrNull { it.slot == item.slot }
+                        val comparison = if (currentSlotItem == null) "Слот свободен" else {
+                            val delta = gearPowerScore(item) - gearPowerScore(currentSlotItem)
+                            when {
+                                delta > 0 -> "Сильнее надетого предмета на $delta"
+                                delta < 0 -> "Слабее надетого предмета на ${-delta}"
+                                else -> "Рейтинг равен надетому предмету"
+                            }
+                        }
+                        val equipped = equippedGearIds.getOrElse(item.slot.ordinal) { "" } == encodeGearInstance(item)
+                        GearInventoryCard(
+                            item = item,
+                            score = gearPowerScore(item),
+                            rarityColor = weaponRarityColor(item.rarity),
+                            setName = gearSetNames[item.setId] ?: item.setId,
+                            comparison = comparison,
+                            comparisonPositive = currentSlotItem == null || gearPowerScore(item) >= gearPowerScore(currentSlotItem),
+                            equipped = equipped,
+                            canEquip = stage >= item.requiredStage,
+                            onEquip = {
+                                equippedGearIds[item.slot.ordinal] = encodeGearInstance(item)
+                                message = "Экипировано: ${item.name}"
+                            }
+                        )
+                    }
                 }
                 val nextWeaponStage = listOf(1, 4, 7, 10, 13, 16).firstOrNull { it > stage }
-                if (nextWeaponStage != null) {
+                if (nextWeaponStage != null && inventoryFilter != 2) {
                     val preview = weaponCatalog.first { it.requiredStage == nextWeaponStage }
-                    Text("Следующий рубеж: ${preview.name} · ${preview.rarity.title}", color = Gold, fontSize = 12.sp)
+                    InventoryNextDropCard(preview.name, preview.rarity.title, stageName(nextWeaponStage), weaponRarityColor(preview.rarity))
                 }
             }
 
@@ -1431,11 +1454,145 @@ private fun InventoryActionButton(
     }
 }
 
+private fun weaponDrawable(type: Int): Int = when (type) {
+    0 -> R.drawable.relic_sword
+    1 -> R.drawable.relic_spear
+    2 -> R.drawable.relic_staff
+    else -> R.drawable.relic_gauntlet
+}
+
+private fun gearDrawable(slot: GearSlot): Int = when (slot) {
+    GearSlot.HELMET -> R.drawable.relic_helmet
+    GearSlot.ARMOR -> R.drawable.relic_armor
+    GearSlot.RING -> R.drawable.relic_ring
+    GearSlot.ARTIFACT -> R.drawable.relic_artifact
+}
+
+@Composable
+private fun RelicArtworkIcon(resourceId: Int, rarityColor: Color, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        color = Color(0xFF101A2B),
+        shape = CircleShape,
+        border = BorderStroke(2.dp, rarityColor.copy(alpha = .92f)),
+        tonalElevation = 7.dp,
+        shadowElevation = 5.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Canvas(Modifier.fillMaxSize()) {
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        listOf(rarityColor.copy(alpha = .40f), Color(0xFF17243A), Color(0xFF09111F)),
+                        center = Offset(size.width * .5f, size.height * .44f)
+                    )
+                )
+                drawCircle(Gold.copy(alpha = .72f), radius = size.minDimension * .43f, style = Stroke(width = 1.dp.toPx()))
+                drawCircle(rarityColor.copy(alpha = .55f), radius = size.minDimension * .34f, style = Stroke(width = 1.dp.toPx()))
+            }
+            Image(
+                painter = painterResource(resourceId),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize().padding(8.dp),
+                contentScale = ContentScale.Fit
+            )
+        }
+    }
+}
+
+@Composable
+private fun InventoryLoadoutRow(weapon: WeaponDefinition, equippedGear: List<GearDefinition>) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        InventoryLoadoutSlot("ОРУЖИЕ", weapon.name, weaponDrawable(weapon.type), weaponRarityColor(weapon.rarity), Modifier.weight(1f))
+        GearSlot.values().forEach { slot ->
+            val item = equippedGear.firstOrNull { it.slot == slot }
+            InventoryLoadoutSlot(
+                slot.title.uppercase(),
+                item?.name ?: "Пусто",
+                gearDrawable(slot),
+                item?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF65758A),
+                Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun InventoryLoadoutSlot(label: String, itemName: String, icon: Int, tint: Color, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        color = Color(0xFF101C30),
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(1.dp, tint.copy(alpha = .72f)),
+        tonalElevation = 3.dp
+    ) {
+        Column(
+            Modifier.padding(vertical = 7.dp, horizontal = 2.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            RelicArtworkIcon(icon, tint, Modifier.size(39.dp))
+            Text(label, color = Gold, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            Text(itemName, color = Color(0xFFD8E0EC), fontSize = 7.sp, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun InventoryCategoryTab(label: String, icon: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(
+        modifier = modifier.heightIn(min = 42.dp).clickable(onClick = onClick),
+        color = if (selected) Color(0xFF71502C) else Color(0xFF17263A),
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(1.dp, if (selected) Gold else Color(0xFF45566C)),
+        tonalElevation = if (selected) 6.dp else 1.dp
+    ) {
+        Row(
+            Modifier.padding(horizontal = 5.dp, vertical = 7.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RpgIcon(icon, Modifier.size(22.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(label, color = if (selected) Color(0xFFFFE7B4) else Color(0xFFC0CCDB), fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun InventorySectionHeading(title: String, count: String, icon: String) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        RpgIcon(icon, Modifier.size(30.dp))
+        Spacer(Modifier.width(7.dp))
+        Text(title, color = Gold, fontSize = 14.sp, fontWeight = FontWeight.Black)
+        Spacer(Modifier.weight(1f))
+        Text(count, color = Jade, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun InventoryNextDropCard(name: String, rarity: String, realm: String, rarityColor: Color) {
+    Surface(
+        color = Color(0xFF111E31),
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.dp, Gold.copy(alpha = .55f))
+    ) {
+        Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            RpgIcon("chest", Modifier.size(34.dp))
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                Text("СЛЕДУЮЩАЯ РЕЛИКВИЯ", color = Jade, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                Text(name, color = rarityColor, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text("$realm · $rarity", color = Color(0xFFB8C6D8), fontSize = 9.sp)
+            }
+            RpgIcon("portal", Modifier.size(28.dp))
+        }
+    }
+}
+
 @Composable
 private fun WeaponInventoryCard(
     item: WeaponDefinition,
     weaponTypeName: String,
-    iconKey: String,
     score: Int,
     rarityColor: Color,
     comparison: String,
@@ -1447,34 +1604,44 @@ private fun WeaponInventoryCard(
     Surface(
         color = if (equipped) Color(0xE52A4054) else Color(0xD918273C),
         shape = MaterialTheme.shapes.large,
+        border = BorderStroke(if (equipped) 2.dp else 1.dp, if (equipped) Gold else rarityColor.copy(alpha = .48f)),
         tonalElevation = if (equipped) 8.dp else 3.dp,
-        shadowElevation = 4.dp
+        shadowElevation = 5.dp
     ) {
-        Row(Modifier.fillMaxWidth().padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
-            RpgIcon(iconKey, Modifier.size(70.dp))
-            Spacer(Modifier.width(9.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(item.name, color = rarityColor, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                Text("$weaponTypeName · ${stageName(item.requiredStage)} · ступень ${item.requiredStage}", color = Color(0xFFD1DCEB), fontSize = 9.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RelicArtworkIcon(weaponDrawable(item.type), rarityColor, Modifier.size(76.dp))
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(item.name, color = rarityColor, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 2)
+                    Text("$weaponTypeName · ${stageName(item.requiredStage)} · ступень ${item.requiredStage}", color = Color(0xFFD1DCEB), fontSize = 9.sp)
+                    Text(item.effectDescription, color = Color(0xFFB8C6D8), fontSize = 9.sp, maxLines = 2)
+                    Text("РЕЙТИНГ $score · ${item.rarity.title.uppercase()}", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                }
+                if (equipped) RpgIcon("check", Modifier.size(23.dp))
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     ClassMetric("weapon", "+${item.attackBonus}")
                     ClassMetric("critical", "+${item.bonusDamage}")
                     ClassMetric("shield", "+${item.defenseBonus}")
                     ClassMetric("health", "+${item.healOnHit}")
                 }
-                Text("Рейтинг $score · ${item.rarity.title}", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                Text(item.effectDescription, color = Color(0xFFB8C6D8), fontSize = 9.sp, maxLines = 2)
-                Text(comparison, color = if (equipped || comparisonPositive) Jade else Color.LightGray, fontSize = 9.sp)
+                Spacer(Modifier.width(7.dp))
+                Box(Modifier.width(112.dp)) {
+                    InventoryActionButton(
+                        label = when { equipped -> "НАДЕТО"; !canEquip -> "СТУПЕНЬ ${item.requiredStage}"; else -> "ЭКИПИРОВАТЬ" },
+                        selected = equipped,
+                        enabled = canEquip && !equipped,
+                        onClick = onEquip
+                    )
+                }
             }
-            Spacer(Modifier.width(8.dp))
-            Box(Modifier.width(116.dp)) {
-                InventoryActionButton(
-                    label = when { equipped -> "НАДЕТО"; !canEquip -> "СТУПЕНЬ ${item.requiredStage}"; else -> "ЭКИПИРОВАТЬ" },
-                    selected = equipped,
-                    enabled = canEquip && !equipped,
-                    onClick = onEquip
-                )
-            }
+            Text(comparison, color = if (equipped || comparisonPositive) Jade else Color.LightGray, fontSize = 9.sp, maxLines = 2)
         }
     }
 }
@@ -1482,7 +1649,6 @@ private fun WeaponInventoryCard(
 @Composable
 private fun GearInventoryCard(
     item: GearDefinition,
-    iconKey: String,
     score: Int,
     rarityColor: Color,
     setName: String,
@@ -1495,34 +1661,45 @@ private fun GearInventoryCard(
     Surface(
         color = if (equipped) Color(0xE52A4054) else Color(0xD918273C),
         shape = MaterialTheme.shapes.large,
+        border = BorderStroke(if (equipped) 2.dp else 1.dp, if (equipped) Gold else rarityColor.copy(alpha = .48f)),
         tonalElevation = if (equipped) 8.dp else 3.dp,
-        shadowElevation = 4.dp
+        shadowElevation = 5.dp
     ) {
-        Row(Modifier.fillMaxWidth().padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
-            RpgIcon(iconKey, Modifier.size(70.dp))
-            Spacer(Modifier.width(9.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(item.name, color = rarityColor, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                Text("${item.slot.title} · ${stageName(item.requiredStage)} · набор «$setName»", color = Color(0xFFD1DCEB), fontSize = 9.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RelicArtworkIcon(gearDrawable(item.slot), rarityColor, Modifier.size(76.dp))
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(item.name, color = rarityColor, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 2)
+                    Text("${item.slot.title} · ${stageName(item.requiredStage)}", color = Color(0xFFD1DCEB), fontSize = 9.sp)
+                    Text("Комплект: $setName", color = Jade, fontSize = 9.sp, maxLines = 1)
+                    Text(item.effectDescription, color = Color(0xFFB8C6D8), fontSize = 9.sp, maxLines = 2)
+                    Text("РЕЙТИНГ $score · ${item.rarity.title.uppercase()}", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                }
+                if (equipped) RpgIcon("check", Modifier.size(23.dp))
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     ClassMetric("weapon", "+${item.attackBonus}")
                     ClassMetric("shield", "+${item.defenseBonus}")
                     ClassMetric("health", "+${item.hpBonus}")
                     ClassMetric("skills", "+${item.skillBonus}")
                 }
-                Text("Рейтинг $score · ${item.rarity.title}", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                Text(item.effectDescription, color = Color(0xFFB8C6D8), fontSize = 9.sp, maxLines = 2)
-                Text(comparison, color = if (equipped || comparisonPositive) Jade else Color.LightGray, fontSize = 9.sp)
+                Spacer(Modifier.width(7.dp))
+                Box(Modifier.width(112.dp)) {
+                    InventoryActionButton(
+                        label = when { equipped -> "НАДЕТО"; !canEquip -> "СТУПЕНЬ ${item.requiredStage}"; else -> "НАДЕТЬ" },
+                        selected = equipped,
+                        enabled = canEquip && !equipped,
+                        onClick = onEquip
+                    )
+                }
             }
-            Spacer(Modifier.width(8.dp))
-            Box(Modifier.width(116.dp)) {
-                InventoryActionButton(
-                    label = when { equipped -> "НАДЕТО"; !canEquip -> "СТУПЕНЬ ${item.requiredStage}"; else -> "НАДЕТЬ" },
-                    selected = equipped,
-                    enabled = canEquip && !equipped,
-                    onClick = onEquip
-                )
-            }
+            Text(comparison, color = if (equipped || comparisonPositive) Jade else Color.LightGray, fontSize = 9.sp, maxLines = 2)
         }
     }
 }

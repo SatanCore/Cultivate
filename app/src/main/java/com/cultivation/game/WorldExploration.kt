@@ -107,8 +107,8 @@ val worldLocationCatalog = listOf(
 
 fun worldEncounterMaxHp(location: ExplorationLocation): Int {
     val eliteScale = if (location.isElite) 1.45f else 1f
-    return ((260f + location.recommendedPower * 1.15f) * location.enemyHpMultiplier * eliteScale)
-        .toInt().coerceIn(450, 18_000)
+    return ((180f + location.requiredStage * 45f) * location.enemyHpMultiplier * eliteScale)
+        .toInt().coerceIn(250, 18_000)
 }
 
 @Composable
@@ -308,7 +308,11 @@ fun WorldExplorationScreen(
                     enabled = canExplore,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (selectedLocation.isBoss) Color(0xFF7D4A83) else Color(0xFF236A5B),
+                        containerColor = when {
+                            selectedLocation.isBoss -> Color(0xFF7D4A83)
+                            selectedLocation.isElite -> Color(0xFF75552B)
+                            else -> Color(0xFF236A5B)
+                        },
                         disabledContainerColor = Color(0xFF354153)
                     )
                 ) {
@@ -396,6 +400,7 @@ private fun WorldLocationCard(
                         locked && location.isBoss -> "НУЖНО ЗАВЕРШИТЬ 3 ТЕРРИТОРИИ"
                         locked -> "ОТКРЫВАЕТСЯ НА СТУПЕНИ ${location.requiredStage}"
                         location.isBoss -> "ХРАНИТЕЛЬ · РАНГ ${location.bossRank}"
+                        location.isElite -> "ЭЛИТА · ИССЛЕДОВАНО $progress / ${location.progressGoal}"
                         else -> "ИССЛЕДОВАНО · $progress / ${location.progressGoal}"
                     },
                     color = if (completed) ExpeditionJade else if (locked) Color(0xFFE4C58B) else accent,

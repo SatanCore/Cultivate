@@ -1510,9 +1510,9 @@ private fun CultivateApp() {
                     color = Jade, fontSize = 10.sp, maxLines = 2
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    InventoryCategoryTab("ВСЁ", "inventory", inventoryFilter == 0, Modifier.weight(1f)) { inventoryFilter = 0 }
-                    InventoryCategoryTab("ОРУЖИЕ", "weapon", inventoryFilter == 1, Modifier.weight(1f)) { inventoryFilter = 1 }
-                    InventoryCategoryTab("ДОСПЕХИ", "equipment", inventoryFilter == 2, Modifier.weight(1f)) { inventoryFilter = 2 }
+                    InventoryCategoryTab("ВСЁ · ${ownedWeapons.size + ownedGear.size}", "inventory", inventoryFilter == 0, Modifier.weight(1f)) { inventoryFilter = 0 }
+                    InventoryCategoryTab("ОРУЖИЕ · ${ownedWeapons.size}", "weapon", inventoryFilter == 1, Modifier.weight(1f)) { inventoryFilter = 1 }
+                    InventoryCategoryTab("БРОНЯ · ${ownedGear.size}", "equipment", inventoryFilter == 2, Modifier.weight(1f)) { inventoryFilter = 2 }
                 }
                 if (inventoryFilter != 2) {
                     InventorySectionHeading("Арсенал", "${ownedWeapons.size} предметов", "weapon")
@@ -2771,17 +2771,35 @@ private fun lootRarityColor(rarity: String): Color = when (rarity.uppercase()) {
 
 @Composable
 private fun InventoryLoadoutRow(weapon: WeaponDefinition, equippedGear: List<GearDefinition>) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-        InventoryLoadoutSlot("ОРУЖИЕ", weapon.name, weaponDrawable(weapon.type), weaponRarityColor(weapon.rarity), Modifier.weight(1f))
-        GearSlot.values().forEach { slot ->
-            val item = equippedGear.firstOrNull { it.slot == slot }
-            InventoryLoadoutSlot(
-                slot.title.uppercase(),
-                item?.name ?: "Пусто",
-                gearDrawable(slot),
-                item?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF65758A),
-                Modifier.weight(1f)
-            )
+    Surface(
+        color = Color(0xD9111F32),
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.dp, Color(0x665C7895))
+    ) {
+        Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                RpgIcon("equipment", Modifier.size(19.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("АКТИВНЫЙ КОМПЛЕКТ", color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.weight(1f))
+                Text("5 СЛОТОВ", color = Color(0xFF8EA3B9), fontSize = 7.sp, fontWeight = FontWeight.Bold)
+            }
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 7.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                InventoryLoadoutSlot("ОРУЖИЕ", weapon.name, weaponDrawable(weapon.type), weaponRarityColor(weapon.rarity), Modifier.width(88.dp))
+                GearSlot.values().forEach { slot ->
+                    val item = equippedGear.firstOrNull { it.slot == slot }
+                    InventoryLoadoutSlot(
+                        slot.title.uppercase(),
+                        item?.name ?: "Пусто",
+                        gearDrawable(slot),
+                        item?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF65758A),
+                        Modifier.width(88.dp)
+                    )
+                }
+            }
         }
     }
 }
@@ -2789,20 +2807,20 @@ private fun InventoryLoadoutRow(weapon: WeaponDefinition, equippedGear: List<Gea
 @Composable
 private fun InventoryLoadoutSlot(label: String, itemName: String, icon: Int, tint: Color, modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier,
+        modifier = modifier.height(104.dp),
         color = Color(0xFF101C30),
-        shape = MaterialTheme.shapes.medium,
-        border = BorderStroke(1.dp, tint.copy(alpha = .72f)),
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.dp, tint.copy(alpha = .76f)),
         tonalElevation = 3.dp
     ) {
         Column(
-            Modifier.padding(vertical = 7.dp, horizontal = 2.dp),
+            Modifier.fillMaxSize().padding(horizontal = 5.dp, vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
-            RelicArtworkIcon(icon, tint, Modifier.size(39.dp))
+            RelicArtworkIcon(icon, tint, Modifier.size(49.dp))
             Text(label, color = Gold, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
-            Text(itemName, color = Color(0xFFD8E0EC), fontSize = 7.sp, maxLines = 1)
+            Text(itemName, color = Color(0xFFD8E0EC), fontSize = 7.sp, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
     }
 }

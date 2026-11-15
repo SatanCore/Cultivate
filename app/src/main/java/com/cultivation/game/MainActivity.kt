@@ -416,6 +416,7 @@ private fun CultivateApp() {
                         val eliteTier = if (location.materialTier >= 0) location.materialTier.coerceIn(0, skillMaterials.lastIndex)
                             else ((location.requiredStage - 1) / 5).coerceIn(0, skillMaterials.lastIndex)
                         skillMaterials[eliteTier] = skillMaterials[eliteTier] + 1
+                        lootItems += LootRevealItem("material", "artifact", skillMaterialNames[eliteTier], "+1 · элита", "EPIC")
                     }
                     worldFragments[location.worldIndex] = worldFragments[location.worldIndex] + 1
                     val resourceIconKey = when (location.resourceKind) {

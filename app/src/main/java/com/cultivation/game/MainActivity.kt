@@ -108,6 +108,7 @@ private fun CultivateApp() {
     var pendingWorldBossId by remember { mutableStateOf(prefs.getString("pending_world_boss", "") ?: "") }
     var pendingWorldEncounterId by remember { mutableStateOf(prefs.getString("pending_world_encounter", "") ?: "") }
     var worldBossTurnCount by remember { mutableIntStateOf(prefs.getInt("world_boss_turn_count", 0).coerceAtLeast(0)) }
+    var guardPrepared by remember { mutableStateOf(false) }
     var selectedLocationId by remember { mutableStateOf(prefs.getString("world_selected_location", "mortal_valley") ?: "mortal_valley") }
     var ownedPetIds by remember { mutableStateOf(prefs.getString("owned_pet_ids", "jade_fox") ?: "jade_fox") }
     var activePetId by remember { mutableStateOf(prefs.getString("active_pet_id", "jade_fox") ?: "jade_fox") }
@@ -307,17 +308,23 @@ private fun CultivateApp() {
             val encounterBaseDamage = activeWorldEncounter?.let { 8 + it.recommendedPower / 90 + it.requiredStage * 2 } ?: (12 + bossLevel * 3)
             var incoming = (encounterBaseDamage + (if (specialStrike) specialBonus else 0) + eliteBonus - classDefense).coerceAtLeast(2)
             if (activePet.id == "stone_tortoise") incoming = (incoming * 80 / 100).coerceAtLeast(1)
-            if (action != null && action in 0..8) {
+            val usedGuard = guardPrepared
+            if (usedGuard) {
+                incoming = (incoming * 45 / 100).coerceAtLeast(1)
+                guardPrepared = false
+            } else if (action != null && action in 0..8) {
                 incoming = when (chosenClass) { 0 -> incoming * 55 / 100; 1 -> incoming * 25 / 100; 2 -> 0; else -> incoming * 70 / 100 }
                 if (chosenClass == 3) playerHp = (playerHp + 45).coerceAtMost(playerMaxHp)
             }
             playerHp = (playerHp - incoming).coerceAtLeast(0)
             if (activeWorldOpponent != null) worldBossTurnCount = nextWorldBossTurn
-            if (specialStrike) worldBossAbilityMessage = "$abilityName · дополнительный урон +$specialBonus."
-            if (eliteStrike) worldBossAbilityMessage = "${activeWorldEncounter?.eliteAbilityName ?: "Элитный натиск"} · дополнительный урон +$eliteBonus."
+            if (usedGuard) worldBossAbilityMessage = "Защитная стойка смягчила ответный удар."
+            if (specialStrike) worldBossAbilityMessage = listOf(worldBossAbilityMessage, "$abilityName · дополнительный урон +$specialBonus.").filter { it.isNotBlank() }.joinToString(" ")
+            if (eliteStrike) worldBossAbilityMessage = listOf(worldBossAbilityMessage, "${activeWorldEncounter?.eliteAbilityName ?: "Элитный натиск"} · дополнительный урон +$eliteBonus.").filter { it.isNotBlank() }.joinToString(" ")
         }
         if (enemyHp == 0) {
             autoBattle = false
+            guardPrepared = false
             val encounterRank = activeWorldEncounter?.requiredStage ?: bossLevel
             val reward = if (activeWorldEncounter != null) 20 + encounterRank * 7 else 80 + bossLevel * 15 + stage * 5
             stones += reward
@@ -399,6 +406,7 @@ private fun CultivateApp() {
             }
         } else if (playerHp <= 0) {
             autoBattle = false
+            guardPrepared = false
             message = "Ты пал в бою. Восстановись за 40 камней духа, чтобы продолжить." + if (worldBossAbilityMessage.isNotBlank()) " $worldBossAbilityMessage" else ""
         } else {
             val actionName = when {
@@ -449,6 +457,7 @@ private fun CultivateApp() {
             pendingWorldEncounterId = ""
             pendingWorldBossId = location.id
             worldBossTurnCount = 0
+            guardPrepared = false
             bossLevel = maxOf(bossLevel, location.bossRank)
             enemyHp = bossMaxHp(bossLevel)
             playerHp = playerMaxHp
@@ -472,6 +481,7 @@ private fun CultivateApp() {
         explorationEnergy--
         pendingWorldEncounterId = location.id
         worldBossTurnCount = 0
+        guardPrepared = false
         enemyHp = worldEncounterMaxHp(location)
         playerHp = playerMaxHp
         autoBattle = false
@@ -1155,6 +1165,23 @@ private fun CultivateApp() {
                         ) { autoBattle = !autoBattle }
                     }
 
+                    if (telegraphActive || guardPrepared) {
+                        BattleActionButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            icon = "shield",
+                            label = if (guardPrepared) "ЗАЩИТА ГОТОВА · ОТМЕНИТЬ" else "ПРИНЯТЬ ЗАЩИТНУЮ СТОЙКУ",
+                            enabled = enemyHp > 0 && playerHp > 0 && !autoBattle,
+                            selected = guardPrepared
+                        ) {
+                            guardPrepared = !guardPrepared
+                            message = if (guardPrepared) {
+                                "Ты принимаешь защитную стойку. Следующий ответный удар будет ослаблен."
+                            } else {
+                                "Защитная стойка отменена. Можно полагаться на активную технику."
+                            }
+                        }
+                    }
+
                     if (chosenClass in 0..3) {
                         val availableCombatSkills = (0..8).filter { node ->
                             skillTreeLevels[chosenClass * 9 + node] == 1 &&
@@ -1225,6 +1252,7 @@ private fun CultivateApp() {
                     ) {
                         if (enemyHp <= 0) {
                             bossLevel++
+                            guardPrepared = false
                             enemyHp = bossMaxHp(bossLevel)
                             playerHp = playerMaxHp
                             message = "На арену вышел страж ранга $bossLevel. Будь осторожен!"

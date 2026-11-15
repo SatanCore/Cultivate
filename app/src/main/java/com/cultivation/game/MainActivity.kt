@@ -935,7 +935,7 @@ private fun CultivateApp() {
                 "Хранилище сокровищ",
                 "${ownedWeapons.size + ownedGear.size} реликвий · ${ownedWeapons.count { encodeWeaponInstance(it) == encodeWeaponInstance(equippedWeapon) } + ownedGear.count { equippedGearIds.getOrElse(it.slot.ordinal) { "" } == encodeGearInstance(it) }} экипировано"
             ) {
-                InventoryLoadoutRow(equippedWeapon = equippedWeapon, equippedGear = equippedGear)
+                InventoryLoadoutRow(weapon = equippedWeapon, equippedGear = equippedGear)
                 Text(
                     activeSetBonus.description.ifBlank { "Собери четыре части одного набора, чтобы пробудить полную силу комплекта." },
                     color = Jade, fontSize = 10.sp, maxLines = 2

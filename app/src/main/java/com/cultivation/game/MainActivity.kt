@@ -60,6 +60,133 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
+private fun CharacterCreationScreen(
+    selectedClass: Int,
+    onClassSelected: (Int) -> Unit,
+    gender: String,
+    onGenderSelected: (String) -> Unit,
+    nickname: String,
+    onNicknameChanged: (String) -> Unit,
+    onConfirm: () -> Unit
+) {
+    val validNickname = nickname.trim().length in 3..16 &&
+        nickname.trim().all { it.isLetterOrDigit() || it == '_' }
+    val portraits = listOf(
+        R.drawable.character_blademaster,
+        R.drawable.character_ironbody,
+        R.drawable.character_elementalist,
+        R.drawable.character_spiritmystic
+    )
+    BoxWithConstraints(
+        Modifier.fillMaxSize().background(Color(0xFF081426))
+    ) {
+        Image(
+            painter = painterResource(R.drawable.world_mortal_bg),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xDD07111F), Color(0xEE0B1728), Color(0xF5081220)))))
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text("СОЗДАНИЕ ПЕРВОГО ГЕРОЯ", color = Gold, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+            Text("Выбери свой путь", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Black)
+            Text("Этот выбор определит твоё путешествие по мирам Дао.", color = Color(0xFFC4D1DF), fontSize = 11.sp)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color(0xDD14243A),
+                shape = RoundedCornerShape(22.dp),
+                border = BorderStroke(1.dp, Color(0x887F9BB8))
+            ) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("01 · КЛАСС", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
+                    for (row in 0..1) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            for (column in 0..1) {
+                                val index = row * 2 + column
+                                val selected = selectedClass == index
+                                Surface(
+                                    modifier = Modifier.weight(1f).clickable { onClassSelected(index) },
+                                    color = if (selected) Color(0xFF254B4A) else Color(0xFF17283E),
+                                    shape = RoundedCornerShape(15.dp),
+                                    border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) Jade else Color(0x667F9BB8))
+                                ) {
+                                    Column(
+                                        Modifier.padding(8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                                    ) {
+                                        Image(
+                                            painter = painterResource(portraits[index]),
+                                            contentDescription = classNames[index],
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxWidth().height(142.dp).clip(RoundedCornerShape(10.dp))
+                                        )
+                                        Text(classNames[index], color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Text(classDescriptions[index], color = Color(0xFFB9C9D8), fontSize = 8.sp, minLines = 2)
+                                        Text(if (selected) "ВЫБРАНО" else "ВЫБРАТЬ", color = if (selected) Jade else Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color(0xDD14243A),
+                shape = RoundedCornerShape(22.dp),
+                border = BorderStroke(1.dp, Color(0x887F9BB8))
+            ) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Text("02 · ОБЛИК", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                        listOf("male" to "МУЖСКОЙ", "female" to "ЖЕНСКИЙ").forEach { (value, label) ->
+                            val selected = gender == value
+                            Surface(
+                                modifier = Modifier.weight(1f).clickable { onGenderSelected(value) },
+                                color = if (selected) Color(0xFF254B4A) else Color(0xFF17283E),
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) Jade else Color(0x667F9BB8))
+                            ) {
+                                Text(label, Modifier.padding(vertical = 14.dp), color = if (selected) Jade else Color.White, textAlign = androidx.compose.ui.text.style.TextAlign.Center, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
+                    Text("03 · ИМЯ ПЕРСОНАЖА", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
+                    OutlinedTextField(
+                        value = nickname,
+                        onValueChange = { value -> onNicknameChanged(value.take(16).filter { it.isLetterOrDigit() || it == '_' }) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("Твой никнейм") },
+                        placeholder = { Text("Например, Нефритовый_Лис") },
+                        supportingText = { Text("От 3 до 16 символов: буквы, цифры и _") },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Jade,
+                            unfocusedBorderColor = Color(0x667F9BB8),
+                            focusedLabelColor = Jade,
+                            cursorColor = Jade
+                        )
+                    )
+                    Button(
+                        onClick = onConfirm,
+                        enabled = validNickname,
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF806039), contentColor = Color.White, disabledContainerColor = Color(0xFF394454))
+                    ) {
+                        Text("ЗАКРЕПИТЬ ГЕРОЯ И НАЧАТЬ ПУТЬ", fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun CultivateApp() {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("cultivate_save", 0) }
@@ -141,6 +268,9 @@ private fun CultivateApp() {
     var lotusLevel by remember { mutableIntStateOf(prefs.getInt("tech_lotus", 1).coerceAtLeast(1)) }
     var foxLevel by remember { mutableIntStateOf(prefs.getInt("tech_fox", 1).coerceAtLeast(1)) }
     var chosenClass by remember { mutableIntStateOf(prefs.getInt("chosen_class", -1).coerceIn(-1, 3)) }
+    var playerNickname by remember { mutableStateOf(prefs.getString("player_nickname", "") ?: "") }
+    var playerGender by remember { mutableStateOf(prefs.getString("player_gender", "male") ?: "male") }
+    var creationClass by remember { mutableIntStateOf(prefs.getInt("creation_class_draft", 0).coerceIn(0, 3)) }
     var skillPoints by remember { mutableIntStateOf(prefs.getInt("skill_points", 0).coerceAtLeast(0)) }
     val skillTreeLevels = remember { mutableStateListOf<Int>().apply {
         repeat(4) { ci -> repeat(9) { ni ->
@@ -623,7 +753,7 @@ private fun CultivateApp() {
         }
     }
 
-    LaunchedEffect(qi, stones, stage, selectedWorldIndex, todayKey, explorationEnergy, explorationProgress.toList(), worldFragments.toList(), defeatedWorldBossIds, pendingWorldBossId, pendingWorldEncounterId, worldBossTurnCount, guardPrepared, lootRevealVisible, lastLootPayload, selectedLocationId, abodeLevel, ironOre, spiritHerbs, spiritWater, qiPills, bodyPills, bodyPillBonus, forgeTemper, alchemyRank, gardenReadyAt, springReadyAt, ownedPetIds, activePetId, petLevels.toList(), petBondXp.toList(), petAscensions.toList(), petEssence, petCores, petPity, dailyWins, dailyGardenCollected, dailyMeditated, dailyClanDonated, dailyClaims, clanReputation, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, ownedGearIds, equippedGearIds.toList(), questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
+    LaunchedEffect(qi, stones, stage, selectedWorldIndex, todayKey, explorationEnergy, explorationProgress.toList(), worldFragments.toList(), defeatedWorldBossIds, pendingWorldBossId, pendingWorldEncounterId, worldBossTurnCount, guardPrepared, lootRevealVisible, lastLootPayload, selectedLocationId, abodeLevel, ironOre, spiritHerbs, spiritWater, qiPills, bodyPills, bodyPillBonus, forgeTemper, alchemyRank, gardenReadyAt, springReadyAt, ownedPetIds, activePetId, petLevels.toList(), petBondXp.toList(), petAscensions.toList(), petEssence, petCores, petPity, dailyWins, dailyGardenCollected, dailyMeditated, dailyClanDonated, dailyClaims, clanReputation, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, playerNickname, playerGender, creationClass, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, ownedGearIds, equippedGearIds.toList(), questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
         prefs.edit()
             .putInt("qi", qi)
             .putInt("stones", stones)
@@ -678,6 +808,9 @@ private fun CultivateApp() {
             .putInt("tech_lotus", lotusLevel)
             .putInt("tech_fox", foxLevel)
             .putInt("chosen_class", chosenClass)
+            .putString("player_nickname", playerNickname)
+            .putString("player_gender", playerGender)
+            .putInt("creation_class_draft", creationClass)
             .putInt("skill_points", skillPoints)
             .putInt("chosen_sect", chosenSect)
             .putInt("chosen_alliance", chosenAlliance)
@@ -696,6 +829,34 @@ private fun CultivateApp() {
             .also { editor -> skillTreeLevels.forEachIndexed { index, level -> editor.putInt("skill_tree_${index/9}_${index%9}", level) } }
             .putLong("last_seen", System.currentTimeMillis())
             .apply()
+    }
+
+    if (chosenClass < 0) {
+        MaterialTheme(
+            colorScheme = darkColorScheme(
+                primary = Gold,
+                secondary = Jade,
+                background = Ink,
+                surface = Panel,
+                onBackground = Color(0xFFF0E8D8),
+                onSurface = Color(0xFFF0E8D8)
+            )
+        ) {
+            CharacterCreationScreen(
+                selectedClass = creationClass,
+                onClassSelected = { creationClass = it },
+                gender = playerGender,
+                onGenderSelected = { playerGender = it },
+                nickname = playerNickname,
+                onNicknameChanged = { playerNickname = it },
+                onConfirm = {
+                    chosenClass = creationClass.coerceIn(0, 3)
+                    playerNickname = playerNickname.trim()
+                    message = "Путь выбран. Добро пожаловать, $playerNickname!"
+                }
+            )
+        }
+        return
     }
 
     MaterialTheme(
@@ -1247,7 +1408,7 @@ private fun CultivateApp() {
                         autoBattle = autoBattle,
                         actionText = message,
                         bossLevel = bossLevel,
-                        playerName = if (chosenClass >= 0) classNames[chosenClass] else "Путь не выбран",
+                        playerName = playerNickname.ifBlank { classNames[chosenClass] },
                         playerHp = playerHp,
                         playerMaxHp = playerMaxHp,
                         enemyHp = enemyHp,
@@ -1441,6 +1602,8 @@ private fun CultivateApp() {
             if (selectedMenu == 3) {
                 CharacterArmoryScreen(
                     stage = stage,
+                    playerNickname = playerNickname,
+                    playerGender = playerGender,
                     classIndex = chosenClass,
                     attack = classBonus,
                     defense = classDefense,
@@ -2096,6 +2259,8 @@ private fun DailyTaskCard(
 @Composable
 private fun CharacterArmoryScreen(
     stage: Int,
+    playerNickname: String,
+    playerGender: String,
     classIndex: Int,
     attack: Int,
     defense: Int,
@@ -2334,27 +2499,17 @@ private fun CharacterArmoryScreen(
             }
         }
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("ВЫБОР ПУТИ", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
-            Spacer(Modifier.weight(1f))
-            Text("Нажми на образ, чтобы сменить класс", color = Color(0xFFB7C5D6), fontSize = 8.sp)
-        }
-        Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color(0xE522344A),
+            shape = MaterialTheme.shapes.large,
+            border = BorderStroke(1.dp, Gold.copy(alpha = .62f))
         ) {
-            classNames.forEachIndexed { index, name ->
-                CharacterClassTile(
-                    name = name,
-                    portraitRes = when (index) {
-                        0 -> R.drawable.character_blademaster
-                        1 -> R.drawable.character_ironbody
-                        2 -> R.drawable.character_elementalist
-                        else -> R.drawable.character_spiritmystic
-                    },
-                    selected = classIndex == index,
-                    onClick = { onSelectClass(index) }
-                )
+            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("ПУТЬ ЗАКРЕПЛЁН", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                Text(playerNickname, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(classNames[selected] + " · " + if (playerGender == "female") "Женский облик" else "Мужской облик", color = Jade, fontSize = 10.sp)
+                Text("Класс и облик выбираются при создании персонажа и не меняются в пути.", color = Color(0xFFB7C5D6), fontSize = 9.sp)
             }
         }
     }

@@ -1073,42 +1073,65 @@ private fun CultivateApp() {
                 }, enabled = chosenSect >= 0 && !dailyClanDonated && stones >= 50, modifier = Modifier.fillMaxWidth()) { Text(if (chosenSect < 0) "Сначала вступи в клан / секту" else if (dailyClanDonated) "Вклад сегодня внесён" else "Внести ежедневный вклад · 50 камней") }
             }
 
-            if (selectedMenu == 7) GameCard("Духовный зверинец", "Коллекция питомцев · активен: ${activePet.name}") {
-                Text("Каждый зверь меняет стиль боя. Опыт связи получает только активный питомец за победы. Развитие намеренно сложное: нужны опыт, эссенция зверя и ядра для ключевых рубежей.", color = Color.LightGray, fontSize = 12.sp)
+            if (selectedMenu == 7) GameCard("Духовный зверинец", "Семь духовных спутников · активен: " + activePet.name) {
+                Text("Выбирай спутника под свой стиль боя, укрепляй связь и пробуждай скрытую силу древних зверей.", color = Color(0xFFD2DCEB), fontSize = 11.sp)
                 PetCompanionArt()
-                Text("Эссенция: $petEssence · ядра зверя: $petCores · поиск редкого зверя: $petPity / 20 побед", color = Jade, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Image(
-                        painter = painterResource(id = petPortraitResource(activePet.id)),
-                        contentDescription = activePet.name,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(34.dp)
-                    )
-                    Text("Активен: ${activePet.name} · уровень $petLevel / 30 · опыт связи $petXp · пробуждение $petAscension / 5", color = Gold)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    PetResourceBadge("qi", "Эссенция", petEssence.toString(), Modifier.weight(1f))
+                    PetResourceBadge("lotus", "Ядра", petCores.toString(), Modifier.weight(1f))
+                    PetResourceBadge("chest", "Поиск", petPity.toString() + " / 20", Modifier.weight(1f))
                 }
-                Text("Бонусы: атака +$petAttack · защита +$petDefense · здоровье +${activePet.hp + petLevel * 3 + if (petSynergy) 20 else 0} · техника +$petSkill · крит +${activePet.critical + if (petSynergy) 2 else 0}% · лечение +${activePet.healing + if (petSynergy) 2 else 0}", color = Jade, fontSize = 11.sp)
-                Text(if (petSynergy) "Резонанс класса: активен · питомец усиливает твой путь" else "Резонанс класса: нет · выбери подходящий класс для полного раскрытия питомца", color = if (petSynergy) Gold else Color.Gray, fontSize = 10.sp)
-                Text("Особенность спутника: ${petCombatTrait(activePet.id)}", color = Color.LightGray, fontSize = 10.sp)
                 val xpCost = 100 + petLevel * 75
                 val essenceCost = 1 + petLevel / 5
                 val coreCost = if ((petLevel + 1) % 5 == 0) 1 else 0
-                Button(onClick = {
-                    if (petLevel < 30 && petXp >= xpCost && petEssence >= essenceCost && petCores >= coreCost) {
-                        petBondXp[activePetIndex] = petXp - xpCost
-                        petEssence -= essenceCost
-                        petCores -= coreCost
-                        petLevels[activePetIndex] = petLevel + 1
-                        message = "${activePet.name} достиг ${petLevel + 1} уровня связи."
-                    } else message = "Нужно $xpCost опыта связи, $essenceCost эссенции и $coreCost ядер зверя."
-                }, enabled = petLevel < 30 && petXp >= xpCost && petEssence >= essenceCost && petCores >= coreCost, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (petLevel >= 30) "Предел уровня · требуется пробуждение" else "Укрепить связь · $xpCost XP · $essenceCost эссенции · $coreCost ядер")
+                PetActiveShowcase(
+                    pet = activePet,
+                    level = petLevel,
+                    bondXp = petXp,
+                    ascension = petAscension,
+                    attack = petAttack,
+                    defense = petDefense,
+                    hp = activePet.hp + petLevel * 3 + if (petSynergy) 20 else 0,
+                    skill = petSkill,
+                    synergy = petSynergy,
+                    xpCost = xpCost
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(Modifier.weight(1f)) {
+                        InventoryActionButton(
+                            label = if (petLevel >= 30) "МАКС. УРОВЕНЬ" else "УКРЕПИТЬ СВЯЗЬ",
+                            selected = false,
+                            enabled = petLevel < 30 && petXp >= xpCost && petEssence >= essenceCost && petCores >= coreCost,
+                            onClick = {
+                                if (petLevel < 30 && petXp >= xpCost && petEssence >= essenceCost && petCores >= coreCost) {
+                                    petBondXp[activePetIndex] = petXp - xpCost
+                                    petEssence -= essenceCost
+                                    petCores -= coreCost
+                                    petLevels[activePetIndex] = petLevel + 1
+                                    message = activePet.name + " достиг " + (petLevel + 1) + " уровня связи."
+                                } else message = "Нужно " + xpCost + " опыта связи, " + essenceCost + " эссенции и " + coreCost + " ядер зверя."
+                            }
+                        )
+                    }
+                    if (petLevel >= 30 && petAscension < 5) {
+                        Box(Modifier.weight(1f)) {
+                            InventoryActionButton(
+                                label = "ПРОБУЖДЕНИЕ",
+                                selected = true,
+                                enabled = petEssence >= 20 && petCores >= 5,
+                                onClick = {
+                                    if (petEssence >= 20 && petCores >= 5) {
+                                        petEssence -= 20
+                                        petCores -= 5
+                                        petAscensions[activePetIndex] = petAscension + 1
+                                        message = activePet.name + " пробудил новую ступень силы!"
+                                    } else message = "Пробуждение требует 20 эссенции и 5 ядер зверя."
+                                }
+                            )
+                        }
+                    }
                 }
-                if (petLevel >= 30 && petAscension < 5) {
-                    Button(onClick = {
-                        if (petEssence >= 20 && petCores >= 5) { petEssence -= 20; petCores -= 5; petAscensions[activePetIndex] = petAscension + 1; message = "${activePet.name} пробудил новую ступень силы!" }
-                        else message = "Пробуждение требует 20 эссенции и 5 ядер зверя."
-                    }, enabled = petEssence >= 20 && petCores >= 5, modifier = Modifier.fillMaxWidth()) { Text("Пробудить питомца · 20 эссенции + 5 ядер") }
-                }
+                Text("КОЛЛЕКЦИЯ ДУХОВНЫХ ЗВЕРЕЙ", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
                 petCatalog.forEachIndexed { index, pet ->
                     val owned = pet.id in ownedPetIds.split("|")
                     val isActive = pet.id == activePetId
@@ -1119,7 +1142,7 @@ private fun CultivateApp() {
                         level = petLevels[index],
                         bondXp = petBondXp[index],
                         ascension = petAscensions[index],
-                        onSelect = { activePetId = pet.id; message = "${pet.name} теперь твой спутник." }
+                        onSelect = { activePetId = pet.id; message = pet.name + " теперь твой спутник." }
                     )
                 }
             }
@@ -1514,72 +1537,231 @@ private fun PetCompanionCard(
     ascension: Int,
     onSelect: () -> Unit
 ) {
+    val rarity = petRarityColor(pet.id)
+    val nextBondCost = 100 + level * 75
+    val bondProgress = if (level >= 30) 1f else (bondXp.toFloat() / nextBondCost.coerceAtLeast(1)).coerceIn(0f, 1f)
     Surface(
+        modifier = Modifier.fillMaxWidth().clickable(enabled = owned && !active, onClick = onSelect),
         color = when {
-            active -> Color(0xE52C4B51)
-            owned -> Color(0xD91B2C42)
-            else -> Color(0xB9162031)
+            active -> Color(0xE52B4A4C)
+            owned -> Color(0xE51A2C43)
+            else -> Color(0xC9162031)
         },
-        shape = MaterialTheme.shapes.large,
-        tonalElevation = if (active) 9.dp else 4.dp,
-        shadowElevation = if (active) 7.dp else 3.dp
+        shape = MaterialTheme.shapes.extraLarge,
+        border = androidx.compose.foundation.BorderStroke(
+            if (active) 2.dp else 1.dp,
+            when { active -> rarity; owned -> rarity.copy(alpha = .48f); else -> Color(0xFF566174).copy(alpha = .45f) }
+        ),
+        tonalElevation = if (active) 10.dp else 4.dp,
+        shadowElevation = if (active) 8.dp else 3.dp
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(9.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Image(
-                painter = painterResource(id = petPortraitResource(pet.id)),
-                contentDescription = pet.name,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.size(76.dp)
-            )
-            Spacer(Modifier.width(9.dp))
-            Column(
-                Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
+        Row(Modifier.fillMaxWidth().padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
+            PetPortraitMedallion(pet.id, 88.dp, active)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(pet.name, color = if (owned) Gold else Color(0xFFB3BDCA), fontWeight = FontWeight.Black, fontSize = 13.sp)
-                    if (active) {
-                        Spacer(Modifier.width(6.dp))
-                        Text("СПУТНИК", color = Jade, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        pet.name,
+                        color = if (owned) Color(0xFFFFE5B0) else Color(0xFFB3BDCA),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 12.sp,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1
+                    )
+                    Surface(color = rarity.copy(alpha = if (owned) .20f else .10f), shape = MaterialTheme.shapes.small) {
+                        Text(petRarityName(pet.id), Modifier.padding(horizontal = 5.dp, vertical = 2.dp), color = if (owned) rarity else Color(0xFF929BAB), fontSize = 7.sp, fontWeight = FontWeight.Black)
                     }
                 }
-                Text(pet.role, color = Color(0xFFD7C49D), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
-                Text(pet.description, color = Color(0xFFD1DCEB), fontSize = 10.sp, maxLines = 2)
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(pet.role.uppercase(), color = Color(0xFFD5C59F), fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                Text(pet.description, color = Color(0xFFD1DCEB), fontSize = 9.sp, maxLines = 2, lineHeight = 12.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
                     ClassMetric("weapon", pet.attack.toString())
                     ClassMetric("shield", pet.defense.toString())
                     ClassMetric("health", pet.hp.toString())
                     ClassMetric("skills", pet.skill.toString())
                 }
-                Text(
-                    if (owned) "Уровень $level · связь $bondXp XP · пробуждение $ascension/5"
-                    else "Поиск: ${pet.dropHint}",
-                    color = if (owned) Jade else Color(0xFF9DA9BA),
-                    fontSize = 9.sp
-                )
-                Text("Резонанс: ${pet.bestClass}", color = Color(0xFFC9B8E9), fontSize = 9.sp)
-            }
-            Spacer(Modifier.width(5.dp))
-            if (owned) {
-                Surface(
-                    modifier = Modifier.size(42.dp).clickable(enabled = !active, onClick = onSelect),
-                    shape = MaterialTheme.shapes.extraLarge,
-                    color = if (active) Color(0xFF315C51) else Color(0xFF263B58),
-                    tonalElevation = 5.dp
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        RpgIcon(if (active) "check" else "plus", Modifier.size(34.dp))
+                if (owned) {
+                    LinearProgressIndicator(
+                        progress = { bondProgress },
+                        modifier = Modifier.fillMaxWidth().height(4.dp),
+                        color = if (active) Jade else rarity,
+                        trackColor = Color(0xFF354359)
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("УР. " + level + "/30", color = Jade, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        Spacer(Modifier.width(7.dp))
+                        Text("СВЯЗЬ " + bondXp + " XP", color = Color(0xFFD1DCEB), fontSize = 8.sp)
+                        Spacer(Modifier.weight(1f))
+                        Text("✦".repeat(ascension) + "·".repeat(5 - ascension), color = Color(0xFFFFD47F), fontSize = 10.sp, fontWeight = FontWeight.Black)
                     }
+                } else {
+                    Text("ИСТОЧНИК: " + pet.dropHint, color = Color(0xFFFFC978), fontSize = 8.sp, maxLines = 2)
                 }
-            } else {
-                RpgIcon("lock", Modifier.size(36.dp))
+                Text(if (owned) pet.bestClass else "РЕЗОНАНС: " + pet.bestClass, color = Color(0xFFB9C6DC), fontSize = 8.sp, maxLines = 1)
+            }
+            Spacer(Modifier.width(7.dp))
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                RpgIcon(when { active -> "check"; owned -> "plus"; else -> "lock" }, Modifier.size(30.dp))
+                Text(
+                    when { active -> "АКТИВЕН"; owned -> "ВЫБРАТЬ"; else -> "ЗАКРЫТ" },
+                    color = when { active -> Jade; owned -> Color(0xFFFFD58A); else -> Color(0xFF8E99A9) },
+                    fontSize = 7.sp,
+                    fontWeight = FontWeight.Black
+                )
             }
         }
     }
 }
+
+@Composable
+private fun PetPortraitMedallion(
+    petId: String,
+    size: androidx.compose.ui.unit.Dp,
+    active: Boolean = false
+) {
+    val tint = petRarityColor(petId)
+    val transition = rememberInfiniteTransition(label = "pet-medallion-" + petId)
+    val pulse by transition.animateFloat(
+        if (active) .94f else .97f,
+        if (active) 1.06f else 1.02f,
+        infiniteRepeatable(tween(if (active) 1500 else 2200), RepeatMode.Reverse),
+        label = "pet-medallion-pulse-" + petId
+    )
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+        Image(
+            painter = painterResource(R.drawable.pet_sanctuary_seal),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = pulse; scaleY = pulse }
+        )
+        Canvas(Modifier.fillMaxSize()) {
+            val center = Offset(this.size.width / 2f, this.size.height / 2f)
+            val radius = this.size.minDimension * .43f
+            drawCircle(
+                Brush.radialGradient(listOf(tint.copy(alpha = if (active) .28f else .16f), Color.Transparent)),
+                radius,
+                center
+            )
+            drawCircle(
+                tint.copy(alpha = if (active) .85f else .45f),
+                radius * .91f,
+                center,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = if (active) 2.3.dp.toPx() else 1.4.dp.toPx())
+            )
+            for (i in 0..7) {
+                val angle = i * (Math.PI / 4.0)
+                val x = center.x + kotlin.math.cos(angle).toFloat() * radius * .91f
+                val y = center.y + kotlin.math.sin(angle).toFloat() * radius * .91f
+                drawCircle(Color(0xFFFFE5A5).copy(alpha = if (active) .9f else .55f), if (active) 2.1.dp.toPx() else 1.4.dp.toPx(), Offset(x, y))
+            }
+        }
+        Image(
+            painter = painterResource(id = petPortraitResource(petId)),
+            contentDescription = petId,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize(.74f)
+        )
+    }
+}
+
+@Composable
+private fun PetActiveShowcase(
+    pet: PetDefinition,
+    level: Int,
+    bondXp: Int,
+    ascension: Int,
+    attack: Int,
+    defense: Int,
+    hp: Int,
+    skill: Int,
+    synergy: Boolean,
+    xpCost: Int
+) {
+    val rarity = petRarityColor(pet.id)
+    val progress = if (level >= 30) 1f else (bondXp.toFloat() / xpCost.coerceAtLeast(1)).coerceIn(0f, 1f)
+    Surface(
+        color = Color(0xEE12223A),
+        shape = MaterialTheme.shapes.extraLarge,
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, rarity.copy(alpha = .8f)),
+        tonalElevation = 10.dp,
+        shadowElevation = 8.dp
+    ) {
+        Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            PetPortraitMedallion(pet.id, 118.dp, true)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(petRarityName(pet.id), color = rarity, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                Text(pet.name, color = Color(0xFFFFE5B0), fontSize = 16.sp, fontWeight = FontWeight.Black, maxLines = 2)
+                Text(pet.role, color = Color(0xFFD5C59F), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ClassMetric("weapon", "+" + attack)
+                    ClassMetric("shield", "+" + defense)
+                    ClassMetric("health", "+" + hp)
+                    ClassMetric("skills", "+" + skill)
+                }
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth().height(6.dp),
+                    color = if (level >= 30) Color(0xFFFFD47F) else Jade,
+                    trackColor = Color(0xFF354359)
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("СВЯЗЬ · УР. " + level + "/30", color = Jade, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    Spacer(Modifier.weight(1f))
+                    Text("✦".repeat(ascension) + "·".repeat(5 - ascension), color = Color(0xFFFFD47F), fontSize = 11.sp, fontWeight = FontWeight.Black)
+                }
+                Surface(color = if (synergy) Color(0xFF254D47) else Color(0xFF30394B), shape = MaterialTheme.shapes.small) {
+                    Text(
+                        if (synergy) "РЕЗОНАНС КЛАССА · АКТИВЕН" else "РЕЗОНАНС · " + pet.bestClass,
+                        Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                        color = if (synergy) Color(0xFFA6E9CD) else Color(0xFFB9C6D8),
+                        fontSize = 7.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+                Text("ОСОБЕННОСТЬ: " + petCombatTrait(pet.id), color = Color(0xFFD0D9E5), fontSize = 8.sp, maxLines = 2)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PetResourceBadge(icon: String, label: String, value: String, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        color = Color(0xD91B2B42),
+        shape = MaterialTheme.shapes.large,
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x55D7B56F))
+    ) {
+        Row(Modifier.padding(horizontal = 7.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            RpgIcon(icon, Modifier.size(24.dp))
+            Spacer(Modifier.width(5.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(label.uppercase(), color = Color(0xFFBFC9D8), fontSize = 7.sp, fontWeight = FontWeight.Black)
+                Text(value, color = Color(0xFFFFE5B0), fontSize = 10.sp, fontWeight = FontWeight.Black)
+            }
+        }
+    }
+}
+
+private fun petRarityName(petId: String): String = when (petId) {
+    "jade_fox", "stone_tortoise" -> "РЕДКИЙ СПУТНИК"
+    "thunder_hawk", "ember_wolf", "iron_ape" -> "ЭПИЧЕСКИЙ СПУТНИК"
+    "moon_deer", "river_koi" -> "ЛЕГЕНДАРНЫЙ СПУТНИК"
+    else -> "ДУХОВНЫЙ СПУТНИК"
+}
+
+private fun petRarityColor(petId: String): Color = when (petId) {
+    "jade_fox" -> Color(0xFF83D8BD)
+    "stone_tortoise" -> Color(0xFF9EC7A5)
+    "thunder_hawk" -> Color(0xFF83CFFF)
+    "ember_wolf" -> Color(0xFFFFA36F)
+    "moon_deer" -> Color(0xFFE3C6FF)
+    "iron_ape" -> Color(0xFFE5BD72)
+    "river_koi" -> Color(0xFFB8A4FF)
+    else -> Color(0xFFE5BD72)
+}
+
 
 @Composable
 private fun ClassPortraitCard(

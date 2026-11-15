@@ -109,6 +109,8 @@ private fun CultivateApp() {
     var pendingWorldEncounterId by remember { mutableStateOf(prefs.getString("pending_world_encounter", "") ?: "") }
     var worldBossTurnCount by remember { mutableIntStateOf(prefs.getInt("world_boss_turn_count", 0).coerceAtLeast(0)) }
     var guardPrepared by remember { mutableStateOf(prefs.getBoolean("battle_guard_prepared", false)) }
+    var lootRevealVisible by remember { mutableStateOf(prefs.getBoolean("battle_loot_visible", false)) }
+    var lastLootPayload by remember { mutableStateOf(prefs.getString("battle_loot_payload", "") ?: "") }
     var selectedLocationId by remember { mutableStateOf(prefs.getString("world_selected_location", "mortal_valley") ?: "mortal_valley") }
     var ownedPetIds by remember { mutableStateOf(prefs.getString("owned_pet_ids", "jade_fox") ?: "jade_fox") }
     var activePetId by remember { mutableStateOf(prefs.getString("active_pet_id", "jade_fox") ?: "jade_fox") }
@@ -332,11 +334,22 @@ private fun CultivateApp() {
             dailyWins++
             qi = (qi + 5).coerceAtMost(9999)
             petBondXp[activePetIndex] = petBondXp[activePetIndex] + 15
-            if (Random.nextInt(100) < 25) petEssence++
-            if (Random.nextInt(100) < 4) petCores++
+            val essenceFound = Random.nextInt(100) < 25
+            if (essenceFound) petEssence++
+            val petCoreFound = Random.nextInt(100) < 4
+            if (petCoreFound) petCores++
             skillPoints++
             val materialTier = ((encounterRank - 1) / 5).coerceIn(0, 5)
             skillMaterials[materialTier] = skillMaterials[materialTier] + 1
+            val lootItems = mutableListOf(
+                LootRevealItem("currency", "artifact", "Камни духа", "+$reward", "COMMON"),
+                LootRevealItem("currency", "qi", "Ци", "+5", "UNCOMMON"),
+                LootRevealItem("pet_xp", "pet_fox", "Опыт связи питомца", "+15", "UNCOMMON"),
+                LootRevealItem("skill_point", "skills", "Очко навыка", "+1", "RARE"),
+                LootRevealItem("material", "artifact", skillMaterialNames[materialTier], "+1", "RARE")
+            )
+            if (essenceFound) lootItems += LootRevealItem("pet_essence", "lotus", "Эссенция питомца", "+1", "RARE")
+            if (petCoreFound) lootItems += LootRevealItem("pet_core", "artifact", "Ядро питомца", "+1", "EPIC")
             val weaponDrop = rollWeaponDrop(stage, ownedWeaponList)
             val gearDrop = if (Random.nextInt(100) < 35) rollGearDrop(stage) else null
             val oreFound = if (activeWorldEncounter != null) 0 else 1 + (bossLevel / 5).coerceAtMost(3)
@@ -345,10 +358,12 @@ private fun CultivateApp() {
             val weaponText = if (weaponDrop != null) {
                 val encodedDrop = encodeWeaponInstance(weaponDrop)
                 ownedWeaponIds = (ownedWeaponList + encodedDrop).joinToString("|")
+                lootItems += LootRevealItem("weapon", weaponDrop.type.toString(), weaponDrop.name, weaponDrop.rarity.title, weaponDrop.rarity.name)
                 " Добыча: ${weaponDrop.name} · ${weaponDrop.rarity.title}."
             } else ""
             val gearText = if (gearDrop != null) {
                 ownedGearIds = (ownedGearList + encodeGearInstance(gearDrop)).joinToString("|")
+                lootItems += LootRevealItem("gear", gearDrop.slot.name, gearDrop.name, gearDrop.rarity.title, gearDrop.rarity.name)
                 " Экипировка: ${gearDrop.name} · ${gearDrop.rarity.title}."
             } else ""
             petPity++
@@ -357,9 +372,14 @@ private fun CultivateApp() {
             val petDropText = if (foundPet != null) {
                 ownedPetIds = (ownedPetIds.split("|").filter { it.isNotBlank() } + foundPet.id).distinct().joinToString("|")
                 petPity = 0
+                lootItems += LootRevealItem("pet", foundPet.id, foundPet.name, "Новый спутник", "EPIC")
                 " Редкая находка! Приручён питомец: ${foundPet.name}."
             } else ""
-            if (rareSkillFound) rareSkill = rareArts[chosenClass]
+            if (rareSkillFound) {
+                rareSkill = rareArts[chosenClass]
+                lootItems += LootRevealItem("skill", "skills", rareSkill, "Редкое наследие", "MYTHIC")
+            }
+            if (oreFound > 0) lootItems += LootRevealItem("resource", "equipment", "Железная руда", "×$oreFound", "COMMON")
             val oreText = if (oreFound > 0) " и железная руда ×$oreFound" else ""
             message = "Победа! Получено $reward камней, 5 Ци и опыт связи питомца$oreText.$weaponText$gearText$petDropText" +
                 if (rareSkillFound) " Редкое наследие: $rareSkill!" else ""
@@ -369,6 +389,7 @@ private fun CultivateApp() {
                 if (worldBoss != null && worldBoss.id !in defeated) {
                     defeatedWorldBossIds = (defeated + worldBoss.id).distinct().joinToString("|")
                     worldFragments[worldBoss.worldIndex] = worldFragments[worldBoss.worldIndex] + 5
+                    lootItems += LootRevealItem("fragment", "portal", "Фрагменты мира", "+5", "EPIC")
                     message += " Хранитель ${worldBoss.title} повержен: получено 5 фрагментов мира."
                 }
                 pendingWorldBossId = ""
@@ -397,6 +418,16 @@ private fun CultivateApp() {
                         skillMaterials[eliteTier] = skillMaterials[eliteTier] + 1
                     }
                     worldFragments[location.worldIndex] = worldFragments[location.worldIndex] + 1
+                    val resourceIconKey = when (location.resourceKind) {
+                        "ore" -> "equipment"
+                        "herbs" -> "garden"
+                        "water" -> "ice"
+                        else -> "artifact"
+                    }
+                    lootItems += LootRevealItem("resource", resourceIconKey, location.resourceLabel, "×${location.resourceAmount}", if (location.isElite) "EPIC" else "UNCOMMON")
+                    lootItems += LootRevealItem("currency", "artifact", "Камни духа", "+${location.stoneReward}", "COMMON")
+                    lootItems += LootRevealItem("currency", "qi", "Ци", "+${location.qiReward}", "UNCOMMON")
+                    lootItems += LootRevealItem("fragment", "portal", "Фрагмент мира", "+1", "EPIC")
                     val completedProgress = explorationProgress.getOrElse(locationIndex) { 0 }
                     message += " Экспедиция «${location.title}»: ${location.resourceLabel} ×${location.resourceAmount}, +${location.stoneReward} камней, +${location.qiReward} Ци. Прогресс ${completedProgress}/${location.progressGoal}."
                 }
@@ -404,6 +435,8 @@ private fun CultivateApp() {
                 worldBossTurnCount = 0
                 selectedMenu = 9
             }
+            lastLootPayload = encodeLootReveal(lootItems)
+            lootRevealVisible = lootItems.isNotEmpty()
         } else if (playerHp <= 0) {
             autoBattle = false
             guardPrepared = false
@@ -454,6 +487,8 @@ private fun CultivateApp() {
                 return
             }
             explorationEnergy -= 3
+            lootRevealVisible = false
+            lastLootPayload = ""
             pendingWorldEncounterId = ""
             pendingWorldBossId = location.id
             worldBossTurnCount = 0
@@ -479,6 +514,8 @@ private fun CultivateApp() {
         }
 
         explorationEnergy--
+        lootRevealVisible = false
+        lastLootPayload = ""
         pendingWorldEncounterId = location.id
         worldBossTurnCount = 0
         guardPrepared = false
@@ -578,7 +615,7 @@ private fun CultivateApp() {
         }
     }
 
-    LaunchedEffect(qi, stones, stage, selectedWorldIndex, todayKey, explorationEnergy, explorationProgress.toList(), worldFragments.toList(), defeatedWorldBossIds, pendingWorldBossId, pendingWorldEncounterId, worldBossTurnCount, guardPrepared, selectedLocationId, abodeLevel, ironOre, spiritHerbs, spiritWater, qiPills, bodyPills, bodyPillBonus, forgeTemper, alchemyRank, gardenReadyAt, springReadyAt, ownedPetIds, activePetId, petLevels.toList(), petBondXp.toList(), petAscensions.toList(), petEssence, petCores, petPity, dailyWins, dailyGardenCollected, dailyMeditated, dailyClanDonated, dailyClaims, clanReputation, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, ownedGearIds, equippedGearIds.toList(), questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
+    LaunchedEffect(qi, stones, stage, selectedWorldIndex, todayKey, explorationEnergy, explorationProgress.toList(), worldFragments.toList(), defeatedWorldBossIds, pendingWorldBossId, pendingWorldEncounterId, worldBossTurnCount, guardPrepared, lootRevealVisible, lastLootPayload, selectedLocationId, abodeLevel, ironOre, spiritHerbs, spiritWater, qiPills, bodyPills, bodyPillBonus, forgeTemper, alchemyRank, gardenReadyAt, springReadyAt, ownedPetIds, activePetId, petLevels.toList(), petBondXp.toList(), petAscensions.toList(), petEssence, petCores, petPity, dailyWins, dailyGardenCollected, dailyMeditated, dailyClanDonated, dailyClaims, clanReputation, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, ownedGearIds, equippedGearIds.toList(), questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
         prefs.edit()
             .putInt("qi", qi)
             .putInt("stones", stones)
@@ -592,6 +629,8 @@ private fun CultivateApp() {
             .putString("pending_world_encounter", pendingWorldEncounterId)
             .putInt("world_boss_turn_count", worldBossTurnCount)
             .putBoolean("battle_guard_prepared", guardPrepared)
+            .putBoolean("battle_loot_visible", lootRevealVisible)
+            .putString("battle_loot_payload", lastLootPayload)
             .putString("world_selected_location", selectedLocationId)
             .putString("owned_pet_ids", ownedPetIds)
             .putString("active_pet_id", activePetId)
@@ -1115,6 +1154,27 @@ private fun CultivateApp() {
                     onExplore = { exploreWorldLocation(it) },
                     onExchangeFragments = { exchangeWorldFragments(it) }
                 )
+                if (lootRevealVisible && lastLootPayload.isNotBlank()) {
+                    BattleLootReveal(
+                        payload = lastLootPayload,
+                        onDismiss = {
+                            lootRevealVisible = false
+                            lastLootPayload = ""
+                        },
+                        onOpenItem = { item ->
+                            lootRevealVisible = false
+                            lastLootPayload = ""
+                            selectedMenu = when (item.kind) {
+                                "weapon", "gear", "currency" -> 4
+                                "pet", "pet_xp", "pet_essence", "pet_core" -> 7
+                                "skill", "skill_point", "material" -> 5
+                                "fragment" -> 9
+                                "resource" -> 8
+                                else -> 4
+                            }
+                        }
+                    )
+                }
             }
 
             if (selectedMenu == 2) {
@@ -1153,6 +1213,28 @@ private fun CultivateApp() {
                         guardPrepared = guardPrepared,
                         telegraphAccent = enemyAccent
                     )
+
+                    if (lootRevealVisible && lastLootPayload.isNotBlank()) {
+                        BattleLootReveal(
+                            payload = lastLootPayload,
+                            onDismiss = {
+                                lootRevealVisible = false
+                                lastLootPayload = ""
+                            },
+                            onOpenItem = { item ->
+                                lootRevealVisible = false
+                                lastLootPayload = ""
+                                selectedMenu = when (item.kind) {
+                                    "weapon", "gear", "currency" -> 4
+                                    "pet", "pet_xp", "pet_essence", "pet_core" -> 7
+                                    "skill", "skill_point", "material" -> 5
+                                    "fragment" -> 9
+                                    "resource" -> 8
+                                    else -> 4
+                                }
+                            }
+                        )
+                    }
 
                     Row(
                         Modifier.fillMaxWidth(),
@@ -1261,6 +1343,8 @@ private fun CultivateApp() {
                         if (enemyHp <= 0) {
                             bossLevel++
                             guardPrepared = false
+                            lootRevealVisible = false
+                            lastLootPayload = ""
                             enemyHp = bossMaxHp(bossLevel)
                             playerHp = playerMaxHp
                             message = "На арену вышел страж ранга $bossLevel. Будь осторожен!"
@@ -2401,6 +2485,128 @@ private fun RelicArtworkIcon(resourceId: Int, rarityColor: Color, modifier: Modi
             )
         }
     }
+}
+
+@Composable
+private fun BattleLootReveal(
+    payload: String,
+    onDismiss: () -> Unit,
+    onOpenItem: (LootRevealItem) -> Unit
+) {
+    val items = remember(payload) { decodeLootReveal(payload) }
+    if (items.isEmpty()) return
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color(0xF0142238),
+        shape = MaterialTheme.shapes.extraLarge,
+        border = BorderStroke(1.5.dp, Gold.copy(alpha = .82f)),
+        tonalElevation = 9.dp,
+        shadowElevation = 7.dp
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RelicArtworkIcon(R.drawable.relic_artifact, Gold, Modifier.size(42.dp))
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("СОКРОВИЩА ПОБЕДЫ", color = Gold, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    Text("Награды уже зачислены. Нажми на предмет, чтобы открыть его раздел.", color = Color(0xFFD5E0ED), fontSize = 8.sp, maxLines = 2)
+                }
+                Surface(
+                    color = Color(0xFF24483F),
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, Jade.copy(alpha = .8f))
+                ) {
+                    Text("✓", Modifier.padding(horizontal = 8.dp, vertical = 5.dp), color = Jade, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                }
+            }
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                items.forEach { item ->
+                    LootRevealTile(item = item, onClick = { onOpenItem(item) })
+                }
+            }
+            InventoryActionButton(
+                label = "ЗАКРЫТЬ СОКРОВИЩНИЦУ",
+                selected = true,
+                enabled = true,
+                onClick = onDismiss
+            )
+        }
+    }
+}
+
+@Composable
+private fun LootRevealTile(item: LootRevealItem, onClick: () -> Unit) {
+    val rarityColor = lootRarityColor(item.rarity)
+    Surface(
+        modifier = Modifier.width(104.dp).height(126.dp).clickable(onClick = onClick),
+        color = Color(0xFF13233A),
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.5.dp, rarityColor.copy(alpha = .9f)),
+        tonalElevation = 4.dp
+    ) {
+        Column(
+            Modifier.fillMaxSize().padding(horizontal = 5.dp, vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            LootRevealIcon(item, rarityColor)
+            Text(
+                item.title,
+                color = Color.White,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                minLines = 2,
+                lineHeight = 10.sp
+            )
+            Text(
+                item.detail,
+                color = rarityColor,
+                fontSize = 7.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
+private fun LootRevealIcon(item: LootRevealItem, rarityColor: Color) {
+    val resource = when (item.kind) {
+        "weapon" -> weaponDrawable(item.key.toIntOrNull() ?: 0)
+        "gear" -> gearDrawable(GearSlot.values().firstOrNull { it.name == item.key } ?: GearSlot.ARTIFACT)
+        "pet" -> petPortraitResource(item.key)
+        else -> null
+    }
+    if (resource != null) {
+        RelicArtworkIcon(resource, rarityColor, Modifier.size(48.dp))
+    } else {
+        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+            Canvas(Modifier.fillMaxSize()) {
+                drawCircle(
+                    Brush.radialGradient(listOf(rarityColor.copy(alpha = .42f), Color(0xFF17243A), Color(0xFF09111F)))
+                )
+                drawCircle(rarityColor.copy(alpha = .75f), size.minDimension * .44f, style = Stroke(width = 1.dp.toPx()))
+            }
+            RpgIcon(item.key, Modifier.fillMaxSize().padding(6.dp))
+        }
+    }
+}
+
+private fun lootRarityColor(rarity: String): Color = when (rarity.uppercase()) {
+    "UNCOMMON" -> Color(0xFF77C9A6)
+    "RARE" -> Color(0xFF70BCEB)
+    "EPIC" -> Color(0xFFB78BFF)
+    "LEGENDARY" -> Color(0xFFFFC76F)
+    "MYTHIC" -> Color(0xFFFF80C7)
+    else -> Color(0xFFC1CBD8)
 }
 
 @Composable
@@ -4347,6 +4553,28 @@ private val weaponNames=listOf("Меч","Копьё","Посох","Боевые 
 private val weaponAttackBonus=listOf(8,10,7,9)
 private val weaponNodeOneBonus=listOf(3,5,2,4)
 private val weaponNodeTwoBonus=listOf(4,2,5,3)
+
+private data class LootRevealItem(
+    val kind: String,
+    val key: String,
+    val title: String,
+    val detail: String,
+    val rarity: String
+)
+
+private fun encodeLootReveal(items: List<LootRevealItem>): String =
+    items.joinToString("~") { item ->
+        listOf(item.kind, item.key, item.title, item.detail, item.rarity)
+            .joinToString("^") { it.replace("^", " ").replace("~", " ") }
+    }
+
+private fun decodeLootReveal(payload: String): List<LootRevealItem> {
+    if (payload.isBlank()) return emptyList()
+    return payload.split("~").mapNotNull { encoded ->
+        val fields = encoded.split('^', limit = 5)
+        if (fields.size != 5) null else LootRevealItem(fields[0], fields[1], fields[2], fields[3], fields[4])
+    }
+}
 
 private enum class WeaponRarity(val title: String, val realmGapShare: Double, val rollSpread: Double) {
     COMMON("Обычное", 0.00, 0.10),

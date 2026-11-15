@@ -1722,19 +1722,47 @@ private fun CultivateApp() {
                         }
                     }
                 }
-                Text("КОЛЛЕКЦИЯ ДУХОВНЫХ ЗВЕРЕЙ", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                petCatalog.forEachIndexed { index, pet ->
-                    val owned = pet.id in ownedPetIds.split("|")
-                    val isActive = pet.id == activePetId
-                    PetCompanionCard(
-                        pet = pet,
-                        owned = owned,
-                        active = isActive,
-                        level = petLevels[index],
-                        bondXp = petBondXp[index],
-                        ascension = petAscensions[index],
-                        onSelect = { activePetId = pet.id; message = pet.name + " теперь твой спутник." }
+                val ownedPetCount = petCatalog.count { it.id in ownedPetIds.split("|") }
+                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("КОЛЛЕКЦИЯ ДУХОВНЫХ ЗВЕРЕЙ", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                            Text("$ownedPetCount / ${petCatalog.size} спутников пробуждено", color = Color(0xFFBFC9D8), fontSize = 8.sp)
+                        }
+                        Text("КАТАЛОГ", color = Jade, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    }
+                    LinearProgressIndicator(
+                        progress = { ownedPetCount.toFloat() / petCatalog.size.coerceAtLeast(1) },
+                        modifier = Modifier.fillMaxWidth().height(4.dp),
+                        color = Jade,
+                        trackColor = Color(0xFF34445A)
                     )
+                }
+                petCatalog.withIndex().toList().chunked(2).forEach { rowPets ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        rowPets.forEach { (index, pet) ->
+                            val owned = pet.id in ownedPetIds.split("|")
+                            val isActive = pet.id == activePetId
+                            Box(Modifier.weight(1f)) {
+                                PetCollectionTile(
+                                    pet = pet,
+                                    owned = owned,
+                                    active = isActive,
+                                    level = petLevels[index],
+                                    bondXp = petBondXp[index],
+                                    onClick = {
+                                        if (owned) {
+                                            activePetId = pet.id
+                                            message = pet.name + " теперь твой спутник."
+                                        } else {
+                                            message = "След: ${pet.dropHint}."
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                        if (rowPets.size == 1) Spacer(Modifier.weight(1f))
+                    }
                 }
             }
 
@@ -2894,6 +2922,94 @@ private fun GearInventoryCard(
                 }
             }
             Text(comparison, color = if (equipped || comparisonPositive) Jade else Color.LightGray, fontSize = 9.sp, maxLines = 2)
+        }
+    }
+}
+
+@Composable
+private fun PetCollectionTile(
+    pet: PetDefinition,
+    owned: Boolean,
+    active: Boolean,
+    level: Int,
+    bondXp: Int,
+    onClick: () -> Unit
+) {
+    val rarity = petRarityColor(pet.id)
+    val bondCost = 100 + level * 75
+    val progress = if (level >= 30) 1f else (bondXp.toFloat() / bondCost.coerceAtLeast(1)).coerceIn(0f, 1f)
+    Surface(
+        modifier = Modifier.fillMaxWidth().height(174.dp).clickable(onClick = onClick),
+        color = when {
+            active -> Color(0xE52A494A)
+            owned -> Color(0xE51A2C43)
+            else -> Color(0xC9162031)
+        },
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(
+            if (active) 2.dp else 1.dp,
+            when {
+                active -> rarity
+                owned -> rarity.copy(alpha = .55f)
+                else -> Color(0xFF69768A).copy(alpha = .42f)
+            }
+        ),
+        tonalElevation = if (active) 8.dp else 3.dp,
+        shadowElevation = if (active) 7.dp else 2.dp
+    ) {
+        Column(
+            Modifier.fillMaxSize().padding(horizontal = 6.dp, vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    if (active) "СПУТНИК" else if (owned) "ПРИРУЧЁН" else "НЕ НАЙДЕН",
+                    color = if (active) Jade else if (owned) rarity else Color(0xFF9BA8B8),
+                    fontSize = 7.sp,
+                    fontWeight = FontWeight.Black
+                )
+                Spacer(Modifier.weight(1f))
+                RpgIcon(if (active) "check" else if (owned) "plus" else "lock", Modifier.size(15.dp))
+            }
+            PetPortraitMedallion(pet.id, 76.dp, active)
+            Text(
+                pet.name,
+                color = if (owned) Color(0xFFFFE5B0) else Color(0xFFB5C0CF),
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 1
+            )
+            Text(
+                petRarityName(pet.id).replace(" СПУТНИК", ""),
+                color = if (owned) rarity else Color(0xFF8794A6),
+                fontSize = 6.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+            if (owned) {
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth(.92f).height(3.dp),
+                    color = if (active) Jade else rarity,
+                    trackColor = Color(0xFF354359)
+                )
+                Text(
+                    "СВЯЗЬ · УР. $level/30",
+                    color = if (active) Jade else Color(0xFFD4DDE8),
+                    fontSize = 7.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            } else {
+                Text(
+                    pet.dropHint,
+                    color = Color(0xFFE1C58D),
+                    fontSize = 7.sp,
+                    maxLines = 2,
+                    lineHeight = 8.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
         }
     }
 }

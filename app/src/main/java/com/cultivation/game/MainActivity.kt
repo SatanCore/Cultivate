@@ -313,6 +313,7 @@ private fun CultivateApp() {
     val ownedWeapons = remember(ownedWeaponIds) { ownedWeaponList.mapNotNull { resolveWeaponInstance(it) } }
     val equippedWeapon = resolveWeaponInstance(equippedWeaponId)?.takeIf { equippedWeaponId in ownedWeaponList } ?: weaponCatalog.first()
     var activeSkillNode by remember { mutableIntStateOf(prefs.getInt("active_skill_node",0).coerceIn(0,8)) }
+    var inspectedSkillNode by remember { mutableIntStateOf(0) }
     val skillCooldowns = remember { mutableStateListOf<Int>().apply { repeat(9) { add(0) } } }
     var techniqueCooldown by remember { mutableIntStateOf(0) }
     var weaponCooldown by remember { mutableIntStateOf(0) }
@@ -1626,6 +1627,7 @@ private fun CultivateApp() {
                     },
                     onSelectClass = { i ->
                         chosenClass = i
+                        inspectedSkillNode = 0
                         rotationOrder.clear()
                         (0..8).filter { skillTreeLevels[i * 9 + it] == 1 && skillDefinitions[i][it].active }
                             .forEach { rotationOrder.add(it) }
@@ -1743,28 +1745,65 @@ private fun CultivateApp() {
                         }
                     }
                 }
-                GameCard("Древо навыков", if (chosenClass < 0) "Сначала выбери класс в меню персонажа" else classNames[chosenClass]) {
+                GameCard("Зал боевых искусств", if (chosenClass < 0) "Сначала выбери класс в меню персонажа" else "Наследие · ${classNames[chosenClass]}") {
                     if (chosenClass >= 0) {
-                        Text("Очки навыков: $skillPoints · пассивных узлов: $passiveSkillCount", color = Gold, fontWeight = FontWeight.Bold)
-                        SkillTreeSection("Начальный навык", chosenClass, listOf(0), skillTreeLevels, skillPoints, selectedWeapon, activeSkillNode, stage.coerceAtMost(20),
-                            onLearn = { node -> learnSkillNode(node) },
-                            onSetActive = { node -> activeSkillNode = node })
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text("Ветвь I · Напор", color = Jade, fontWeight = FontWeight.Bold)
-                                SkillTreeSection("", chosenClass, listOf(1,2,3), skillTreeLevels, skillPoints, selectedWeapon, activeSkillNode, stage.coerceAtMost(20),
-                                    { node -> learnSkillNode(node) }, { node -> activeSkillNode = node })
+                        val learnedForClass = (0..8).count { skillTreeLevels[chosenClass * 9 + it] == 1 }
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(battleSkillDrawable(chosenClass)),
+                                contentDescription = "Знак наследия класса ${classNames[chosenClass]}",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.size(66.dp)
+                            )
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text("НАСЛЕДИЕ КЛАССА", color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.3.sp)
+                                Text(classNames[chosenClass], color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                                Text("$learnedForClass / 9 узлов освоено · ${classDescriptions[chosenClass]}", color = Color(0xFFB9C9D8), fontSize = 8.sp, lineHeight = 11.sp)
                             }
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text("Ветвь II · Искусность", color = Jade, fontWeight = FontWeight.Bold)
-                                SkillTreeSection("", chosenClass, listOf(4,5,6), skillTreeLevels, skillPoints, selectedWeapon, activeSkillNode, stage.coerceAtMost(20),
-                                    { node -> learnSkillNode(node) }, { node -> activeSkillNode = node })
+                            Surface(
+                                color = Color(0xFF193D38),
+                                shape = RoundedCornerShape(13.dp),
+                                border = BorderStroke(1.dp, Jade.copy(alpha = .7f))
+                            ) {
+                                Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("$skillPoints", color = Color(0xFFFFE4A8), fontSize = 19.sp, fontWeight = FontWeight.Black)
+                                    Text("ОЧКИ", color = Jade, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                                }
                             }
                         }
-                        SkillTreeSection("Слияние ветвей", chosenClass, listOf(7,8), skillTreeLevels, skillPoints, selectedWeapon, activeSkillNode, stage.coerceAtMost(20),
-                            onLearn = { node -> learnSkillNode(node) },
-                            onSetActive = { node -> activeSkillNode = node })
-                        Text("Активный навык: ${skillDefinitions[chosenClass][activeSkillNode].name} · перезарядка: ${skillCooldowns[activeSkillNode]}", color = Gold, fontSize = 12.sp)
+                        Text("ПУТЬ РАЗВИТИЯ · ВЫБЕРИ УЗЕЛ, ЧТОБЫ УЗНАТЬ ЕГО СИЛУ", color = Color(0xFFB8C7D8), fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                        SkillTreeConstellation(
+                            classIndex = chosenClass,
+                            levels = skillTreeLevels,
+                            points = skillPoints,
+                            activeNode = activeSkillNode,
+                            selectedNode = inspectedSkillNode,
+                            characterLevel = stage.coerceAtMost(20),
+                            onSelectNode = { inspectedSkillNode = it }
+                        )
+                        SkillNodeDetailCard(
+                            classIndex = chosenClass,
+                            node = inspectedSkillNode,
+                            levels = skillTreeLevels,
+                            points = skillPoints,
+                            weapon = selectedWeapon,
+                            activeNode = activeSkillNode,
+                            characterLevel = stage.coerceAtMost(20),
+                            onLearn = { learnSkillNode(inspectedSkillNode) },
+                            onSetActive = { activeSkillNode = inspectedSkillNode }
+                        )
+                        Text(
+                            "Боевой слот: ${skillDefinitions[chosenClass][activeSkillNode].name} · перезарядка ${skillCooldowns[activeSkillNode]} хода",
+                            color = Gold,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    } else {
+                        Text("Выбери одно из четырёх наследий в зале персонажа. Каждое открывает собственное древо из девяти техник и пассивных искусств.", color = Color(0xFFD2DCEB), fontSize = 11.sp)
                     }
                     Text(if (rareSkill.isBlank()) "Редкое искусство: шанс выпадения за победу — 0,8%." else "Получено редкое искусство: $rareSkill", color = Gold)
                 }
@@ -5696,103 +5735,276 @@ private fun weaponSkillDescription(ci:Int,node:Int,w:Int):String {
  }
  return weapon+" меняет навык: "+effects[w]+"."
 }
-@Composable
-private fun SkillTreeSection(
-    title: String,
-    classIndex: Int,
-    nodes: List<Int>,
-    levels: List<Int>,
-    points: Int,
-    weapon: Int,
-    activeNode: Int,
-    characterLevel: Int,
-    onLearn: (Int) -> Unit,
-    onSetActive: (Int) -> Unit
-) {
-    val iconSets = listOf(
+private fun skillNodeIcon(classIndex: Int, node: Int): String {
+    val icons = listOf(
         listOf("weapon", "critical", "shield", "arena", "spear", "skills", "health", "artifact", "portal"),
         listOf("armor", "shield", "health", "gauntlet", "helmet", "critical", "shield", "artifact", "tower"),
         listOf("fire", "ice", "lightning", "staff", "fire", "ice", "lightning", "portal", "artifact"),
         listOf("spiritmystic", "health", "pets", "artifact", "lotus", "shield", "skills", "lotus", "portal")
     )
-    val tint = listOf(Color(0xFFFFD58B), Color(0xFFB9D5A7), Color(0xFFFFA66F), Color(0xFFC6A5FF))[classIndex.coerceIn(0, 3)]
-    val rows = nodes.chunked(3)
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (title.isNotBlank()) {
-            Text(title.uppercase(), color = tint, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
-        }
-        rows.forEachIndexed { rowIndex, rowNodes ->
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                rowNodes.forEach { node ->
-                    val ix = classIndex * 9 + node
-                    val learned = levels.getOrElse(ix) { 0 } == 1
-                    val required = when (node) { 0 -> 1; 1, 4 -> 3; 2, 5 -> 6; 3, 6 -> 9; 7 -> 13; 8 -> 18; else -> 1 }
-                    val unlocked = skillNodeUnlocked(classIndex, node, levels, characterLevel)
-                    val def = skillDefinitions[classIndex][node]
-                    val canLearn = !learned && unlocked && points > 0 && characterLevel >= required
-                    val canActivate = learned && def.active && activeNode != node
-                    val active = learned && def.active && activeNode == node
-                    val edge = when {
-                        active -> Color(0xFFFFE3A0)
-                        learned -> Jade
-                        canLearn -> tint
-                        else -> Color(0xFF46546B)
-                    }
-                    Surface(
-                        modifier = Modifier.weight(1f).height(112.dp).clickable(enabled = canLearn || canActivate) {
-                            if (canLearn) onLearn(node) else if (canActivate) onSetActive(node)
-                        },
-                        color = when { active -> Color(0xEE34564D); learned -> Color(0xE923443F); canLearn -> Color(0xE9253851); else -> Color(0xD9101B2D) },
-                        shape = RoundedCornerShape(15.dp),
-                        border = BorderStroke(if (active) 2.dp else 1.dp, edge.copy(alpha = if (learned || canLearn) .95f else .55f)),
-                        tonalElevation = if (active) 9.dp else 2.dp,
-                        shadowElevation = if (active) 8.dp else 2.dp
-                    ) {
-                        Column(
-                            Modifier.fillMaxSize().padding(horizontal = 4.dp, vertical = 5.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                                Canvas(Modifier.fillMaxSize()) {
-                                    val c = Offset(size.width / 2f, size.height / 2f)
-                                    drawCircle(Brush.radialGradient(listOf(edge.copy(alpha = .35f), Color.Transparent)), size.minDimension * .49f, c)
-                                    drawCircle(edge.copy(alpha = .9f), size.minDimension * .43f, c, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
-                                    if (active) drawCircle(Color(0xFFFFF0C5).copy(alpha = .7f), size.minDimension * .34f, c, style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
-                                }
-                                RpgIcon(iconSets[classIndex.coerceIn(0, 3)][node], Modifier.size(34.dp))
-                                Box(Modifier.align(Alignment.TopEnd).size(16.dp).background(Color(0xFF101A2B), RoundedCornerShape(20.dp)), contentAlignment = Alignment.Center) {
-                                    RpgIcon(when { learned -> "check"; canLearn -> "plus"; else -> "lock" }, Modifier.size(12.dp))
-                                }
-                            }
-                            Text(
-                                def.name,
-                                color = if (learned) Color(0xFFFFE7B5) else Color(0xFFE1E7F0),
-                                fontSize = 8.sp, lineHeight = 9.sp, fontWeight = FontWeight.Bold,
-                                maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-                            Text(
-                                when { active -> "АКТИВЕН"; learned -> if (def.active) "ИЗУЧЕНО"; else "ПАССИВ"; canLearn -> "ИЗУЧИТЬ · 1 ОЧКО"; characterLevel < required -> "СТУПЕНЬ $required"; !unlocked -> "ПРЕДЫДУЩИЙ УЗЕЛ"; else -> "НЕТ ОЧКОВ" },
-                                color = edge, fontSize = 6.sp, fontWeight = FontWeight.Black, maxLines = 1
-                            )
-                        }
-                    }
+    return icons[classIndex.coerceIn(0, 3)][node.coerceIn(0, 8)]
+}
+
+private fun skillNodeRequiredLevel(node: Int): Int = when (node) {
+    0 -> 1
+    1, 4 -> 3
+    2, 5 -> 6
+    3, 6 -> 9
+    7 -> 13
+    8 -> 18
+    else -> 1
+}
+
+@Composable
+private fun SkillTreeConstellation(
+    classIndex: Int,
+    levels: List<Int>,
+    points: Int,
+    activeNode: Int,
+    selectedNode: Int,
+    characterLevel: Int,
+    onSelectNode: (Int) -> Unit
+) {
+    val accent = listOf(
+        Color(0xFFFFD58B),
+        Color(0xFFB9D5A7),
+        Color(0xFFFFA66F),
+        Color(0xFFC6A5FF)
+    )[classIndex.coerceIn(0, 3)]
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val nodeHeightPx = with(density) { 82.dp.toPx() }
+    val rowStepPx = with(density) { 96.dp.toPx() }
+    val cardTop = mapOf(
+        0 to 0f,
+        1 to rowStepPx, 4 to rowStepPx,
+        2 to rowStepPx * 2f, 5 to rowStepPx * 2f,
+        3 to rowStepPx * 3f, 6 to rowStepPx * 3f,
+        7 to rowStepPx * 4f,
+        8 to rowStepPx * 5f
+    )
+    val cardX = mapOf(
+        0 to .5f,
+        1 to .25f, 4 to .75f,
+        2 to .25f, 5 to .75f,
+        3 to .25f, 6 to .75f,
+        7 to .5f,
+        8 to .5f
+    )
+    BoxWithConstraints(Modifier.fillMaxWidth().height(568.dp)) {
+        Canvas(Modifier.fillMaxSize()) {
+            val edges = listOf(0 to 1, 0 to 4, 1 to 2, 4 to 5, 2 to 3, 5 to 6, 3 to 7, 6 to 7, 7 to 8)
+            edges.forEach { (from, to) ->
+                val bothLearned = levels.getOrElse(classIndex * 9 + from) { 0 } == 1 &&
+                    levels.getOrElse(classIndex * 9 + to) { 0 } == 1
+                val targetOpen = skillNodeUnlocked(classIndex, to, levels, characterLevel)
+                val lineColor = when {
+                    bothLearned -> Jade
+                    targetOpen -> accent
+                    else -> Color(0xFF536176)
                 }
-                repeat(3 - rowNodes.size) { Spacer(Modifier.weight(1f)) }
+                val startPoint = Offset(size.width * cardX.getValue(from), cardTop.getValue(from) + nodeHeightPx)
+                val endPoint = Offset(size.width * cardX.getValue(to), cardTop.getValue(to))
+                drawLine(lineColor.copy(alpha = .16f), startPoint, endPoint, strokeWidth = 8.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                drawLine(lineColor.copy(alpha = .88f), startPoint, endPoint, strokeWidth = 2.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                drawCircle(lineColor.copy(alpha = .9f), 3.dp.toPx(), endPoint)
             }
-            if (rowIndex < rows.lastIndex) {
-                Box(Modifier.fillMaxWidth().height(3.dp).padding(horizontal = 28.dp).background(
-                    Brush.horizontalGradient(listOf(Color.Transparent, tint.copy(alpha = .5f), Color.Transparent)),
-                    RoundedCornerShape(4.dp)
-                ))
+        }
+
+        @Composable
+        fun nodeCard(node: Int, modifier: Modifier) {
+            val learned = levels.getOrElse(classIndex * 9 + node) { 0 } == 1
+            val unlocked = skillNodeUnlocked(classIndex, node, levels, characterLevel)
+            val canLearn = !learned && unlocked && points > 0
+            val active = learned && skillDefinitions[classIndex][node].active && activeNode == node
+            SkillTreeNodeCard(
+                modifier = modifier,
+                node = node,
+                definition = skillDefinitions[classIndex][node],
+                iconKey = skillNodeIcon(classIndex, node),
+                learned = learned,
+                canLearn = canLearn,
+                requiredLevel = skillNodeRequiredLevel(node),
+                active = active,
+                selected = selectedNode == node,
+                accent = accent,
+                onClick = { onSelectNode(node) }
+            )
+        }
+
+        nodeCard(0, Modifier.align(Alignment.TopCenter).fillMaxWidth(.47f).height(82.dp))
+        Row(Modifier.fillMaxWidth().offset(y = 96.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            nodeCard(1, Modifier.width(maxWidth * .47f).height(82.dp))
+            nodeCard(4, Modifier.width(maxWidth * .47f).height(82.dp))
+        }
+        Row(Modifier.fillMaxWidth().offset(y = 192.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            nodeCard(2, Modifier.width(maxWidth * .47f).height(82.dp))
+            nodeCard(5, Modifier.width(maxWidth * .47f).height(82.dp))
+        }
+        Row(Modifier.fillMaxWidth().offset(y = 288.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            nodeCard(3, Modifier.width(maxWidth * .47f).height(82.dp))
+            nodeCard(6, Modifier.width(maxWidth * .47f).height(82.dp))
+        }
+        nodeCard(7, Modifier.align(Alignment.TopCenter).offset(y = 384.dp).fillMaxWidth(.47f).height(82.dp))
+        nodeCard(8, Modifier.align(Alignment.TopCenter).offset(y = 480.dp).fillMaxWidth(.47f).height(82.dp))
+    }
+}
+
+@Composable
+private fun SkillTreeNodeCard(
+    modifier: Modifier,
+    node: Int,
+    definition: SkillDefinition,
+    iconKey: String,
+    learned: Boolean,
+    canLearn: Boolean,
+    requiredLevel: Int,
+    active: Boolean,
+    selected: Boolean,
+    accent: Color,
+    onClick: () -> Unit
+) {
+    val edge = when {
+        selected || active -> Color(0xFFFFE3A0)
+        learned -> Jade
+        canLearn -> accent
+        else -> Color(0xFF526176)
+    }
+    val status = when {
+        active -> "В БОЕВОМ СЛОТЕ"
+        learned && definition.active -> "ИЗУЧЕНА · АКТИВНАЯ"
+        learned -> "ПАССИВНОЕ УСИЛЕНИЕ"
+        canLearn -> "ДОСТУПНО · 1 ОЧКО"
+        else -> "ЗАПЕЧАТАНО · РАНГ $requiredLevel"
+    }
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        color = when {
+            active -> Color(0xF02F554D)
+            learned -> Color(0xED1E403C)
+            canLearn -> Color(0xEC25384F)
+            selected -> Color(0xED28384A)
+            else -> Color(0xE9101B2D)
+        },
+        shape = RoundedCornerShape(15.dp),
+        border = BorderStroke(if (selected || active) 2.dp else 1.dp, edge.copy(alpha = if (learned || canLearn || selected) .96f else .62f)),
+        tonalElevation = if (selected || active) 8.dp else 2.dp,
+        shadowElevation = if (selected || active) 7.dp else 2.dp
+    ) {
+        Row(
+            Modifier.fillMaxSize().padding(horizontal = 7.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val center = Offset(size.width / 2f, size.height / 2f)
+                    drawCircle(Brush.radialGradient(listOf(edge.copy(alpha = .4f), Color.Transparent)), size.minDimension * .49f, center)
+                    drawCircle(edge.copy(alpha = .9f), size.minDimension * .43f, center, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
+                }
+                RpgIcon(iconKey, Modifier.size(39.dp))
+                Surface(
+                    modifier = Modifier.align(Alignment.TopEnd),
+                    color = Color(0xFF101A2B),
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, edge.copy(alpha = .8f))
+                ) {
+                    RpgIcon(when { learned -> "check"; canLearn -> "plus"; else -> "lock" }, Modifier.size(13.dp))
+                }
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    definition.name,
+                    color = if (learned) Color(0xFFFFE7B5) else Color(0xFFE1E7F0),
+                    fontSize = 8.sp,
+                    lineHeight = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2
+                )
+                Text(
+                    status,
+                    color = edge,
+                    fontSize = 6.sp,
+                    lineHeight = 7.sp,
+                    fontWeight = FontWeight.Black,
+                    maxLines = 2
+                )
             }
         }
     }
 }
+
+@Composable
+private fun SkillNodeDetailCard(
+    classIndex: Int,
+    node: Int,
+    levels: List<Int>,
+    points: Int,
+    weapon: Int,
+    activeNode: Int,
+    characterLevel: Int,
+    onLearn: () -> Unit,
+    onSetActive: () -> Unit
+) {
+    val safeNode = node.coerceIn(0, 8)
+    val definition = skillDefinitions[classIndex][safeNode]
+    val learned = levels.getOrElse(classIndex * 9 + safeNode) { 0 } == 1
+    val unlocked = skillNodeUnlocked(classIndex, safeNode, levels, characterLevel)
+    val required = skillNodeRequiredLevel(safeNode)
+    val canLearn = !learned && unlocked && points > 0
+    val canActivate = learned && definition.active && activeNode != safeNode
+    val active = learned && definition.active && activeNode == safeNode
+    val status = when {
+        active -> "ТЕХНИКА ВЫБРАНА ДЛЯ БОЯ"
+        learned && definition.active -> "ИЗУЧЕНО · МОЖНО ПЕРЕКЛЮЧИТЬ"
+        learned -> "ПАССИВНЫЙ ЭФФЕКТ УЖЕ ДЕЙСТВУЕТ"
+        characterLevel < required -> "ТРЕБУЕТСЯ РАНГ $required"
+        !unlocked -> "СНАЧАЛА ИЗУЧИ ПРЕДЫДУЩИЙ УЗЕЛ"
+        points <= 0 -> "НЕТ СВОБОДНЫХ ОЧКОВ НАВЫКА"
+        else -> "УЗЕЛ ГОТОВ К ИЗУЧЕНИЮ"
+    }
+    Surface(
+        color = Color(0xEC172638),
+        shape = RoundedCornerShape(19.dp),
+        border = BorderStroke(1.dp, if (active) Gold else if (learned) Jade.copy(alpha = .72f) else Color(0x6689A2BD)),
+        tonalElevation = 5.dp,
+        shadowElevation = 3.dp
+    ) {
+        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                RpgIcon(skillNodeIcon(classIndex, safeNode), Modifier.size(49.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("УЗЕЛ ${safeNode + 1} · ${if (definition.active) "АКТИВНАЯ ТЕХНИКА" else "ПАССИВНОЕ ИСКУССТВО"}", color = Gold, fontSize = 7.sp, fontWeight = FontWeight.Black, letterSpacing = .7.sp)
+                    Text(definition.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                }
+                Text(if (learned) "ИЗУЧЕНО" else "РАНГ $required", color = if (learned) Jade else Color(0xFFE4C58D), fontSize = 7.sp, fontWeight = FontWeight.Black)
+            }
+            Text(definition.description, color = Color(0xFFD0DCE9), fontSize = 10.sp, lineHeight = 14.sp)
+            if (safeNode == 1 || safeNode == 4) {
+                Text(weaponSkillDescription(classIndex, safeNode, weapon), color = Color(0xFF9FC6D0), fontSize = 9.sp, lineHeight = 12.sp)
+            }
+            Surface(color = Color(0xFF101D2D), shape = RoundedCornerShape(10.dp)) {
+                Text(status, Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 7.dp), color = if (active || learned) Jade else Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
+            }
+            when {
+                canLearn -> Button(
+                    onClick = onLearn,
+                    modifier = Modifier.fillMaxWidth().height(45.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF806039), contentColor = Color.White)
+                ) {
+                    Text("ИЗУЧИТЬ · 1 ОЧКО НАВЫКА", fontSize = 10.sp, fontWeight = FontWeight.Black)
+                }
+                canActivate -> Button(
+                    onClick = onSetActive,
+                    modifier = Modifier.fillMaxWidth().height(45.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF28584D), contentColor = Color.White)
+                ) {
+                    Text("НАЗНАЧИТЬ ОСНОВНОЙ ТЕХНИКОЙ", fontSize = 10.sp, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+    }
+}
+
 
 private val rareArts = listOf("Рассекающий небеса", "Драконий пронзающий удар", "Гром девяти небес", "Печать вечной души")
 private val sectNames = listOf("Секта Кровавого Меча", "Секта Тёмного Пламени", "Дворец Ядовитой Луны", "Павильон Призрачного Клинка", "Секта Лёгкого Копья", "Дворец Нефритового Пика", "Храм Золотого Лотоса", "Обитель Небесного Грома")

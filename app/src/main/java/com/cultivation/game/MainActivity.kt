@@ -1438,10 +1438,10 @@ private fun CharacterArmoryScreen(
     val selected = classIndex.coerceIn(0, classNames.lastIndex)
     val profile = classCombatProfiles[selected]
     val portrait = when (selected) {
-        0 -> R.drawable.class_portrait_blademaster
-        1 -> R.drawable.class_portrait_ironbody
-        2 -> R.drawable.class_portrait_elementalist
-        else -> R.drawable.class_portrait_spiritmystic
+        0 -> R.drawable.character_full_blademaster
+        1 -> R.drawable.character_full_ironbody
+        2 -> R.drawable.character_full_elementalist
+        else -> R.drawable.character_full_spiritmystic
     }
     val gearBySlot = equippedGear.associateBy { it.slot }
     val hpProgress = if (maxHp <= 0) 0f else (currentHp.toFloat() / maxHp).coerceIn(0f, 1f)
@@ -1540,7 +1540,7 @@ private fun CharacterArmoryScreen(
                         painter = painterResource(portrait),
                         contentDescription = "Образ класса: ${classNames[selected]}",
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxWidth(.96f).fillMaxHeight(.86f)
+                        modifier = Modifier.fillMaxWidth(.98f).fillMaxHeight(.92f)
                     )
                     Surface(
                         modifier = Modifier.align(Alignment.BottomCenter),
@@ -1748,7 +1748,7 @@ private fun CharacterClassTile(
                 painter = painterResource(portraitRes),
                 contentDescription = name,
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxWidth().height(102.dp)
+                modifier = Modifier.fillMaxWidth().height(112.dp)
             )
             Text(
                 name,

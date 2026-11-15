@@ -226,12 +226,19 @@ private fun CultivateApp() {
         message = "Изучено умение: ${skillDefinitions[chosenClass][node].name}."
     }
 
-    fun performCombatTurn() {
+    fun performCombatTurn(requestedAction: Int? = null) {
         if (enemyHp <= 0 || playerHp <= 0) return
         val nextSkillCooldowns = skillCooldowns.map { (it - 1).coerceAtLeast(0) }
         val techniqueCd = (techniqueCooldown - 1).coerceAtLeast(0)
         val weaponCd = (weaponCooldown - 1).coerceAtLeast(0)
-        val action = rotationOrder.firstOrNull { candidate ->
+        val selectedManualAction = requestedAction?.takeIf { candidate ->
+            chosenClass in 0..3 && candidate in 0..8 &&
+                skillTreeLevels[chosenClass * 9 + candidate] == 1 &&
+                skillDefinitions[chosenClass][candidate].active &&
+                nextSkillCooldowns[candidate] == 0
+        }
+        if (requestedAction != null && selectedManualAction == null) return
+        val action = selectedManualAction ?: if (requestedAction == null) rotationOrder.firstOrNull { candidate ->
             when {
                 candidate in 0..8 -> chosenClass >= 0 &&
                     skillTreeLevels[chosenClass * 9 + candidate] == 1 &&
@@ -241,7 +248,7 @@ private fun CultivateApp() {
                 candidate == 10 -> weaponCd == 0 && equippedWeapon.hasActiveAbility
                 else -> false
             }
-        }
+        } else null
         val actionBonus = when {
             action != null && action in 0..8 -> activeSkillDamage[chosenClass] + classProfile.skillPower
             action == 9 -> techniqueDamage
@@ -825,6 +832,51 @@ private fun CultivateApp() {
                             enabled = enemyHp > 0 && playerHp > 0,
                             selected = autoBattle
                         ) { autoBattle = !autoBattle }
+                    }
+
+                    if (chosenClass in 0..3) {
+                        val availableCombatSkills = (0..8).filter { node ->
+                            skillTreeLevels[chosenClass * 9 + node] == 1 &&
+                                skillDefinitions[chosenClass][node].active
+                        }
+                        if (availableCombatSkills.isNotEmpty()) {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("ИСКУССТВА БОЯ", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                                Spacer(Modifier.weight(1f))
+                                Text("НАЖМИ ДЛЯ ПРИМЕНЕНИЯ", color = Jade, fontSize = 7.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Row(
+                                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(7.dp)
+                            ) {
+                                availableCombatSkills.forEach { node ->
+                                    BattleSkillCard(
+                                        name = skillDefinitions[chosenClass][node].name,
+                                        iconRes = battleSkillDrawable(chosenClass),
+                                        cooldown = skillCooldowns[node],
+                                        enabled = enemyHp > 0 && playerHp > 0 && !autoBattle && skillCooldowns[node] == 0,
+                                        selected = activeSkillNode == node
+                                    ) {
+                                        performCombatTurn(node)
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Surface(
+                            color = Color(0xCC17243A),
+                            shape = MaterialTheme.shapes.large,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = .45f))
+                        ) {
+                            Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                RpgIcon("skills", Modifier.size(28.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Выбери класс и изучи активные техники, чтобы открывать ручное применение в бою.", color = Color(0xFFD6E0EC), fontSize = 9.sp)
+                            }
+                        }
                     }
 
                     if (playerHp <= 0) {
@@ -3037,6 +3089,101 @@ private fun BattleHealthPanel(
                 color = if (isDefeated) Color(0xFFB0A8A8) else Color(0xFFD7E1E9),
                 fontSize = 7.sp,
                 fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+private fun battleSkillDrawable(classIndex: Int): Int = when (classIndex.coerceIn(0, 3)) {
+    0 -> R.drawable.battle_skill_blade
+    1 -> R.drawable.battle_skill_iron
+    2 -> R.drawable.battle_skill_elemental
+    else -> R.drawable.battle_skill_spirit
+}
+
+@Composable
+private fun BattleSkillCard(
+    name: String,
+    iconRes: Int,
+    cooldown: Int,
+    enabled: Boolean,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.width(104.dp).height(112.dp).clickable(enabled = enabled, onClick = onClick),
+        color = when {
+            !enabled && cooldown > 0 -> Color(0xE51A2332)
+            selected -> Color(0xE33D4B50)
+            enabled -> Color(0xE522354B)
+            else -> Color(0xE51B293B)
+        },
+        shape = MaterialTheme.shapes.large,
+        border = androidx.compose.foundation.BorderStroke(
+            if (selected) 2.dp else 1.dp,
+            when {
+                cooldown > 0 -> Color(0xFF59677B)
+                selected -> Color(0xFFFFDF9B)
+                enabled -> Color(0xFF82D9C0)
+                else -> Color(0xFF45546A)
+            }
+        ),
+        tonalElevation = if (selected) 7.dp else 3.dp,
+        shadowElevation = if (enabled) 4.dp else 1.dp
+    ) {
+        Column(
+            Modifier.fillMaxSize().padding(6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
+                Image(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit,
+                    alpha = if (cooldown > 0) .48f else 1f
+                )
+                if (cooldown > 0) {
+                    Surface(
+                        color = Color(0xE9101724),
+                        shape = CircleShape,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9AA9BD))
+                    ) {
+                        Text(
+                            cooldown.toString(),
+                            Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+                }
+            }
+            Text(
+                name,
+                color = if (enabled) Color(0xFFFFE8B6) else Color(0xFFAAB6C6),
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 2,
+                minLines = 2,
+                lineHeight = 9.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            Text(
+                when {
+                    cooldown > 0 -> "ПЕРЕЗАРЯДКА"
+                    enabled -> "АКТИВИРОВАТЬ"
+                    else -> "НЕДОСТУПНО"
+                },
+                color = when {
+                    cooldown > 0 -> Color(0xFF9DAABD)
+                    enabled -> Jade
+                    else -> Color(0xFF78879A)
+                },
+                fontSize = 6.sp,
+                fontWeight = FontWeight.Black,
                 maxLines = 1
             )
         }

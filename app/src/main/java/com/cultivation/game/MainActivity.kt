@@ -1594,6 +1594,11 @@ private fun CharacterArmoryScreen(
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.fillMaxWidth(.98f).fillMaxHeight(.92f)
                     )
+                    CharacterEquipmentOverlay(
+                        weapon = equippedWeapon,
+                        gearBySlot = gearBySlot,
+                        modifier = Modifier.fillMaxWidth(.98f).fillMaxHeight(.92f)
+                    )
                     Surface(
                         modifier = Modifier.align(Alignment.BottomCenter),
                         color = Color(0xE91A2A40),
@@ -1712,6 +1717,137 @@ private fun CharacterArmoryScreen(
                     onClick = { onSelectClass(index) }
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun CharacterEquipmentOverlay(
+    weapon: WeaponDefinition,
+    gearBySlot: Map<GearSlot, GearDefinition>,
+    modifier: Modifier = Modifier
+) {
+    val armorColor = gearBySlot[GearSlot.ARMOR]?.let { weaponRarityColor(it.rarity) }
+    val helmetColor = gearBySlot[GearSlot.HELMET]?.let { weaponRarityColor(it.rarity) }
+    val ringColor = gearBySlot[GearSlot.RING]?.let { weaponRarityColor(it.rarity) }
+    val artifactColor = gearBySlot[GearSlot.ARTIFACT]?.let { weaponRarityColor(it.rarity) }
+    val weaponColor = weaponRarityColor(weapon.rarity)
+    val transition = rememberInfiniteTransition(label = "equipped-relic-glow")
+    val glow by transition.animateFloat(
+        initialValue = .48f,
+        targetValue = .92f,
+        animationSpec = infiniteRepeatable(tween(1250), RepeatMode.Reverse),
+        label = "equipped-relic-pulse"
+    )
+
+    Canvas(modifier) {
+        val w = size.width
+        val h = size.height
+        fun point(x: Float, y: Float) = Offset(w * x, h * y)
+        val thin = 1.15.dp.toPx()
+        val bold = 2.1.dp.toPx()
+        val gold = Color(0xFFFFE2A0)
+
+        // Оружие рисуется отдельным слоем: его форма и цвет зависят от реально надетого предмета.
+        when (weapon.type) {
+            0 -> {
+                val blade = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(w * .805f, h * .245f)
+                    lineTo(w * .875f, h * .285f)
+                    lineTo(w * .825f, h * .665f)
+                    lineTo(w * .785f, h * .625f)
+                    close()
+                }
+                drawPath(blade, Brush.linearGradient(listOf(Color.White, weaponColor, Color(0xFF34445B)), point(.79f,.25f), point(.87f,.68f)))
+                drawPath(blade, gold.copy(alpha = glow), style = androidx.compose.ui.graphics.drawscope.Stroke(thin))
+                drawLine(gold, point(.765f,.63f), point(.855f,.70f), bold)
+                drawLine(Color(0xFF9A633E), point(.815f,.67f), point(.765f,.79f), bold * 2.2f)
+            }
+            1 -> {
+                drawLine(Color(0xFF9D7145), point(.845f,.28f), point(.805f,.78f), bold * 1.5f)
+                val spear = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(w*.845f,h*.20f); lineTo(w*.895f,h*.30f); lineTo(w*.84f,h*.39f); lineTo(w*.82f,h*.31f); close()
+                }
+                drawPath(spear, Brush.linearGradient(listOf(Color.White, weaponColor, Color(0xFF76513B)), point(.82f,.2f), point(.9f,.4f)))
+                drawPath(spear, gold.copy(alpha = glow), style = androidx.compose.ui.graphics.drawscope.Stroke(thin))
+                drawLine(gold, point(.79f,.66f), point(.86f,.68f), bold)
+            }
+            2 -> {
+                drawLine(Color(0xFF9C704A), point(.83f,.30f), point(.79f,.79f), bold * 2.2f)
+                drawCircle(weaponColor.copy(alpha = .24f * glow), w*.07f, point(.84f,.25f))
+                drawCircle(weaponColor, w*.045f, point(.84f,.25f))
+                drawCircle(gold, w*.045f, point(.84f,.25f), style = androidx.compose.ui.graphics.drawscope.Stroke(bold))
+                drawLine(gold, point(.79f,.79f), point(.86f,.79f), bold)
+            }
+            else -> {
+                val fist = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(w*.77f,h*.48f); lineTo(w*.88f,h*.45f); lineTo(w*.94f,h*.53f)
+                    lineTo(w*.91f,h*.68f); lineTo(w*.82f,h*.72f); lineTo(w*.76f,h*.63f); close()
+                }
+                drawPath(fist, Brush.linearGradient(listOf(weaponColor, Color(0xFF263B50), weaponColor.copy(alpha=.8f)), point(.77f,.46f), point(.93f,.7f)))
+                drawPath(fist, gold.copy(alpha=glow), style=androidx.compose.ui.graphics.drawscope.Stroke(bold))
+                drawCircle(Color.White.copy(alpha=.7f*glow), w*.018f, point(.85f,.55f))
+            }
+        }
+
+        // Нагрудник и наплечники появляются только при наличии надетой брони.
+        armorColor?.let { color ->
+            val leftShoulder = androidx.compose.ui.graphics.Path().apply {
+                moveTo(w*.27f,h*.365f); lineTo(w*.405f,h*.355f); lineTo(w*.445f,h*.455f)
+                lineTo(w*.385f,h*.515f); lineTo(w*.295f,h*.475f); close()
+            }
+            val rightShoulder = androidx.compose.ui.graphics.Path().apply {
+                moveTo(w*.595f,h*.355f); lineTo(w*.73f,h*.365f); lineTo(w*.705f,h*.475f)
+                lineTo(w*.615f,h*.515f); lineTo(w*.555f,h*.455f); close()
+            }
+            val chest = androidx.compose.ui.graphics.Path().apply {
+                moveTo(w*.385f,h*.405f); lineTo(w*.5f,h*.445f); lineTo(w*.615f,h*.405f)
+                lineTo(w*.675f,h*.565f); lineTo(w*.61f,h*.665f); lineTo(w*.5f,h*.705f)
+                lineTo(w*.39f,h*.665f); lineTo(w*.325f,h*.565f); close()
+            }
+            val armorBrush = Brush.linearGradient(
+                listOf(color.copy(alpha=.92f), Color(0xFF18283B).copy(alpha=.96f), color.copy(alpha=.78f)),
+                point(.30f,.38f), point(.70f,.68f)
+            )
+            drawPath(leftShoulder, armorBrush)
+            drawPath(rightShoulder, armorBrush)
+            drawPath(chest, armorBrush)
+            drawPath(leftShoulder, gold.copy(alpha=glow), style=androidx.compose.ui.graphics.drawscope.Stroke(bold))
+            drawPath(rightShoulder, gold.copy(alpha=glow), style=androidx.compose.ui.graphics.drawscope.Stroke(bold))
+            drawPath(chest, gold.copy(alpha=glow), style=androidx.compose.ui.graphics.drawscope.Stroke(bold))
+            drawLine(gold.copy(alpha=.8f), point(.5f,.46f), point(.5f,.66f), thin)
+            drawCircle(Color(0xFF10243A), w*.047f, point(.5f,.535f))
+            drawCircle(color, w*.033f, point(.5f,.535f))
+            drawCircle(Color.White.copy(alpha=.75f*glow), w*.012f, point(.49f,.52f))
+        }
+
+        // Шлем меняет силуэт над головой, не перекрывая лицо персонажа.
+        helmetColor?.let { color ->
+            val crown = androidx.compose.ui.graphics.Path().apply {
+                moveTo(w*.365f,h*.165f); lineTo(w*.405f,h*.055f); lineTo(w*.465f,h*.105f)
+                lineTo(w*.5f,h*.025f); lineTo(w*.535f,h*.105f); lineTo(w*.595f,h*.055f)
+                lineTo(w*.635f,h*.165f); lineTo(w*.59f,h*.205f); lineTo(w*.41f,h*.205f); close()
+            }
+            drawPath(crown, Brush.linearGradient(listOf(color, Color(0xFF19263A), color.copy(alpha=.88f)), point(.36f,.05f), point(.64f,.21f)))
+            drawPath(crown, gold.copy(alpha=glow), style=androidx.compose.ui.graphics.drawscope.Stroke(bold))
+            drawCircle(color, w*.027f, point(.5f,.145f))
+            drawCircle(gold, w*.027f, point(.5f,.145f), style=androidx.compose.ui.graphics.drawscope.Stroke(thin))
+        }
+
+        // Кольцо и артефакт показываются как отдельные магические детали надетых предметов.
+        ringColor?.let { color ->
+            drawCircle(color.copy(alpha=.18f*glow), w*.055f, point(.295f,.585f))
+            drawCircle(color, w*.035f, point(.295f,.585f), style=androidx.compose.ui.graphics.drawscope.Stroke(bold))
+            drawCircle(gold.copy(alpha=glow), w*.012f, point(.295f,.585f))
+        }
+        artifactColor?.let { color ->
+            val center = point(.69f,.425f)
+            drawCircle(color.copy(alpha=.17f*glow), w*.075f, center)
+            drawCircle(color.copy(alpha=.9f), w*.055f, center, style=androidx.compose.ui.graphics.drawscope.Stroke(bold))
+            drawCircle(gold.copy(alpha=glow), w*.032f, center, style=androidx.compose.ui.graphics.drawscope.Stroke(thin))
+            drawLine(gold.copy(alpha=glow), point(.69f,.34f), point(.69f,.51f), thin)
+            drawLine(gold.copy(alpha=glow), point(.625f,.425f), point(.755f,.425f), thin)
+            drawCircle(Color.White.copy(alpha=.85f*glow), w*.012f, center)
         }
     }
 }

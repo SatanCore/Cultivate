@@ -108,7 +108,7 @@ private fun CultivateApp() {
     var pendingWorldBossId by remember { mutableStateOf(prefs.getString("pending_world_boss", "") ?: "") }
     var pendingWorldEncounterId by remember { mutableStateOf(prefs.getString("pending_world_encounter", "") ?: "") }
     var worldBossTurnCount by remember { mutableIntStateOf(prefs.getInt("world_boss_turn_count", 0).coerceAtLeast(0)) }
-    var guardPrepared by remember { mutableStateOf(false) }
+    var guardPrepared by remember { mutableStateOf(prefs.getBoolean("battle_guard_prepared", false)) }
     var selectedLocationId by remember { mutableStateOf(prefs.getString("world_selected_location", "mortal_valley") ?: "mortal_valley") }
     var ownedPetIds by remember { mutableStateOf(prefs.getString("owned_pet_ids", "jade_fox") ?: "jade_fox") }
     var activePetId by remember { mutableStateOf(prefs.getString("active_pet_id", "jade_fox") ?: "jade_fox") }
@@ -549,6 +549,12 @@ private fun CultivateApp() {
         if (selectedWorldIndex < unlockedWorldIndex) selectedWorldIndex = unlockedWorldIndex
     }
 
+    LaunchedEffect(pendingWorldBossId, pendingWorldEncounterId, enemyHp, playerHp) {
+        if ((pendingWorldBossId.isBlank() && pendingWorldEncounterId.isBlank()) || enemyHp <= 0 || playerHp <= 0) {
+            guardPrepared = false
+        }
+    }
+
     LaunchedEffect(selectedWorldIndex) {
         if (worldLocationCatalog.none { it.id == selectedLocationId && it.worldIndex == selectedWorldIndex }) {
             selectedLocationId = worldLocationCatalog.firstOrNull { it.worldIndex == selectedWorldIndex }?.id ?: "mortal_valley"
@@ -572,7 +578,7 @@ private fun CultivateApp() {
         }
     }
 
-    LaunchedEffect(qi, stones, stage, selectedWorldIndex, todayKey, explorationEnergy, explorationProgress.toList(), worldFragments.toList(), defeatedWorldBossIds, pendingWorldBossId, pendingWorldEncounterId, worldBossTurnCount, selectedLocationId, abodeLevel, ironOre, spiritHerbs, spiritWater, qiPills, bodyPills, bodyPillBonus, forgeTemper, alchemyRank, gardenReadyAt, springReadyAt, ownedPetIds, activePetId, petLevels.toList(), petBondXp.toList(), petAscensions.toList(), petEssence, petCores, petPity, dailyWins, dailyGardenCollected, dailyMeditated, dailyClanDonated, dailyClaims, clanReputation, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, ownedGearIds, equippedGearIds.toList(), questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
+    LaunchedEffect(qi, stones, stage, selectedWorldIndex, todayKey, explorationEnergy, explorationProgress.toList(), worldFragments.toList(), defeatedWorldBossIds, pendingWorldBossId, pendingWorldEncounterId, worldBossTurnCount, guardPrepared, selectedLocationId, abodeLevel, ironOre, spiritHerbs, spiritWater, qiPills, bodyPills, bodyPillBonus, forgeTemper, alchemyRank, gardenReadyAt, springReadyAt, ownedPetIds, activePetId, petLevels.toList(), petBondXp.toList(), petAscensions.toList(), petEssence, petCores, petPity, dailyWins, dailyGardenCollected, dailyMeditated, dailyClanDonated, dailyClaims, clanReputation, petLevel, bossLevel, enemyHp, playerHp, wins, selectedTechnique, swordLevel, lotusLevel, foxLevel, chosenClass, skillPoints, skillTreeLevels.toList(), chosenSect, chosenAlliance, rareSkill, selectedWeapon, activeSkillNode, equippedWeaponId, ownedWeaponIds, ownedGearIds, equippedGearIds.toList(), questClaimed, storyChapter, skillMaterials.toList(), autoBattle, rotationOrder.toList()) {
         prefs.edit()
             .putInt("qi", qi)
             .putInt("stones", stones)
@@ -585,6 +591,7 @@ private fun CultivateApp() {
             .putString("pending_world_boss", pendingWorldBossId)
             .putString("pending_world_encounter", pendingWorldEncounterId)
             .putInt("world_boss_turn_count", worldBossTurnCount)
+            .putBoolean("battle_guard_prepared", guardPrepared)
             .putString("world_selected_location", selectedLocationId)
             .putString("owned_pet_ids", ownedPetIds)
             .putString("active_pet_id", activePetId)
@@ -1143,6 +1150,7 @@ private fun CultivateApp() {
                         enemyTitle = activeWorldBoss?.title ?: activeWorldEncounter?.enemyName.orEmpty(),
                         incomingAbilityName = incomingAbilityName,
                         telegraphActive = telegraphActive,
+                        guardPrepared = guardPrepared,
                         telegraphAccent = enemyAccent
                     )
 
@@ -3491,6 +3499,7 @@ private fun BattleScene(
     enemyTitle: String,
     incomingAbilityName: String,
     telegraphActive: Boolean,
+    guardPrepared: Boolean,
     telegraphAccent: Color
 ) {
     val transition = rememberInfiniteTransition(label = "cinematic-battle")
@@ -3696,6 +3705,23 @@ private fun BattleScene(
                     }
                 }
             }
+        }
+
+        if (guardPrepared && playerHp > 0) {
+            Image(
+                painter = painterResource(id = R.drawable.battle_guard_barrier),
+                contentDescription = "Защитная стойка активна",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 0.dp, bottom = 5.dp)
+                    .size(160.dp)
+                    .graphicsLayer {
+                        alpha = .46f + pulse * .42f
+                        scaleX = .94f + pulse * .07f
+                        scaleY = .94f + pulse * .07f
+                    }
+            )
         }
 
         Image(

@@ -37,6 +37,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+private val ExpeditionGold = Color(0xFFE5BD72)
+private val ExpeditionJade = Color(0xFF78C6A3)
+
 data class DaoWorldInfo(
     val index: Int,
     val title: String,
@@ -218,7 +221,7 @@ fun WorldExplorationScreen(
             ExplorationMetric("МОЩЬ", combatPower.toString(), "текущая", Modifier.weight(1f), worldAccent)
         }
 
-        Text("ТЕРРИТОРИИ И ИСПЫТАНИЯ", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
+        Text("ТЕРРИТОРИИ И ИСПЫТАНИЯ", color = ExpeditionGold, fontSize = 10.sp, fontWeight = FontWeight.Black)
         locations.forEach { location ->
             val index = worldLocationCatalog.indexOfFirst { it.id == location.id }.coerceAtLeast(0)
             val progress = locationProgress.getOrElse(index) { 0 }.coerceIn(0, location.progressGoal)
@@ -269,7 +272,7 @@ fun WorldExplorationScreen(
                 Text(
                     if (selectedLocation.isBoss) "Победа над хранителем: фрагменты мира ×5 · ранг стража ${selectedLocation.bossRank}"
                     else "Награда за поход: ${selectedLocation.resourceLabel} ×${selectedLocation.resourceAmount} · прогресс ${selectedProgress}/${selectedLocation.progressGoal}",
-                    color = Jade,
+                    color = ExpeditionJade,
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -289,7 +292,7 @@ fun WorldExplorationScreen(
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("СОКРОВИЩНИЦА МИРА", color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        Text("СОКРОВИЩНИЦА МИРА", color = ExpeditionGold, fontSize = 8.sp, fontWeight = FontWeight.Black)
                         Text("Фрагменты можно обменять на редкие материалы развития.", color = Color(0xFFC6D2E2), fontSize = 8.sp)
                     }
                     Button(
@@ -325,7 +328,7 @@ private fun WorldLocationCard(
         color = Color(0xFF17263A),
         shape = MaterialTheme.shapes.large,
         border = BorderStroke(if (selected) 2.dp else 1.dp, when {
-            completed -> Jade.copy(alpha = .8f)
+            completed -> ExpeditionJade.copy(alpha = .8f)
             selected -> accent
             locked -> Color(0x557B879B)
             else -> accent.copy(alpha = .35f)
@@ -351,12 +354,12 @@ private fun WorldLocationCard(
             }
             Spacer(Modifier.width(9.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(location.title, color = if (completed) Jade else Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                Text(location.title, color = if (completed) ExpeditionJade else Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1)
                 Text(location.subtitle, color = Color(0xFFC7D4E3), fontSize = 8.sp, maxLines = 1)
                 LinearProgressIndicator(
                     progress = { value },
                     modifier = Modifier.fillMaxWidth().height(4.dp),
-                    color = if (completed) Jade else accent,
+                    color = if (completed) ExpeditionJade else accent,
                     trackColor = Color(0xFF344459)
                 )
                 Text(
@@ -368,13 +371,13 @@ private fun WorldLocationCard(
                         location.isBoss -> "ХРАНИТЕЛЬ · РАНГ ${location.bossRank}"
                         else -> "ИССЛЕДОВАНО · $progress / ${location.progressGoal}"
                     },
-                    color = if (completed) Jade else if (locked) Color(0xFFE4C58B) else accent,
+                    color = if (completed) ExpeditionJade else if (locked) Color(0xFFE4C58B) else accent,
                     fontSize = 7.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1
                 )
             }
-            Text(if (completed) "✓" else if (locked) "✦" else "›", color = if (completed) Jade else accent, fontSize = 23.sp, fontWeight = FontWeight.Black)
+            Text(if (completed) "✓" else if (locked) "✦" else "›", color = if (completed) ExpeditionJade else accent, fontSize = 23.sp, fontWeight = FontWeight.Black)
         }
     }
 }

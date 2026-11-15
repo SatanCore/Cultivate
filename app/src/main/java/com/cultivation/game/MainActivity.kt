@@ -302,13 +302,7 @@ private fun CultivateApp() {
                 3 -> 14 + bossLevel * 2
                 else -> 0
             }
-            val abilityName = when (activeWorldBoss?.worldIndex) {
-                0 -> "Рёв Каменного Тигра"
-                1 -> "Корни Нефритового Пика"
-                2 -> "Приговор Небесного Дракона"
-                3 -> "Разлом Пустоты"
-                else -> ""
-            }
+            val abilityName = activeWorldBoss?.let { worldBossAbilityName(it.worldIndex) }.orEmpty()
             val eliteBonus = if (eliteStrike) activeWorldEncounter?.enemyDamageBonus ?: 0 else 0
             val encounterBaseDamage = activeWorldEncounter?.let { 8 + it.recommendedPower / 90 + it.requiredStage * 2 } ?: (12 + bossLevel * 3)
             var incoming = (encounterBaseDamage + (if (specialStrike) specialBonus else 0) + eliteBonus - classDefense).coerceAtLeast(2)
@@ -1107,6 +1101,11 @@ private fun CultivateApp() {
             }
 
             if (selectedMenu == 2) {
+                val incomingAbilityName = activeWorldBoss?.let { worldBossAbilityName(it.worldIndex) }
+                    ?: activeWorldEncounter?.takeIf { it.isElite }?.eliteAbilityName.orEmpty()
+                // The enemy's third response is telegraphed before the player's third action.
+                val telegraphActive = activeWorldOpponent != null && incomingAbilityName.isNotBlank() &&
+                    enemyHp > 0 && playerHp > 0 && (worldBossTurnCount + 1) % 3 == 0
                 val arenaBackgroundRes = activeWorldOpponent?.let { daoWorldCatalog[it.worldIndex].backgroundRes } ?: R.drawable.lunar_harbor_bg
                 val enemyAccent = activeWorldOpponent?.let { daoWorldCatalog[it.worldIndex].accent } ?: Color(0xFFE47A73)
                 val arenaTitle = activeWorldBoss?.title ?: activeWorldEncounter?.enemyName ?: "Страж святилища · ранг $bossLevel"
@@ -1131,7 +1130,10 @@ private fun CultivateApp() {
                         enemyPortraitRes = activeWorldBoss?.battlePortraitRes ?: activeWorldEncounter?.enemyPortraitRes ?: R.drawable.boss_mountain_lord,
                         arenaBackgroundRes = arenaBackgroundRes,
                         enemyAccent = enemyAccent,
-                        enemyTitle = activeWorldBoss?.title ?: activeWorldEncounter?.enemyName.orEmpty()
+                        enemyTitle = activeWorldBoss?.title ?: activeWorldEncounter?.enemyName.orEmpty(),
+                        incomingAbilityName = incomingAbilityName,
+                        telegraphActive = telegraphActive,
+                        telegraphAccent = enemyAccent
                     )
 
                     Row(
@@ -3458,7 +3460,10 @@ private fun BattleScene(
     enemyPortraitRes: Int,
     arenaBackgroundRes: Int,
     enemyAccent: Color,
-    enemyTitle: String
+    enemyTitle: String,
+    incomingAbilityName: String,
+    telegraphActive: Boolean,
+    telegraphAccent: Color
 ) {
     val transition = rememberInfiniteTransition(label = "cinematic-battle")
     val impactProgress = remember { Animatable(1f) }
@@ -3613,6 +3618,56 @@ private fun BattleScene(
                 barColor = enemyAccent,
                 isDefeated = enemyHp <= 0
             )
+        }
+
+        if (telegraphActive && enemyHp > 0 && playerHp > 0) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 62.dp)
+                    .graphicsLayer {
+                        alpha = (.76f + pulse * .22f).coerceIn(0f, 1f)
+                        scaleX = 1f + pulse * .012f
+                        scaleY = 1f + pulse * .012f
+                    },
+                color = Color(0xEE3B1B2B),
+                shape = MaterialTheme.shapes.large,
+                border = BorderStroke(1.dp, telegraphAccent.copy(alpha = .94f)),
+                shadowElevation = 10.dp
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.battle_telegraph_warning),
+                        contentDescription = "Предупреждение об особой атаке",
+                        modifier = Modifier.size(27.dp)
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Text(
+                            "ОСОБАЯ АТАКА ГОТОВИТСЯ",
+                            color = Color(0xFFFFD98C),
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        Text(
+                            incomingAbilityName,
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
+                        )
+                        Text(
+                            "Активный навык снизит ответный урон",
+                            color = Color(0xFFF3D9D2),
+                            fontSize = 7.sp,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
         }
 
         Image(
@@ -4910,6 +4965,14 @@ private fun worldIndexForStage(stage: Int): Int = when {
     stage >= 13 -> 2
     stage >= 7 -> 1
     else -> 0
+}
+
+private fun worldBossAbilityName(worldIndex: Int): String = when (worldIndex) {
+    0 -> "Рёв Каменного Тигра"
+    1 -> "Корни Нефритового Пика"
+    2 -> "Приговор Небесного Дракона"
+    3 -> "Разлом Пустоты"
+    else -> ""
 }
 
 private fun worldLandscapeResource(index: Int): Int = when (index.coerceIn(0, 3)) {

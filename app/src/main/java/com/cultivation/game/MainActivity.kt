@@ -1873,14 +1873,18 @@ private fun HomeResource(symbol: String, label: String, value: String) {
 @Composable
 private fun HomeHotspot(title: String, subtitle: String, symbol: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
-        modifier = modifier.clickable(onClick = onClick),
-        color = Color(0xE91A2740), contentColor = Color.White,
+        modifier = modifier.width(76.dp).height(78.dp).clickable(onClick = onClick),
+        color = Color(0xC9101B2E), contentColor = Color.White,
         shape = MaterialTheme.shapes.large,
-        border = BorderStroke(1.dp, Gold.copy(alpha = .42f)),
-        tonalElevation = 9.dp, shadowElevation = 7.dp
+        border = BorderStroke(0.8.dp, Gold.copy(alpha = .28f)),
+        tonalElevation = 3.dp, shadowElevation = 4.dp
     ) {
-        Row(Modifier.padding(horizontal = 7.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(48.dp, 42.dp), contentAlignment = Alignment.Center) {
+        Column(
+            Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 3.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.fillMaxSize()) {
                     drawCircle(
                         Brush.radialGradient(listOf(Color(0x6689D9C5), Color(0x001A2D42))),
@@ -1890,16 +1894,15 @@ private fun HomeHotspot(title: String, subtitle: String, symbol: String, modifie
                 }
                 Image(
                     painter = painterResource(townBuildingResource(symbol)),
-                    contentDescription = "$title — иллюстрация здания",
+                    contentDescription = "$title — $subtitle",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Fit
                 )
             }
-            Spacer(Modifier.width(5.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Text(title, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                Text(subtitle, color = Color(0xFFE3C98F), fontSize = 8.sp, maxLines = 2, lineHeight = 10.sp)
-            }
+            Text(
+                title, color = Color(0xFFFFE8B5), fontSize = 8.sp,
+                fontWeight = FontWeight.Bold, maxLines = 1
+            )
         }
     }
 }
@@ -1910,8 +1913,8 @@ private fun HomeNavItem(title: String, symbol: String, target: Int, onNavigate: 
         Modifier.clickable { onNavigate(target) }.padding(horizontal = 3.dp, vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        RpgIcon(symbol, Modifier.size(39.dp))
-        Text(title, color = Color(0xFFF1E6D0), fontSize = 9.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        RpgIcon(symbol, Modifier.size(29.dp))
+        Text(title, color = Color(0xFFE8D9B9), fontSize = 8.sp, fontWeight = FontWeight.Medium, maxLines = 1)
     }
 }
 

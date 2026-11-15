@@ -15,3 +15,15 @@
 
 ## Контроль
 После добавления фонов выполнить GitHub Actions `assembleDebug`, затем проверить кадрирование на реальном устройстве. Архив исходников пока не загружен в GitHub; этот файл фиксирует схему импорта.
+
+
+## Отдельные персонажи (подготовлены, ожидают загрузки)
+
+В архиве `Cultivate_Character_Cutouts_Import.zip` находятся восемь PNG с прозрачным фоном. После загрузки в `app/src/main/res/drawable-nodpi/characters/` можно использовать такие ресурсы:
+
+- `blademaster_male.png`, `blademaster_female.png`
+- `ironbody_male.png`, `ironbody_female.png`
+- `elementalist_male.png`, `elementalist_female.png`
+- `spiritmystic_male.png`, `spiritmystic_female.png`
+
+Перед ссылкой из Kotlin необходимо добавить изображения в Android-проект и объявить ресурсные ссылки; старые четыре портрета пока остаются резервным вариантом. PNG вырезаны из концепт-листа автоматически, поэтому требуется визуальная проверка краёв на устройстве.

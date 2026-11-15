@@ -5104,209 +5104,86 @@ private fun SkillTreeSection(
     onLearn: (Int) -> Unit,
     onSetActive: (Int) -> Unit
 ) {
-    if (title.isNotBlank()) {
-        Text(title, color = Gold, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-    }
     val iconSets = listOf(
         listOf("weapon", "critical", "shield", "arena", "spear", "skills", "health", "artifact", "portal"),
         listOf("armor", "shield", "health", "gauntlet", "helmet", "critical", "shield", "artifact", "tower"),
         listOf("fire", "ice", "lightning", "staff", "fire", "ice", "lightning", "portal", "artifact"),
         listOf("spiritmystic", "health", "pets", "artifact", "lotus", "shield", "skills", "lotus", "portal")
     )
-    val classTint = listOf(
-        Color(0xFFFFD58B),
-        Color(0xFFB9D5A7),
-        Color(0xFFFFA66F),
-        Color(0xFFC6A5FF)
-    )[classIndex.coerceIn(0, 3)]
-
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        nodes.forEachIndexed { position, node ->
-            val ix = classIndex * 9 + node
-            val learned = levels.getOrElse(ix) { 0 } == 1
-            val requiredLevel = when (node) { 0 -> 1; 1, 4 -> 3; 2, 5 -> 6; 3, 6 -> 9; 7 -> 13; 8 -> 18; else -> 1 }
-            val unlocked = skillNodeUnlocked(classIndex, node, levels, characterLevel)
-            val def = skillDefinitions[classIndex][node]
-            val desc = if (node == 1 || node == 4) weaponSkillDescription(classIndex, node, weapon) else def.description
-            val iconKey = iconSets[classIndex.coerceIn(0, 3)][node]
-            val canLearn = !learned && unlocked && points > 0 && characterLevel >= requiredLevel
-            val canActivate = learned && def.active && activeNode != node
-            val canInteract = canLearn || canActivate
-            val active = learned && activeNode == node && def.active
-            val borderColor = when {
-                active -> Color(0xFFFFD98C)
-                learned -> Jade.copy(alpha = .85f)
-                canLearn -> classTint.copy(alpha = .9f)
-                else -> Color(0xFF536176)
-            }
-            val panelColor = when {
-                active -> Color(0xE52B514D)
-                learned -> Color(0xE51E3E3B)
-                canLearn -> Color(0xE5233854)
-                else -> Color(0xD9162234)
-            }
-            val levelProgress = if (learned) 1f else
-                (characterLevel.toFloat() / requiredLevel.coerceAtLeast(1)).coerceIn(0f, 1f)
-
+    val tint = listOf(Color(0xFFFFD58B), Color(0xFFB9D5A7), Color(0xFFFFA66F), Color(0xFFC6A5FF))[classIndex.coerceIn(0, 3)]
+    val rows = nodes.chunked(3)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (title.isNotBlank()) {
+            Text(title.uppercase(), color = tint, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+        }
+        rows.forEachIndexed { rowIndex, rowNodes ->
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    Modifier.width(24.dp).height(124.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Canvas(Modifier.fillMaxSize()) {
-                        val x = size.width / 2f
-                        drawLine(
-                            brush = Brush.verticalGradient(
-                                listOf(classTint.copy(alpha = .12f), classTint.copy(alpha = .72f), classTint.copy(alpha = .12f))
-                            ),
-                            start = Offset(x, 0f),
-                            end = Offset(x, size.height),
-                            strokeWidth = 2.dp.toPx()
-                        )
-                        drawCircle(Color(0xFF101A2B), 7.dp.toPx(), Offset(x, size.height * .5f))
-                        drawCircle(borderColor, 5.dp.toPx(), Offset(x, size.height * .5f))
-                        drawCircle(Color(0xFFFFE9B2).copy(alpha = if (learned) .9f else .35f), 2.dp.toPx(), Offset(x, size.height * .5f))
+                rowNodes.forEach { node ->
+                    val ix = classIndex * 9 + node
+                    val learned = levels.getOrElse(ix) { 0 } == 1
+                    val required = when (node) { 0 -> 1; 1, 4 -> 3; 2, 5 -> 6; 3, 6 -> 9; 7 -> 13; 8 -> 18; else -> 1 }
+                    val unlocked = skillNodeUnlocked(classIndex, node, levels, characterLevel)
+                    val def = skillDefinitions[classIndex][node]
+                    val canLearn = !learned && unlocked && points > 0 && characterLevel >= required
+                    val canActivate = learned && def.active && activeNode != node
+                    val active = learned && def.active && activeNode == node
+                    val edge = when {
+                        active -> Color(0xFFFFE3A0)
+                        learned -> Jade
+                        canLearn -> tint
+                        else -> Color(0xFF46546B)
                     }
-                }
-
-                Surface(
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 124.dp)
-                        .clickable(enabled = canInteract) {
+                    Surface(
+                        modifier = Modifier.weight(1f).height(112.dp).clickable(enabled = canLearn || canActivate) {
                             if (canLearn) onLearn(node) else if (canActivate) onSetActive(node)
                         },
-                    color = panelColor,
-                    shape = MaterialTheme.shapes.large,
-                    border = androidx.compose.foundation.BorderStroke(if (active) 1.7.dp else 1.dp, borderColor),
-                    tonalElevation = if (active || learned) 8.dp else 3.dp,
-                    shadowElevation = if (active) 8.dp else 3.dp
-                ) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        color = when { active -> Color(0xEE34564D); learned -> Color(0xE923443F); canLearn -> Color(0xE9253851); else -> Color(0xD9101B2D) },
+                        shape = RoundedCornerShape(15.dp),
+                        border = BorderStroke(if (active) 2.dp else 1.dp, edge.copy(alpha = if (learned || canLearn) .95f else .55f)),
+                        tonalElevation = if (active) 9.dp else 2.dp,
+                        shadowElevation = if (active) 8.dp else 2.dp
                     ) {
-                        Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
-                            Canvas(Modifier.fillMaxSize()) {
-                                val center = Offset(size.width / 2f, size.height / 2f)
-                                val radius = size.minDimension * .43f
-                                drawCircle(Color(0xFF0B1424), radius, center)
-                                drawCircle(
-                                    borderColor.copy(alpha = .42f),
-                                    radius,
-                                    center,
-                                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
-                                )
-                                drawArc(
-                                    color = if (learned) Jade else classTint,
-                                    startAngle = -90f,
-                                    sweepAngle = 360f * levelProgress,
-                                    useCenter = false,
-                                    topLeft = Offset(center.x - radius, center.y - radius),
-                                    size = androidx.compose.ui.geometry.Size(radius * 2f, radius * 2f),
-                                    style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                        width = 3.5.dp.toPx(),
-                                        cap = androidx.compose.ui.graphics.StrokeCap.Round
-                                    )
-                                )
-                                drawCircle(
-                                    Brush.radialGradient(listOf(classTint.copy(alpha = .2f), Color.Transparent)),
-                                    radius * .72f,
-                                    center
-                                )
-                            }
-                            RpgIcon(iconKey, Modifier.size(42.dp))
-                            Box(
-                                Modifier.align(Alignment.TopEnd).size(19.dp)
-                                    .background(Color(0xFF111B2B), MaterialTheme.shapes.extraLarge),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                RpgIcon(
-                                    when {
-                                        learned -> "check"
-                                        canLearn -> "plus"
-                                        else -> "lock"
-                                    },
-                                    Modifier.size(16.dp)
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.width(8.dp))
                         Column(
-                            Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                            Modifier.fillMaxSize().padding(horizontal = 4.dp, vertical = 5.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    def.name,
-                                    color = if (learned) Color(0xFFFFE2A4) else Color.White,
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 11.sp,
-                                    modifier = Modifier.weight(1f),
-                                    maxLines = 2
-                                )
-                                if (active) {
-                                    RpgIcon("sparkle", Modifier.size(17.dp))
+                            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                                Canvas(Modifier.fillMaxSize()) {
+                                    val c = Offset(size.width / 2f, size.height / 2f)
+                                    drawCircle(Brush.radialGradient(listOf(edge.copy(alpha = .35f), Color.Transparent)), size.minDimension * .49f, c)
+                                    drawCircle(edge.copy(alpha = .9f), size.minDimension * .43f, c, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
+                                    if (active) drawCircle(Color(0xFFFFF0C5).copy(alpha = .7f), size.minDimension * .34f, c, style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
                                 }
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Surface(
-                                    color = if (def.active) Color(0xFF344D72) else Color(0xFF35483F),
-                                    shape = MaterialTheme.shapes.small
-                                ) {
-                                    Text(
-                                        if (def.active) "АКТИВНОЕ ИСКУССТВО" else "ПАССИВНОЕ ИСКУССТВО",
-                                        Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
-                                        color = if (def.active) Color(0xFFBFDFFF) else Color(0xFFBFE7CE),
-                                        fontSize = 7.sp,
-                                        fontWeight = FontWeight.Black
-                                    )
+                                RpgIcon(iconSets[classIndex.coerceIn(0, 3)][node], Modifier.size(34.dp))
+                                Box(Modifier.align(Alignment.TopEnd).size(16.dp).background(Color(0xFF101A2B), RoundedCornerShape(20.dp)), contentAlignment = Alignment.Center) {
+                                    RpgIcon(when { learned -> "check"; canLearn -> "plus"; else -> "lock" }, Modifier.size(12.dp))
                                 }
-                                Text(
-                                    if (learned) "ИЗУЧЕНО" else "РУБЕЖ $requiredLevel",
-                                    color = if (learned) Jade else Color(0xFFFFD18A),
-                                    fontSize = 7.sp,
-                                    fontWeight = FontWeight.Black
-                                )
                             }
                             Text(
-                                desc,
-                                color = Color(0xFFD0D9E5),
-                                fontSize = 9.sp,
-                                lineHeight = 12.sp,
-                                maxLines = 2
+                                def.name,
+                                color = if (learned) Color(0xFFFFE7B5) else Color(0xFFE1E7F0),
+                                fontSize = 8.sp, lineHeight = 9.sp, fontWeight = FontWeight.Bold,
+                                maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
-                            if (!learned) {
-                                Text(
-                                    if (characterLevel < requiredLevel) "Уровень $characterLevel / $requiredLevel"
-                                    else if (!unlocked) "Сначала изучи связанный узел"
-                                    else "Доступно очков: $points",
-                                    color = if (canLearn) Jade else Color(0xFFFFC978),
-                                    fontSize = 8.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                            InventoryActionButton(
-                                label = when {
-                                    learned && active -> "НАЗНАЧЕНО АКТИВНЫМ"
-                                    learned && def.active -> "НАЗНАЧИТЬ АКТИВНЫМ"
-                                    learned -> "ИЗУЧЕНО"
-                                    characterLevel < requiredLevel -> "ТРЕБУЕТСЯ УРОВЕНЬ $requiredLevel"
-                                    !unlocked -> "ИЗУЧИ СВЯЗАННЫЙ УЗЕЛ"
-                                    points <= 0 -> "НЕТ ОЧКОВ НАВЫКОВ"
-                                    else -> "ИЗУЧИТЬ · 1 ОЧКО"
-                                },
-                                selected = learned && (!def.active || active),
-                                enabled = canLearn || canActivate,
-                                onClick = { if (canLearn) onLearn(node) else if (canActivate) onSetActive(node) }
+                            Text(
+                                when { active -> "АКТИВЕН"; learned -> if (def.active) "ИЗУЧЕНО"; else "ПАССИВ"; canLearn -> "ИЗУЧИТЬ · 1 ОЧКО"; characterLevel < required -> "СТУПЕНЬ $required"; !unlocked -> "ПРЕДЫДУЩИЙ УЗЕЛ"; else -> "НЕТ ОЧКОВ" },
+                                color = edge, fontSize = 6.sp, fontWeight = FontWeight.Black, maxLines = 1
                             )
                         }
                     }
                 }
+                repeat(3 - rowNodes.size) { Spacer(Modifier.weight(1f)) }
+            }
+            if (rowIndex < rows.lastIndex) {
+                Box(Modifier.fillMaxWidth().height(3.dp).padding(horizontal = 28.dp).background(
+                    Brush.horizontalGradient(listOf(Color.Transparent, tint.copy(alpha = .5f), Color.Transparent)),
+                    RoundedCornerShape(4.dp)
+                ))
             }
         }
     }

@@ -74,10 +74,10 @@ private fun CharacterCreationScreen(
     val validNickname = nickname.trim().length in 3..16 &&
         nickname.trim().all { it.isLetterOrDigit() || it == '_' }
     val portraits = listOf(
-        R.drawable.character_blademaster,
-        R.drawable.character_ironbody,
-        R.drawable.character_elementalist,
-        R.drawable.character_spiritmystic
+        if (gender == "female") R.drawable.blademaster_female else R.drawable.blademaster_male,
+        if (gender == "female") R.drawable.ironbody_female else R.drawable.ironbody_male,
+        if (gender == "female") R.drawable.elementalist_female else R.drawable.elementalist_male,
+        if (gender == "female") R.drawable.spiritmystic_female else R.drawable.spiritmystic_male
     )
     BoxWithConstraints(
         Modifier.fillMaxSize().background(Color(0xFF081426))

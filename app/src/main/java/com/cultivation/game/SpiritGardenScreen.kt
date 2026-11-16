@@ -8,13 +8,16 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,12 +29,16 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -74,6 +81,7 @@ internal fun SpiritGardenScreen(
         label = "garden-glow"
     )
     val progress = growth.coerceIn(0f, 1f)
+    val selectedBed = remember { mutableIntStateOf(0) }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -108,52 +116,45 @@ internal fun SpiritGardenScreen(
                 }
 
                 Box(
-                    modifier = Modifier.fillMaxWidth().height(158.dp)
+                    modifier = Modifier.fillMaxWidth().aspectRatio(1.6f)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(Brush.verticalGradient(listOf(Color(0xFF1B3B45), Color(0xFF182F35), Color(0xFF263B32))))
+                        .background(Color(0xFF173341))
                 ) {
-                    Canvas(Modifier.matchParentSize()) {
-                        val w = size.width
-                        val h = size.height
-                        drawCircle(Color(0xFFFFD98D).copy(alpha = .10f + glow * .09f), h * .34f, Offset(w * .78f, h * .22f))
-                        drawCircle(Color(0xFFFFD98D).copy(alpha = .18f + glow * .22f), h * .23f, Offset(w * .78f, h * .22f), style = Stroke(width = 1.4.dp.toPx()))
-                        drawPath(
-                            Path().apply {
-                                moveTo(0f, h * .72f)
-                                cubicTo(w * .16f, h * .58f, w * .32f, h * .60f, w * .48f, h * .72f)
-                                cubicTo(w * .64f, h * .84f, w * .84f, h * .80f, w, h * .66f)
-                                lineTo(w, h)
-                                lineTo(0f, h)
-                                close()
-                            },
-                            Color(0xFF172A2C)
+                    Image(
+                        painter = painterResource(R.drawable.abode_garden_scene),
+                        contentDescription = "Панорама сада духовных трав с горными террасами и павильоном",
+                        contentScale = ContentScale.FillBounds,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    Box(
+                        Modifier.matchParentSize().background(
+                            Brush.verticalGradient(
+                                listOf(Color(0x22101E35), Color(0x00101E35), Color(0xA50C1B27))
+                            )
                         )
-                        for (i in 0..22) {
-                            val x = w * ((i * 41 % 97) / 97f)
-                            val y = h * (.12f + (i * 23 % 68) / 100f)
+                    )
+                    Canvas(Modifier.matchParentSize()) {
+                        for (i in 0..25) {
+                            val phase = (glow + i * .137f) % 1f
+                            val x = size.width * ((i * 41 % 97) / 97f)
+                            val y = size.height * (.14f + phase * .72f)
                             drawCircle(
-                                if (i % 3 == 0) GardenGold.copy(alpha = .20f + glow * .35f) else GardenJade.copy(alpha = .12f + glow * .22f),
-                                if (i % 5 == 0) 2.5.dp.toPx() else 1.3.dp.toPx(),
+                                if (i % 3 == 0) GardenGold.copy(alpha = .14f + glow * .22f)
+                                else GardenJade.copy(alpha = .12f + glow * .18f),
+                                if (i % 5 == 0) 2.2.dp.toPx() else 1.2.dp.toPx(),
                                 Offset(x, y)
                             )
                         }
-                        // Three raised soil beds anchor the illustrated plants.
-                        for (i in 0..2) {
-                            val cx = w * (.20f + i * .30f)
-                            val cy = h * .79f
-                            drawOval(Color(0xFF0D1C20).copy(alpha = .72f), topLeft = Offset(cx - w * .13f, cy - h * .045f), size = Size(w * .26f, h * .10f))
-                            drawOval(Brush.verticalGradient(listOf(Color(0xFF806344), Color(0xFF3D3B2D))), topLeft = Offset(cx - w * .12f, cy - h * .075f), size = Size(w * .24f, h * .105f))
-                            drawOval(Color(0xFFB78B5D).copy(alpha = .75f), topLeft = Offset(cx - w * .12f, cy - h * .075f), size = Size(w * .24f, h * .025f))
-                        }
                     }
                     Row(
-                        modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(horizontal = 8.dp, vertical = 12.dp),
+                        modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter)
+                            .padding(horizontal = 14.dp, vertical = 7.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.Bottom
                     ) {
                         repeat(3) { index ->
                             GardenPlantArt(
-                                modifier = Modifier.weight(1f).height(112.dp),
+                                modifier = Modifier.weight(1f).height(118.dp),
                                 variant = index,
                                 growth = progress,
                                 sway = breeze,
@@ -163,20 +164,70 @@ internal fun SpiritGardenScreen(
                     }
                     Surface(
                         modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
-                        color = Color(0xD90C1B27),
+                        color = Color(0xE60C1B27),
                         shape = RoundedCornerShape(9.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, GardenGold.copy(alpha = .5f))
+                        border = androidx.compose.foundation.BorderStroke(1.dp, GardenGold.copy(alpha = .62f))
                     ) {
                         Text("ОБИТЕЛЬ · УР. $abodeLevel", modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp), color = GardenGold, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    }
+                    Surface(
+                        modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+                        color = Color(0xE60C1B27),
+                        shape = RoundedCornerShape(9.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, GardenJade.copy(alpha = .55f))
+                    ) {
+                        Text("СВЯЩЕННЫЕ ГРЯДКИ · 3", modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp), color = GardenJade, fontSize = 8.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
-            GardenBedBadge("ГРЯДКА I", "Молодые побеги", progress, Modifier.weight(1f))
-            GardenBedBadge("ГРЯДКА II", "Духовный рост", progress, Modifier.weight(1f))
-            GardenBedBadge("ГРЯДКА III", "Цветение Ци", progress, Modifier.weight(1f))
+            GardenBedBadge(
+                "ГРЯДКА I", "Лунолист", R.drawable.garden_herb_moonleaf, progress,
+                selectedBed.intValue == 0, { selectedBed.intValue = 0 }, Modifier.weight(1f)
+            )
+            GardenBedBadge(
+                "ГРЯДКА II", "Лотос Ци", R.drawable.garden_herb_lotus, progress,
+                selectedBed.intValue == 1, { selectedBed.intValue = 1 }, Modifier.weight(1f)
+            )
+            GardenBedBadge(
+                "ГРЯДКА III", "Солнечный корень", R.drawable.garden_herb_sunbloom, progress,
+                selectedBed.intValue == 2, { selectedBed.intValue = 2 }, Modifier.weight(1f)
+            )
+        }
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color(0xD9162939),
+            shape = RoundedCornerShape(11.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, GardenGold.copy(alpha = .24f))
+        ) {
+            Row(
+                Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(9.dp)
+            ) {
+                val selectedPlant = when (selectedBed.intValue) {
+                    0 -> R.drawable.garden_herb_moonleaf
+                    1 -> R.drawable.garden_herb_lotus
+                    else -> R.drawable.garden_herb_sunbloom
+                }
+                Image(painterResource(selectedPlant), contentDescription = null, modifier = Modifier.size(36.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        when (selectedBed.intValue) {
+                            0 -> "Лунолист · прохладные тенистые грядки"
+                            1 -> "Лотос Ци · цветок чистой духовной энергии"
+                            else -> "Солнечный корень · тёплая сторона сада"
+                        },
+                        color = GardenGold, fontSize = 9.sp, fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "Все три грядки входят в общий восьмичасовой цикл и пополняют запас духовных трав.",
+                        color = Color(0xFFB8C9D4), fontSize = 8.sp, lineHeight = 11.sp
+                    )
+                }
+            }
         }
 
         Surface(
@@ -228,17 +279,38 @@ internal fun SpiritGardenScreen(
 }
 
 @Composable
-private fun GardenBedBadge(title: String, subtitle: String, progress: Float, modifier: Modifier = Modifier) {
+private fun GardenBedBadge(
+    title: String,
+    subtitle: String,
+    icon: Int,
+    progress: Float,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Surface(
-        modifier = modifier,
-        color = Color(0xE91B3038),
+        modifier = modifier.clickable(onClick = onClick),
+        color = if (selected) Color(0xEF29463F) else Color(0xE91B3038),
         shape = RoundedCornerShape(11.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, GardenJade.copy(alpha = .32f))
+        border = androidx.compose.foundation.BorderStroke(
+            if (selected) 1.5.dp else 1.dp,
+            if (selected) GardenGold.copy(alpha = .88f) else GardenJade.copy(alpha = .32f)
+        )
     ) {
-        Column(Modifier.padding(horizontal = 7.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(title, color = GardenGold, fontSize = 7.sp, fontWeight = FontWeight.Black)
+        Column(
+            Modifier.padding(horizontal = 6.dp, vertical = 7.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Image(painterResource(icon), contentDescription = null, modifier = Modifier.size(31.dp))
+            Text(title, color = if (selected) GardenGold else GardenJade, fontSize = 7.sp, fontWeight = FontWeight.Black)
             Text(subtitle, color = Color(0xFFC6D5D6), fontSize = 8.sp, maxLines = 1)
-            LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(3.dp), color = GardenJade, trackColor = Color(0xFF34464A))
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth().height(3.dp),
+                color = if (selected) GardenGold else GardenJade,
+                trackColor = Color(0xFF34464A)
+            )
         }
     }
 }
@@ -251,42 +323,27 @@ private fun GardenPlantArt(
     sway: Float,
     glow: Float
 ) {
-    Canvas(modifier) {
-        val base = Offset(size.width * .5f, size.height * .86f)
-        val height = size.height * (.26f + growth * .42f)
-        val top = Offset(base.x + sway * size.width, base.y - height)
-        val stem = Color(0xFF75B66E)
-        val leaf = when (variant) {
-            0 -> Color(0xFF9BD77C)
-            1 -> Color(0xFF78C99B)
-            else -> Color(0xFFB8D879)
-        }
-        drawLine(stem, base, top, strokeWidth = 3.dp.toPx())
-        for (side in -1..1) {
-            if (side == 0) continue
-            val y = base.y - height * (if (side < 0) .48f else .66f)
-            val x = base.x + side * size.width * (.22f + growth * .08f)
-            drawOval(
-                Brush.linearGradient(listOf(leaf.copy(alpha = .85f), Color(0xFF315F45))),
-                topLeft = Offset(x - size.width * .15f, y - size.height * .09f),
-                size = Size(size.width * .30f, size.height * .18f)
-            )
-            drawLine(Color(0xFFC7E8A0).copy(alpha = .72f), Offset(x - side * size.width * .10f, y), Offset(x + side * size.width * .10f, y - size.height * .01f), strokeWidth = 1.dp.toPx())
-        }
-        if (growth > .38f) {
-            val flower = when (variant) {
-                0 -> Color(0xFFE5B6E9)
-                1 -> Color(0xFF9BE2D6)
-                else -> Color(0xFFFFD98C)
-            }
-            val flowerCenter = Offset(top.x, top.y - size.height * .035f)
-            val radius = size.minDimension * (.035f + growth * .018f)
-            for (petal in 0..5) {
-                val angle = petal * (Math.PI / 3.0)
-                drawCircle(flower.copy(alpha = .82f), radius, Offset(flowerCenter.x + kotlin.math.cos(angle).toFloat() * radius * 1.25f, flowerCenter.y + kotlin.math.sin(angle).toFloat() * radius * 1.25f))
-            }
-            drawCircle(GardenGold.copy(alpha = .8f + glow * .2f), radius * .58f, flowerCenter)
-        }
-        drawCircle(Color(0xFFFFD98C).copy(alpha = .16f + glow * .28f), size.minDimension * .13f, top)
+    val plantResource = when (variant) {
+        0 -> R.drawable.garden_herb_moonleaf
+        1 -> R.drawable.garden_herb_lotus
+        else -> R.drawable.garden_herb_sunbloom
     }
+    val description = when (variant) {
+        0 -> "Лунолист"
+        1 -> "Цветущий лотос Ци"
+        else -> "Солнечный корень"
+    }
+    val scale = .62f + growth.coerceIn(0f, 1f) * .38f
+    Image(
+        painter = painterResource(plantResource),
+        contentDescription = description,
+        contentScale = ContentScale.Fit,
+        modifier = modifier.graphicsLayer {
+            rotationZ = sway * 92f
+            scaleX = scale
+            scaleY = scale
+            alpha = (.58f + growth.coerceIn(0f, 1f) * .36f + glow * .06f).coerceIn(0f, 1f)
+            transformOrigin = TransformOrigin(0.5f, 1f)
+        }
+    )
 }

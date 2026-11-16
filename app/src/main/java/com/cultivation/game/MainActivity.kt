@@ -1814,31 +1814,34 @@ private fun CultivateApp() {
                 }
             }
 
-            if (selectedMenu == 6) GameCard(if (stage < 7) "Кланы Смертного мира" else "Секты Духовного мира", if (stage < 7) "Родовые дома, торговые союзы и защитники долин" else "Праведный и Злой пути · новый уровень влияния") {
-                Text(if (stage < 7) "В Смертном мире нет сект бессмертных. Здесь власть держат кланы и союзы: они защищают дороги, торгуют ресурсами и обучают простым искусствам." else "За пределами смертных земель культиваторы объединяются в секты, где передают наследия и изучают законы Дао.", color = Color.LightGray, fontSize = 12.sp)
-                (if (stage < 7) listOf("Союз долин", "Вольные дома") else listOf("Праведный альянс", "Злой альянс")).forEachIndexed { index, label ->
-                    OutlinedButton(onClick = { chosenAlliance = index; val alignment = if (stage < 7) factionAlliance else sectAlliance; if (chosenSect >= 0 && alignment[chosenSect] != index) chosenSect = -1; message = "Выбран $label" }, modifier = Modifier.fillMaxWidth()) { Text(label + if (chosenAlliance == index) " · выбран" else "") }
-                }
-                val factionNames = if (stage < 7) clanNames else sectNames
-                val factionLore = if (stage < 7) clanLore else sectLore
-                val factionAlliances = if (stage < 7) factionAlliance else sectAlliance
-                factionNames.forEachIndexed { index, sect ->
-                    if (chosenAlliance < 0 || factionAlliances[index] == chosenAlliance) {
-                        Column(Modifier.fillMaxWidth().padding(8.dp)) {
-                            Text(sect, color = Gold, fontWeight = FontWeight.Bold)
-                            Text(factionLore[index], color = Color.LightGray, fontSize = 12.sp)
-                            Text("Бонус союза: атака +${clanAttackBonuses[index]} · защита +${clanDefenseBonuses[index]} · здоровье +${clanHpBonuses[index]}", color = Jade, fontSize = 11.sp)
-                            OutlinedButton(onClick = { chosenSect = index; message = if (stage < 7) "Ты вступил в клан «$sect»." else "Ты вступил в секту «$sect»." }, enabled = chosenAlliance == factionAlliances[index], modifier = Modifier.fillMaxWidth()) { Text(if (chosenSect == index) if (stage < 7) "Твой клан" else "Твоя секта" else "Вступить") }
-                        }
+            if (selectedMenu == 6) {
+                val isMortalClan = stage < 7
+                val factionNames = if (isMortalClan) clanNames else sectNames
+                val factionLore = if (isMortalClan) clanLore else sectLore
+                val factionAlliances = if (isMortalClan) factionAlliance else sectAlliance
+                SectHallScreen(
+                    stage = stage, selectedAlliance = chosenAlliance, chosenSect = chosenSect,
+                    reputation = clanReputation, dailyDonated = dailyClanDonated, stones = stones,
+                    factionNames = factionNames, factionLore = factionLore, factionAlliances = factionAlliances,
+                    attackBonuses = clanAttackBonuses, defenseBonuses = clanDefenseBonuses, hpBonuses = clanHpBonuses,
+                    onAllianceSelected = { index ->
+                        chosenAlliance = index
+                        if (index >= 0 && chosenSect >= 0 && factionAlliances[chosenSect] != index) chosenSect = -1
+                        message = if (index < 0) "Открыт обзор всех объединений." else "Выбран путь: ${if (isMortalClan) listOf("Союз долин", "Вольные дома")[index] else listOf("Праведный альянс", "Злой альянс")[index]}."
+                    },
+                    onJoinFaction = { index ->
+                        chosenSect = index
+                        message = if (isMortalClan) "Ты вступил в клан «${factionNames[index]}»." else "Ты вступил в секту «${factionNames[index]}»."
+                    },
+                    onDonate = {
+                        if (chosenSect < 0) message = "Сначала вступи в клан или секту."
+                        else if (!dailyClanDonated && stones >= 50) {
+                            stones -= 50; qi += 35; clanReputation++; dailyClanDonated = true
+                            message = "Вклад принят. +35 Ци и 1 очко репутации."
+                        } else if (dailyClanDonated) message = "Сегодня ты уже внёс вклад."
+                        else message = "Для вклада нужно 50 камней духа."
                     }
-                }
-                Text("Репутация союза: $clanReputation · ежедневный вклад помогает заслужить доверие старейшин.", color = Gold, fontSize = 11.sp)
-                Button(onClick = {
-                    if (chosenSect < 0) message = "Сначала вступи в клан или секту."
-                    else if (!dailyClanDonated && stones >= 50) { stones -= 50; qi += 35; clanReputation++; dailyClanDonated = true; message = "Вклад принят. +35 Ци и 1 очко репутации." }
-                    else if (dailyClanDonated) message = "Сегодня ты уже внёс вклад."
-                    else message = "Для вклада нужно 50 камней духа."
-                }, enabled = chosenSect >= 0 && !dailyClanDonated && stones >= 50, modifier = Modifier.fillMaxWidth()) { Text(if (chosenSect < 0) "Сначала вступи в клан / секту" else if (dailyClanDonated) "Вклад сегодня внесён" else "Внести ежедневный вклад · 50 камней") }
+                )
             }
 
             if (selectedMenu == 7) GameCard("Духовный зверинец", "Активный спутник · " + activePet.name) {
@@ -4361,6 +4364,165 @@ private fun TownScene(stage: Int, storyChapter: Int) {
         Text("СТУПЕНЬ $stage", color = Jade, fontSize = 10.sp, fontWeight = FontWeight.Bold)
     }
 }
+
+private fun factionEmblemResource(index: Int): Int = when (index) {
+    0 -> R.drawable.faction_crest_mountain
+    1 -> R.drawable.faction_crest_maple
+    2 -> R.drawable.faction_crest_lotus
+    3 -> R.drawable.faction_crest_river
+    4 -> R.drawable.faction_crest_wolf
+    5 -> R.drawable.faction_crest_gate
+    6 -> R.drawable.faction_crest_sword
+    else -> R.drawable.faction_crest_flame
+}
+
+@Composable
+private fun SectHallScreen(
+    stage: Int, selectedAlliance: Int, chosenSect: Int, reputation: Int, dailyDonated: Boolean, stones: Int,
+    factionNames: List<String>, factionLore: List<String>, factionAlliances: List<Int>,
+    attackBonuses: List<Int>, defenseBonuses: List<Int>, hpBonuses: List<Int>,
+    onAllianceSelected: (Int) -> Unit, onJoinFaction: (Int) -> Unit, onDonate: () -> Unit
+) {
+    val mortal = stage < 7
+    val allianceNames = if (mortal) listOf("СОЮЗ ДОЛИН", "ВОЛЬНЫЕ ДОМА") else listOf("ПРАВЕДНЫЙ ПУТЬ", "ТЁМНЫЙ ПУТЬ")
+    val ambient = rememberInfiniteTransition(label = "sect-hall-ambient")
+    val lanternPulse by ambient.animateFloat(.38f, .92f, infiniteRepeatable(tween(1900), RepeatMode.Reverse), label = "sect-hall-pulse")
+    val visibleFactions = factionNames.indices.filter { selectedAlliance < 0 || factionAlliances.getOrElse(it) { 0 } == selectedAlliance }
+
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.fillMaxWidth().height(194.dp).clip(RoundedCornerShape(22.dp))) {
+            Image(painterResource(R.drawable.sect_hall_scene), if (mortal) "Зал кланов Лунной Гавани" else "Зал духовных сект", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color(0xAA071321), .42f to Color(0x24101B2A), 1f to Color(0xF20A1423))))
+            Canvas(Modifier.fillMaxSize()) {
+                val w = size.width; val h = size.height
+                drawCircle(Color(0xFFE5BD72).copy(alpha = .10f + lanternPulse * .08f), w * .20f, Offset(w * .79f, h * .36f))
+                drawCircle(Color(0xFF8DDCC1).copy(alpha = .20f + lanternPulse * .22f), w * .10f, Offset(w * .79f, h * .36f), style = Stroke(2.dp.toPx()))
+                for (i in 0..25) {
+                    val x = w * (((i * 41) % 97) / 97f); val y = h * (.12f + ((i * 31) % 78) / 100f)
+                    drawCircle((if (i % 3 == 0) Color(0xFFFFD995) else Color(0xFF8DDEC5)).copy(alpha = .12f + lanternPulse * .24f), if (i % 6 == 0) 2.8f else 1.35f, Offset(x, y))
+                }
+                drawLine(Brush.horizontalGradient(listOf(Color.Transparent, Color(0xFFD9B875).copy(alpha = .58f), Color.Transparent)), Offset(w * .06f, h * .74f), Offset(w * .94f, h * .74f), 1.4.dp.toPx())
+            }
+            Column(Modifier.align(Alignment.TopStart).padding(14.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(if (mortal) "ЗАЛ КЛАНОВ" else "ЗАЛ ДУХОВНЫХ СЕКТ", color = Color(0xFFFFD995), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.8.sp)
+                Text(if (mortal) "Клятвы долины и наследие родов" else "Праведный и тёмный пути Дао", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                Text("\${worldName(stage)} · ступень $stage", color = Color(0xFFD3E1E8), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            }
+            Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(13.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("РЕПУТАЦИЯ", color = Color(0xFFB9C9D8), fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(reputation.toString(), color = Color(0xFFFFE3A4), fontSize = 23.sp, fontWeight = FontWeight.Black)
+                }
+                Surface(color = Color(0xDD142B35), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Jade.copy(alpha = .72f))) {
+                    Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        RpgIcon("clan", Modifier.size(23.dp))
+                        Text(if (chosenSect >= 0) "СОЮЗ ЗАКЛЮЧЁН" else "ИЩИ ПОКРОВИТЕЛЯ", color = Jade, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    }
+                }
+            }
+        }
+
+        Surface(Modifier.fillMaxWidth(), color = Color(0xE9162738), shape = RoundedCornerShape(15.dp), border = BorderStroke(1.dp, Color(0x5578C6A3))) {
+            Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("КАМНИ ДУХА", color = Color(0xFF9FB4C6), fontSize = 7.sp, fontWeight = FontWeight.Black)
+                    Text(stones.toString(), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                }
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("ТВОЁ ОБЪЕДИНЕНИЕ", color = Color(0xFF9FB4C6), fontSize = 7.sp, fontWeight = FontWeight.Black)
+                    Text(if (chosenSect in factionNames.indices) factionNames[chosenSect] else "Пока не выбрано", color = if (chosenSect >= 0) Gold else Color(0xFFB8C7D5), fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                }
+            }
+        }
+
+        Text("ВЫБЕРИ СТОРОНУ", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.3.sp)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            SectAllianceTab("ВСЕ ПУТИ", "8 наследий", selectedAlliance == -1, Modifier.weight(.78f)) { onAllianceSelected(-1) }
+            SectAllianceTab(allianceNames[0], "Союз света", selectedAlliance == 0, Modifier.weight(1f)) { onAllianceSelected(0) }
+            SectAllianceTab(allianceNames[1], "Второй союз", selectedAlliance == 1, Modifier.weight(1f)) { onAllianceSelected(1) }
+        }
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("НАСЛЕДИЯ И ОБИТЕЛИ", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+            Text("\${visibleFactions.size} найдено", color = Color(0xFF9FB3C4), fontSize = 8.sp, fontWeight = FontWeight.Bold)
+        }
+        visibleFactions.forEach { index ->
+            SectFactionCard(
+                index, factionNames[index], factionLore.getOrElse(index) { "" },
+                attackBonuses.getOrElse(index) { 0 }, defenseBonuses.getOrElse(index) { 0 }, hpBonuses.getOrElse(index) { 0 },
+                chosenSect == index, selectedAlliance == factionAlliances.getOrElse(index) { 0 }
+            ) { onJoinFaction(index) }
+        }
+
+        Surface(Modifier.fillMaxWidth(), color = Color(0xE91B2D3C), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, Color(0x66D9B875))) {
+            Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Image(painterResource(R.drawable.town_building_skills), "Знак ежедневного вклада", Modifier.size(58.dp), contentScale = ContentScale.Fit)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("ЕЖЕДНЕВНАЯ ПРИСЯГА", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Text("50 камней духа · +35 Ци · +1 репутация", color = Color(0xFFD3DFE8), fontSize = 9.sp)
+                    Text(when { chosenSect < 0 -> "Сначала выбери своё объединение"; dailyDonated -> "Сегодняшний вклад уже принят"; stones < 50 -> "Не хватает \${50 - stones} камней духа"; else -> "Старейшины ждут твоего вклада" }, color = if (dailyDonated) Jade else Color(0xFFB9C8D7), fontSize = 8.sp)
+                }
+                Button(onClick = onDonate, enabled = chosenSect >= 0 && !dailyDonated && stones >= 50, modifier = Modifier.height(38.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF806039), contentColor = Color.White, disabledContainerColor = Color(0xFF35404B))) {
+                    Text(if (dailyDonated) "ВНЕСЕНО" else "ВНЕСТИ", fontSize = 8.sp, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectAllianceTab(title: String, subtitle: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(modifier = modifier.clickable(onClick = onClick), color = if (selected) Color(0xFF294A43) else Color(0xE9162738), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, if (selected) Gold.copy(alpha = .85f) else Color(0x445F8293))) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 9.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(title, color = if (selected) Color(0xFFFFE5AE) else Color(0xFFD2DDE6), fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            Text(subtitle, color = if (selected) Jade else Color(0xFF91A5B6), fontSize = 6.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun SectFactionCard(
+    index: Int, name: String, lore: String, attack: Int, defense: Int, hp: Int,
+    joined: Boolean, allianceSelected: Boolean, onJoin: () -> Unit
+) {
+    Surface(Modifier.fillMaxWidth(), color = if (joined) Color(0xE92A453F) else Color(0xE9182939), shape = RoundedCornerShape(18.dp), border = BorderStroke(if (joined) 1.8.dp else 1.dp, if (joined) Gold.copy(alpha = .9f) else Color(0x556D879B)), tonalElevation = if (joined) 7.dp else 2.dp, shadowElevation = if (joined) 6.dp else 1.dp) {
+        Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.size(76.dp), contentAlignment = Alignment.Center) {
+                    Canvas(Modifier.fillMaxSize()) { drawCircle(Brush.radialGradient(listOf(if (joined) Color(0x668BE0BC) else Color(0x334E7E91), Color.Transparent)), size.minDimension * .5f) }
+                    Image(painterResource(factionEmblemResource(index)), "Герб: $name", Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("НАСЛЕДИЕ \${index + 1}", color = if (joined) Gold else Jade, fontSize = 7.sp, fontWeight = FontWeight.Black, letterSpacing = .8.sp)
+                    Text(name, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                    Text(lore, color = Color(0xFFB9C8D7), fontSize = 8.sp, lineHeight = 11.sp)
+                }
+                if (joined) Surface(color = Color(0xFF173E36), shape = RoundedCornerShape(9.dp), border = BorderStroke(1.dp, Jade.copy(alpha = .8f))) {
+                    Text("ТВОЙ ПУТЬ", Modifier.padding(horizontal = 7.dp, vertical = 5.dp), color = Jade, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                SectBonusChip("АТАКА", "+$attack", Color(0xFFFFC27D), Modifier.weight(1f))
+                SectBonusChip("ЗАЩИТА", "+$defense", Color(0xFF8EDBC1), Modifier.weight(1f))
+                SectBonusChip("ЗДОРОВЬЕ", "+$hp", Color(0xFFFF9C9C), Modifier.weight(1f))
+            }
+            Button(onClick = onJoin, enabled = allianceSelected && !joined, modifier = Modifier.fillMaxWidth().height(36.dp), contentPadding = PaddingValues(vertical = 0.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF735B3A), contentColor = Color.White, disabledContainerColor = if (joined) Color(0xFF285246) else Color(0xFF35404B))) {
+                Text(when { joined -> "ТВОЁ ОБЪЕДИНЕНИЕ"; !allianceSelected -> "ВЫБЕРИ СТОРОНУ ДЛЯ ВСТУПЛЕНИЯ"; else -> "ПРИНЯТЬ НАСЛЕДИЕ" }, fontSize = 8.sp, fontWeight = FontWeight.Black)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectBonusChip(title: String, value: String, accent: Color, modifier: Modifier = Modifier) {
+    Surface(modifier, color = Color(0xFF101D2B), shape = RoundedCornerShape(9.dp), border = BorderStroke(1.dp, accent.copy(alpha = .32f))) {
+        Column(Modifier.fillMaxWidth().padding(vertical = 6.dp, horizontal = 3.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Text(title, color = Color(0xFF9FB0C0), fontSize = 6.sp, fontWeight = FontWeight.Black)
+            Text(value, color = accent, fontSize = 11.sp, fontWeight = FontWeight.Black)
+        }
+    }
+}
+
 @Composable
 private fun AbodeScene(
     level: Int,

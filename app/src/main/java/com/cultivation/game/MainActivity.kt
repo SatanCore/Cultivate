@@ -2276,10 +2276,10 @@ private fun CharacterArmoryScreen(
     val selected = classIndex.coerceIn(0, classNames.lastIndex)
     val profile = classCombatProfiles[selected]
     val portrait = when (selected) {
-        0 -> R.drawable.character_blademaster
-        1 -> R.drawable.character_ironbody
-        2 -> R.drawable.character_elementalist
-        else -> R.drawable.character_spiritmystic
+        0 -> if (playerGender == "female") R.drawable.blademaster_female else R.drawable.blademaster_male
+        1 -> if (playerGender == "female") R.drawable.ironbody_female else R.drawable.ironbody_male
+        2 -> if (playerGender == "female") R.drawable.elementalist_female else R.drawable.elementalist_male
+        else -> if (playerGender == "female") R.drawable.spiritmystic_female else R.drawable.spiritmystic_male
     }
     val gearBySlot = equippedGear.associateBy { it.slot }
     val hpProgress = if (maxHp <= 0) 0f else (currentHp.toFloat() / maxHp).coerceIn(0f, 1f)

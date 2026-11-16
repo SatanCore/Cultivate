@@ -4584,6 +4584,30 @@ private fun BattleScene(
     val impactProgress = remember { Animatable(1f) }
     val strikeLunge = remember { Animatable(0f) }
     val arenaShake = remember { Animatable(0f) }
+    val playerHitProgress = remember { Animatable(1f) }
+    val guardImpactProgress = remember { Animatable(1f) }
+    var previousPlayerHp by remember { mutableIntStateOf(playerHp) }
+    val enemyWindup by transition.animateFloat(
+        0f, 1f,
+        infiniteRepeatable(tween(430), RepeatMode.Reverse),
+        label = "battle-enemy-telegraph-windup"
+    )
+    val guardImpact = actionText.contains("Защитная стойка смягчила", ignoreCase = true)
+    LaunchedEffect(playerHp) {
+        if (playerHp < previousPlayerHp) {
+            playerHitProgress.snapTo(0f)
+            playerHitProgress.animateTo(1f, tween(440))
+        }
+        previousPlayerHp = playerHp
+    }
+    LaunchedEffect(actionText) {
+        if (guardImpact) {
+            guardImpactProgress.snapTo(0f)
+            guardImpactProgress.animateTo(1f, tween(520))
+        } else if (!guardPrepared) {
+            guardImpactProgress.snapTo(1f)
+        }
+    }
     val combatAction = actionText.contains("урон", ignoreCase = true) ||
         actionText.contains("КРИТИЧЕСКИЙ УДАР", ignoreCase = true) ||
         actionText.contains("Рёв Каменного Тигра", ignoreCase = true) ||
@@ -4880,24 +4904,31 @@ private fun BattleScene(
                             fontSize = 7.sp,
                             maxLines = 1
                         )
+                        LinearProgressIndicator(
+                            progress = { .22f + enemyWindup * .72f },
+                            modifier = Modifier.fillMaxWidth().height(3.dp),
+                            color = telegraphAccent,
+                            trackColor = Color(0xFF5A3038)
+                        )
                     }
                 }
             }
         }
 
-        if (guardPrepared && playerHp > 0) {
+        if ((guardPrepared || guardImpactProgress.value < .98f) && playerHp > 0) {
             Image(
                 painter = painterResource(id = R.drawable.battle_guard_barrier),
-                contentDescription = "Защитная стойка активна",
+                contentDescription = if (guardPrepared) "Защитная стойка активна" else "Защитная стойка отразила часть удара",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(start = 0.dp, bottom = 5.dp)
                     .size(160.dp)
                     .graphicsLayer {
-                        alpha = .46f + pulse * .42f
-                        scaleX = .94f + pulse * .07f
-                        scaleY = .94f + pulse * .07f
+                        val impactFlash = (1f - guardImpactProgress.value).coerceIn(0f, 1f)
+                        alpha = if (guardPrepared) .46f + pulse * .42f else impactFlash * .88f
+                        scaleX = if (guardPrepared) .94f + pulse * .07f else 1f + impactFlash * .26f
+                        scaleY = if (guardPrepared) .94f + pulse * .07f else 1f + impactFlash * .26f
                     }
             )
         }
@@ -4912,14 +4943,36 @@ private fun BattleScene(
                 .width(132.dp)
                 .height(176.dp)
                 .graphicsLayer {
-                    translationY = -pulse * 2.5f + heroBreath * 2.1f
+                    val hitFlash = (1f - playerHitProgress.value).coerceIn(0f, 1f)
+                    translationY = -pulse * 2.5f + heroBreath * 2.1f + hitFlash * 2.5f
                     translationX = heroBreath * 1.4f + strikeLunge.value * 22f +
-                        if (combatAction && impactProgress.value < .22f) {
+                        (if (combatAction && impactProgress.value < .22f) {
                             (1f - impactProgress.value / .22f) * 6f
-                        } else 0f
-                    rotationZ = heroBreath * .22f
+                        } else 0f) +
+                        kotlin.math.sin((playerHitProgress.value * 44f).toDouble()).toFloat() * hitFlash * 8f
+                    rotationZ = heroBreath * .22f + hitFlash * 4.5f
+                    alpha = 1f - hitFlash * .08f
                 }
         )
+        val playerHitFlash = (1f - playerHitProgress.value).coerceIn(0f, 1f)
+        if (playerHitFlash > .01f) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 22.dp, bottom = 28.dp)
+                    .size(154.dp)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(
+                                Color(0x99FF5664).copy(alpha = playerHitFlash),
+                                Color(0x44D92F49).copy(alpha = playerHitFlash * .6f),
+                                Color.Transparent
+                            )
+                        ),
+                        CircleShape
+                    )
+            )
+        }
 
         Box(
             Modifier.align(Alignment.BottomEnd)
@@ -4937,6 +4990,24 @@ private fun BattleScene(
                 )
         )
 
+        if (telegraphActive && enemyHp > 0 && playerHp > 0) {
+            Image(
+                painter = painterResource(R.drawable.battle_telegraph_sigil),
+                contentDescription = "Печать подготовки особой атаки",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 0.dp, bottom = 2.dp)
+                    .size(222.dp)
+                    .graphicsLayer {
+                        alpha = .22f + enemyWindup * .42f
+                        scaleX = .88f + enemyWindup * .18f
+                        scaleY = .88f + enemyWindup * .18f
+                        rotationZ = enemyWindup * 7f
+                    }
+            )
+        }
+
         Image(
             painter = painterResource(id = enemyPortraitRes),
             contentDescription = bossName,
@@ -4951,11 +5022,11 @@ private fun BattleScene(
                         kotlin.math.sin((impactProgress.value * 72f).toDouble()).toFloat() *
                             (1f - impactProgress.value / .30f) * 8f
                     } else 0f
-                    translationX = hitShake
-                    translationY = enemyHover * 3.4f
-                    rotationZ = enemyHover * .42f
-                    scaleX = phasePulse + pulse * .008f
-                    scaleY = phasePulse + pulse * .008f
+                    translationX = hitShake - if (telegraphActive) enemyWindup * 13f else 0f
+                    translationY = enemyHover * 3.4f - if (telegraphActive) enemyWindup * 5f else 0f
+                    rotationZ = enemyHover * .42f - if (telegraphActive) enemyWindup * 1.4f else 0f
+                    scaleX = phasePulse + pulse * .008f + if (telegraphActive) enemyWindup * .035f else 0f
+                    scaleY = phasePulse + pulse * .008f + if (telegraphActive) enemyWindup * .035f else 0f
                 }
         )
 

@@ -966,11 +966,20 @@ private fun CultivateApp() {
                         },
                         onClose = { selectedTownBuilding = "" }
                     )
-                    "forge" -> GameCard("Кузница Чэня", "Мастерская оружейника") {
-                        Text("Чэнь изучает найденное оружие и помогает подготовить его к бою. Выбери предмет в инвентаре, чтобы сравнить характеристики и экипировать его.", color = Color.LightGray)
-                        Button(onClick = { selectedMenu = 4; selectedTownBuilding = "" }, modifier = Modifier.fillMaxWidth()) { Text("Открыть склад оружия") }
-                        OutlinedButton(onClick = { selectedTownBuilding = "" }) { Text("Назад на площадь") }
-                    }
+                    "forge" -> ForgeHallScreen(
+                        weaponName = equippedWeapon.name,
+                        weaponAttack = equippedWeapon.attackBonus,
+                        bonusDamage = equippedWeapon.bonusDamage,
+                        temper = forgeTemper,
+                        ironOre = ironOre,
+                        stones = stones,
+                        onOpenWorkshop = {
+                            abodeSection = "forge"
+                            selectedMenu = 8
+                            selectedTownBuilding = ""
+                        },
+                        onClose = { selectedTownBuilding = "" }
+                    )
                     "event" -> GameCard("Юнь · посыльный ярмарки", "События и вести из соседних долин") {
                         Text("«На площади сегодня ярмарка духовных огней. Торговцы привезли редкие находки, а вечером у восточных ворот появится странствующий рассказчик».", color = Color.LightGray)
                         Text("Текущая история: глава ${storyChapter + 1} из 4", color = Gold)

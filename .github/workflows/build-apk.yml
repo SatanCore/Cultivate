@@ -4,12 +4,37 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Import selected character portraits from art library
+        run: |
+          mkdir -p /tmp/cultivate-art
+          unzip -oq Cultivate_ART_SOURCE_EXPANDED_PART_01.zip -d /tmp/cultivate-art
+          for archive in art_source/Cultivate_ART_SOURCE_EXPANDED_PART_*.zip; do
+            unzip -oq "$archive" -d /tmp/cultivate-art
+          done
+          source_dir="/tmp/cultivate-art/art_source/01_ready_alpha_assets/characters"
+          target_dir="app/src/main/res/drawable-nodpi"
+          test -s "$source_dir/blademaster_male_14118cf4.png"
+          cp "$source_dir/blademaster_male_14118cf4.png" "$target_dir/blademaster_male.png"
+          cp "$source_dir/blademaster_female_53a87051.png" "$target_dir/blademaster_female.png"
+          cp "$source_dir/ironbody_male_891e8b8b.png" "$target_dir/ironbody_male.png"
+          cp "$source_dir/ironbody_female_c5adf06c.png" "$target_dir/ironbody_female.png"
+          cp "$source_dir/elementalist_male_2e9f9bc1.png" "$target_dir/elementalist_male.png"
+          cp "$source_dir/elementalist_female_bd6c47c4.png" "$target_dir/elementalist_female.png"
+          cp "$source_dir/spiritmystic_male_6ca05db4.png" "$target_dir/spiritmystic_male.png"
+          cp "$source_dir/spiritmystic_female_446e7fa6.png" "$target_dir/spiritmystic_female.png"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$target_dir"/*_male.png "$target_dir"/*_female.png
+          if ! git diff --cached --quiet; then
+            git commit -m "Import gender-specific character portraits"
+            git push
+          fi
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

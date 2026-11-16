@@ -1094,7 +1094,32 @@ private fun CultivateApp() {
                     }
                     when (abodeSection) {
                         "sanctuary" -> {
-                            Text("Пещера уединения", color = Gold, fontWeight = FontWeight.Bold)
+                            Box(
+                                Modifier.fillMaxWidth().height(148.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .border(1.dp, Jade.copy(alpha = 0.62f), RoundedCornerShape(16.dp))
+                            ) {
+                                Image(
+                                    painter = painterResource(R.drawable.abode_meditation_scene),
+                                    contentDescription = "Пещера уединения для медитации",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                                Box(
+                                    Modifier.fillMaxSize().background(
+                                        Brush.verticalGradient(
+                                            listOf(Color(0x22101E35), Color(0xCC081522), Color(0xF0081522))
+                                        )
+                                    )
+                                )
+                                Column(
+                                    Modifier.align(Alignment.BottomStart).padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Text("ПЕЩЕРА УЕДИНЕНИЯ", color = Jade, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
+                                    Text("Место тихой медитации", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                                }
+                            }
                             Text("Ци накапливается автоматически даже вне игры. Уровень обители ускоряет медитацию: сейчас одна единица Ци каждые ${qiIntervalForAbode(abodeLevel) / 60} мин. Прогресс сохраняется.", color = Color.LightGray, fontSize = 12.sp)
                             Button(onClick = { if (!dailyMeditated) { val gain = 25 + abodeLevel * 5; qi = (qi + gain).coerceAtMost(9999); dailyMeditated = true; message = "Медитация завершена: собрано $gain Ци. Возвращайся завтра." } else message = "Сегодня ты уже завершил основную медитацию. Продолжай пассивное накопление." }, modifier = Modifier.fillMaxWidth()) { Text(if (dailyMeditated) "Ежедневная медитация завершена" else "Провести медитацию · +${25 + abodeLevel * 5} Ци") }
                             Divider(color = Color(0xFF3B4B4F))

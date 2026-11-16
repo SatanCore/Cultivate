@@ -2576,10 +2576,10 @@ private fun CharacterArmoryScreen(
     val selected = classIndex.coerceIn(0, classNames.lastIndex)
     val profile = classCombatProfiles[selected]
     val portrait = when (selected) {
-        0 -> if (playerGender == "female") R.drawable.blademaster_female else R.drawable.blademaster_male
-        1 -> if (playerGender == "female") R.drawable.ironbody_female else R.drawable.ironbody_male
-        2 -> if (playerGender == "female") R.drawable.elementalist_female else R.drawable.elementalist_male
-        else -> if (playerGender == "female") R.drawable.spiritmystic_female else R.drawable.spiritmystic_male
+        0 -> R.drawable.hero_full_blademaster
+        1 -> R.drawable.hero_full_ironbody
+        2 -> R.drawable.hero_full_elementalist
+        else -> R.drawable.hero_full_spiritmystic
     }
     val gearBySlot = equippedGear.associateBy { it.slot }
     val hpProgress = if (maxHp <= 0) 0f else (currentHp.toFloat() / maxHp).coerceIn(0f, 1f)
@@ -2687,8 +2687,8 @@ private fun CharacterArmoryScreen(
                             Image(
                                 painter = painterResource(portrait),
                                 contentDescription = "Полноценный образ класса: ${classNames[selected]}",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 2.dp)
                             )
                             Box(
                                 Modifier.align(Alignment.BottomCenter)
@@ -7551,12 +7551,10 @@ private fun PetGalleryTile(
         shadowElevation = if (active) 7.dp else 2.dp
     ) {
         Column(Modifier.fillMaxSize().padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Image(
-                painter = painterResource(petPortraitResource(pet.id)),
-                contentDescription = pet.name,
-                modifier = Modifier.size(72.dp),
-                contentScale = ContentScale.Fit
-            )
+            Box(Modifier.size(78.dp), contentAlignment = Alignment.Center) {
+                Image(painter = painterResource(petPortraitResource(pet.id)), contentDescription = pet.name, modifier = Modifier.fillMaxSize(.76f), contentScale = ContentScale.Fit)
+                Image(painter = painterResource(when { active -> R.drawable.ui_rarity_frame_03; owned -> R.drawable.ui_rarity_frame_02; else -> R.drawable.ui_rarity_frame_01 }), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+            }
             Text(pet.name, color = if (owned) Color(0xFFFFE5B0) else Color(0xFFADB8C8), fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Text(when { active -> "АКТИВНЫЙ"; owned -> "УР. $level · ВЫБРАТЬ"; else -> "ЗАКРЫТ · ПОДРОБНЕЕ" }, color = if (active) Jade else accent, fontSize = 6.sp, fontWeight = FontWeight.Black, maxLines = 1)
         }

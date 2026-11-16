@@ -3778,23 +3778,64 @@ private fun TreasuryRelicTile(
     equipped: Boolean,
     onClick: () -> Unit
 ) {
+    val selectionProgress by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = 240,
+            easing = androidx.compose.animation.core.FastOutSlowInEasing
+        ),
+        label = "relic-selection"
+    )
     Surface(
-        modifier = modifier.height(158.dp).clickable(onClick = onClick),
+        modifier = modifier.height(158.dp).graphicsLayer {
+            val scale = 1f + selectionProgress * .018f
+            scaleX = scale
+            scaleY = scale
+        }.clickable(onClick = onClick),
         color = if (selected) Color(0xEE29485A) else Color(0xE9142236),
         shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) Gold else rarityColor.copy(alpha = .72f)),
-        tonalElevation = if (selected) 7.dp else 2.dp,
-        shadowElevation = if (selected) 5.dp else 1.dp
+        border = BorderStroke(
+            1.dp + selectionProgress.dp,
+            Gold.copy(alpha = .55f + selectionProgress * .45f)
+        ),
+        tonalElevation = 2.dp + selectionProgress * 5.dp,
+        shadowElevation = 1.dp + selectionProgress * 5.dp
     ) {
         Box(Modifier.fillMaxSize()) {
+            Box(
+                Modifier.fillMaxSize()
+                    .background(
+                        Gold.copy(alpha = selectionProgress * .075f),
+                        RoundedCornerShape(14.dp)
+                    )
+            )
             Column(
                 Modifier.fillMaxSize().padding(horizontal = 5.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                RelicArtworkIcon(resourceId, rarityColor, Modifier.size(76.dp), frameResource)
+                RelicArtworkIcon(
+                    resourceId,
+                    rarityColor,
+                    Modifier.size(76.dp).graphicsLayer {
+                        val scale = 1f + selectionProgress * .035f
+                        scaleX = scale
+                        scaleY = scale
+                    },
+                    frameResource
+                )
                 Text(title, color = if (selected) Color.White else Color(0xFFE2E8F0), fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 2, minLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 10.sp)
                 Text(subtitle, color = rarityColor, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            }
+            if (selected) {
+                Surface(
+                    Modifier.align(Alignment.BottomCenter).padding(bottom = 3.dp),
+                    color = Color(0xEE6B512C),
+                    shape = RoundedCornerShape(5.dp),
+                    border = BorderStroke(1.dp, Gold.copy(alpha = .75f))
+                ) {
+                    Text("✦ ВЫБРАНО", Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = Color(0xFFFFE8B7), fontSize = 6.sp, fontWeight = FontWeight.Black)
+                }
             }
             if (equipped) {
                 Surface(

@@ -1,6 +1,11 @@
 package com.cultivation.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -55,6 +61,25 @@ internal fun MeiShopScreen(
     var quantity by remember(stones) { mutableIntStateOf(1) }
     val shownQuantity = quantity.coerceIn(1, maxAffordable.coerceAtLeast(1))
     val totalCost = shownQuantity * 200
+    val shopAmbient = rememberInfiniteTransition(label = "mei-shop-ambient")
+    val shopGlow by shopAmbient.animateFloat(
+        initialValue = .24f,
+        targetValue = .62f,
+        animationSpec = infiniteRepeatable(tween(2100), RepeatMode.Reverse),
+        label = "mei-shop-glow"
+    )
+    val portraitBreath by shopAmbient.animateFloat(
+        initialValue = .985f,
+        targetValue = 1.015f,
+        animationSpec = infiniteRepeatable(tween(2600), RepeatMode.Reverse),
+        label = "mei-shop-portrait-breath"
+    )
+    val shardFloat by shopAmbient.animateFloat(
+        initialValue = -1.8f,
+        targetValue = 1.8f,
+        animationSpec = infiniteRepeatable(tween(1900), RepeatMode.Reverse),
+        label = "mei-shop-shard-float"
+    )
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -129,7 +154,7 @@ internal fun MeiShopScreen(
             modifier = Modifier.fillMaxWidth(),
             color = ShopPanel,
             shape = RoundedCornerShape(16.dp),
-            border = BorderStroke(1.dp, ShopGold.copy(alpha = .38f)),
+            border = BorderStroke(1.dp, ShopGold.copy(alpha = .24f + shopGlow * .28f)),
             tonalElevation = 3.dp
         ) {
             Row(
@@ -144,7 +169,8 @@ internal fun MeiShopScreen(
                     modifier = Modifier
                         .size(82.dp)
                         .clip(CircleShape)
-                        .border(1.5.dp, ShopGold.copy(alpha = .85f), CircleShape)
+                        .border(1.5.dp, ShopGold.copy(alpha = .55f + shopGlow * .55f), CircleShape)
+                        .graphicsLayer { scaleX = portraitBreath; scaleY = portraitBreath }
                 )
                 Column(
                     modifier = Modifier.weight(1f),
@@ -183,7 +209,7 @@ internal fun MeiShopScreen(
                         painter = painterResource(R.drawable.shop_spirit_shard),
                         contentDescription = "Нефритовый осколок духа",
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(76.dp)
+                        modifier = Modifier.size(76.dp).graphicsLayer { translationY = shardFloat.dp.toPx(); scaleX = 1f + shopGlow * .025f; scaleY = 1f + shopGlow * .025f }
                     )
                 }
                 Column(

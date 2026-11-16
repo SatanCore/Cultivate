@@ -2870,7 +2870,7 @@ private fun CharacterArmoryScreen(
     val auraPulse by aura.animateFloat(
         initialValue = .88f,
         targetValue = 1.06f,
-        animationSpec = infiniteRepeatable(tween(1900), RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(tween(2500), RepeatMode.Reverse),
         label = "character-armory-pulse"
     )
 
@@ -3286,7 +3286,7 @@ private fun CharacterEquipmentSlot(
             InventoryItemArtwork(
                 resourceId = iconRes,
                 frameResource = frameResource,
-                modifier = Modifier.size(66.dp)
+                modifier = Modifier.size(48.dp)
             )
             Text(title, color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
             Text(
@@ -3492,7 +3492,7 @@ private fun RelicArtworkIcon(
     val frameGlow by frameTransition.animateFloat(
         initialValue = .72f,
         targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1900), RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(tween(2500), RepeatMode.Reverse),
         label = "relic-rarity-frame-glow"
     )
     Surface(

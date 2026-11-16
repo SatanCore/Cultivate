@@ -1753,6 +1753,10 @@ private fun CultivateApp() {
                         selectedTownBuilding = ""
                         selectedMenu = 4
                     },
+                    onSelectGender = { gender ->
+                        playerGender = gender
+                        prefs.edit().putString("player_gender", gender).apply()
+                    },
                     onSelectClass = { i ->
                         chosenClass = i
                         inspectedSkillNode = 0
@@ -2854,16 +2858,18 @@ private fun CharacterArmoryScreen(
     setBonus: GearSetBonus,
     onOpenWeapons: () -> Unit,
     onOpenGear: () -> Unit,
-    onSelectClass: (Int) -> Unit
+    onSelectClass: (Int) -> Unit,
+    onSelectGender: (String) -> Unit
 ) {
     val selected = classIndex.coerceIn(0, classNames.lastIndex)
     val profile = classCombatProfiles[selected]
     val portrait = when (selected) {
-        0 -> R.drawable.hero_full_blademaster
-        1 -> R.drawable.hero_full_ironbody
-        2 -> R.drawable.hero_full_elementalist
-        else -> R.drawable.hero_full_spiritmystic
+        0 -> if (playerGender == "female") R.drawable.blademaster_female else R.drawable.blademaster_male
+        1 -> if (playerGender == "female") R.drawable.ironbody_female else R.drawable.ironbody_male
+        2 -> if (playerGender == "female") R.drawable.elementalist_female else R.drawable.elementalist_male
+        else -> if (playerGender == "female") R.drawable.spiritmystic_female else R.drawable.spiritmystic_male
     }
+    val classAura = listOf(Color(0xFF79C8FF), Color(0xFFFF956B), Color(0xFFB58BFF), Color(0xFF72E0C0))[selected]
     val gearBySlot = equippedGear.associateBy { it.slot }
     val hpProgress = if (maxHp <= 0) 0f else (currentHp.toFloat() / maxHp).coerceIn(0f, 1f)
     val aura = rememberInfiniteTransition(label = "character-armory-aura")
@@ -2874,7 +2880,20 @@ private fun CharacterArmoryScreen(
         label = "character-armory-pulse"
     )
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("male" to "МУЖСКОЙ ОБЛИК", "female" to "ЖЕНСКИЙ ОБЛИК").forEach { (gender, label) ->
+                val active = playerGender == gender
+                Surface(
+                    modifier = Modifier.weight(1f).clickable { onSelectGender(gender) },
+                    color = if (active) Color(0xFF244A49) else Color(0xFF17263A),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(if (active) 2.dp else 1.dp, if (active) classAura else Color(0x557E9BB8))
+                ) {
+                    Text(label, Modifier.padding(vertical = 10.dp), color = if (active) classAura else Color(0xFFD5DFEC), fontSize = 8.sp, fontWeight = FontWeight.Black, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
+            }
+        }
         Surface(
             color = Color(0xEE17263D),
             shape = MaterialTheme.shapes.extraLarge,
@@ -2906,16 +2925,16 @@ private fun CharacterArmoryScreen(
         Surface(
             color = Color(0xE9101C30),
             shape = MaterialTheme.shapes.extraLarge,
-            border = BorderStroke(1.dp, Color(0x887E9BB8)),
+            border = BorderStroke(1.dp, classAura.copy(alpha = .72f)),
             tonalElevation = 7.dp
         ) {
             Row(
-                Modifier.fillMaxWidth().height(258.dp).padding(6.dp),
+                Modifier.fillMaxWidth().height(370.dp).padding(6.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(
-                    Modifier.weight(.25f).fillMaxHeight(),
+                    Modifier.weight(.20f).fillMaxHeight(),
                     verticalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     CharacterEquipmentSlot(
@@ -2948,7 +2967,7 @@ private fun CharacterArmoryScreen(
                 }
 
                 Box(
-                    Modifier.weight(.50f).fillMaxHeight(),
+                    Modifier.weight(.60f).fillMaxHeight(),
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
@@ -2965,7 +2984,7 @@ private fun CharacterArmoryScreen(
                         modifier = Modifier.fillMaxHeight(.94f).aspectRatio(2f / 3f),
                         color = Color(0xFF111A2B),
                         shape = RoundedCornerShape(14.dp),
-                        border = BorderStroke(1.5.dp, Gold.copy(alpha = .88f)),
+                        border = BorderStroke(1.5.dp, classAura.copy(alpha = .95f)),
                         tonalElevation = 8.dp,
                         shadowElevation = 7.dp
                     ) {
@@ -2974,7 +2993,7 @@ private fun CharacterArmoryScreen(
                                 painter = painterResource(portrait),
                                 contentDescription = "Полноценный образ класса: ${classNames[selected]}",
                                 contentScale = ContentScale.Fit,
-                                modifier = Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 2.dp)
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 1.dp, vertical = 1.dp)
                             )
                             Box(
                                 Modifier.align(Alignment.BottomCenter)
@@ -3032,7 +3051,7 @@ private fun CharacterArmoryScreen(
                 }
 
                 Column(
-                    Modifier.weight(.25f).fillMaxHeight(),
+                    Modifier.weight(.20f).fillMaxHeight(),
                     verticalArrangement = Arrangement.SpaceEvenly
                 ) {
                     CharacterEquipmentSlot(

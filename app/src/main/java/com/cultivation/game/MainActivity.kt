@@ -1365,6 +1365,7 @@ private fun CultivateApp() {
                 WorldExplorationScreen(
                     stage = stage,
                     combatPower = classBonus + classDefense + playerMaxHp,
+                    classIndex = chosenClass, playerGender = playerGender, playerNickname = playerNickname,
                     selectedWorldIndex = selectedWorldIndex,
                     onSelectWorld = { index ->
                         selectedWorldIndex = index

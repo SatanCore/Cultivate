@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -2366,6 +2367,11 @@ private fun CultivateBottomNavigation(
         ) {
             primary.forEach { (label, icon, target) ->
                 val selected = selectedMenu == target
+                val iconScale by animateFloatAsState(
+                    targetValue = if (selected) 1.14f else 1f,
+                    animationSpec = tween(220),
+                    label = "bottom-nav-scale-$icon"
+                )
                 Column(
                     Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(13.dp))
                         .background(if (selected) Color(0xFF25443F) else Color.Transparent)
@@ -2373,11 +2379,38 @@ private fun CultivateBottomNavigation(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    RpgIcon(icon, Modifier.size(25.dp))
+                    Box(Modifier.size(29.dp), contentAlignment = Alignment.Center) {
+                        if (selected) {
+                            Canvas(Modifier.fillMaxSize()) {
+                                drawCircle(
+                                    Brush.radialGradient(listOf(Jade.copy(alpha = .34f), Color.Transparent)),
+                                    radius = size.minDimension * .5f
+                                )
+                                drawArc(
+                                    color = Gold.copy(alpha = .78f),
+                                    startAngle = 205f,
+                                    sweepAngle = 130f,
+                                    useCenter = false,
+                                    topLeft = Offset(size.width * .12f, size.height * .12f),
+                                    size = Size(size.width * .76f, size.height * .76f),
+                                    style = Stroke(width = 1.dp.toPx())
+                                )
+                            }
+                        }
+                        RpgIcon(icon, Modifier.size(25.dp).graphicsLayer {
+                            scaleX = iconScale
+                            scaleY = iconScale
+                        })
+                    }
                     Text(label, color = if (selected) Gold else Color(0xFFB9C7D8), fontSize = 8.sp, fontWeight = if (selected) FontWeight.Black else FontWeight.Medium)
                 }
             }
             val moreSelected = selectedMenu in listOf(5, 6, 7, 8, 9)
+            val moreScale by animateFloatAsState(
+                targetValue = if (moreSelected) 1.12f else 1f,
+                animationSpec = tween(220),
+                label = "bottom-nav-more-scale"
+            )
             Column(
                 Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(13.dp))
                     .background(if (moreSelected) Color(0xFF25443F) else Color.Transparent)
@@ -2385,7 +2418,10 @@ private fun CultivateBottomNavigation(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                RpgIcon("menu", Modifier.size(25.dp))
+                RpgIcon("menu", Modifier.size(25.dp).graphicsLayer {
+                    scaleX = moreScale
+                    scaleY = moreScale
+                })
                 Text("Ещё", color = if (moreSelected) Gold else Color(0xFFB9C7D8), fontSize = 8.sp, fontWeight = if (moreSelected) FontWeight.Black else FontWeight.Medium)
             }
         }

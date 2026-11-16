@@ -43,9 +43,26 @@ jobs:
           cp "$source_dir/elementalist_female_bd6c47c4.png" "$target_dir/elementalist_female.png"
           cp "$source_dir/spiritmystic_male_6ca05db4.png" "$target_dir/spiritmystic_male.png"
           cp "$source_dir/spiritmystic_female_446e7fa6.png" "$target_dir/spiritmystic_female.png"
+          # Import full-body class artwork and clean, transparent creature illustrations.
+          cp "$source_dir/character_full_blademaster_5dc1eacc.webp" "$target_dir/hero_full_blademaster.webp"
+          cp "$source_dir/character_full_elementalist_9126bc7a.webp" "$target_dir/hero_full_elementalist.webp"
+          cp "$source_dir/character_full_ironbody_804ca338.webp" "$target_dir/hero_full_ironbody.webp"
+          cp "$source_dir/character_full_spiritmystic_d5ac6aff.webp" "$target_dir/hero_full_spiritmystic.webp"
+          creature_dir="/tmp/cultivate-art/art_source/01_ready_alpha_assets/creatures"
+          cp "$creature_dir/celestial_dragon_6a4b5e9a.png" "$target_dir/creature_celestial_dragon.png"
+          cp "$creature_dir/magma_warlord_tiger_9118f812.png" "$target_dir/creature_magma_tiger.png"
+          cp "$creature_dir/frost_phoenix_aafa8bf5.png" "$target_dir/creature_frost_phoenix.png"
+          cp "$creature_dir/abyssal_demon_lord_b8aa0238.png" "$target_dir/creature_abyssal_lord.png"
+          cp "$creature_dir/jade_qilin_85e3d4a2.png" "$target_dir/creature_jade_qilin.png"
+          cp "$creature_dir/nine_tailed_fox_e79a3545.png" "$target_dir/creature_nine_tailed_fox.png"
+          # Three transparent rarity frames for icon slots and collection tiles.
+          interface_dir="/tmp/cultivate-art/art_source/01_ready_alpha_assets/interface"
+          cp "$interface_dir/rarity_frame_01_e6dd0bdb.png" "$target_dir/ui_rarity_frame_01.png"
+          cp "$interface_dir/rarity_frame_02_9373d96b.png" "$target_dir/ui_rarity_frame_02.png"
+          cp "$interface_dir/rarity_frame_03_d6abb656.png" "$target_dir/ui_rarity_frame_03.png"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$target_dir"/*_male.png "$target_dir"/*_female.png ART_ASSET_INVENTORY.md
+          git add "$target_dir"/*_male.png "$target_dir"/*_female.png "$target_dir"/hero_full_*.webp "$target_dir"/creature_*.png "$target_dir"/ui_rarity_frame_*.png ART_ASSET_INVENTORY.md
           if ! git diff --cached --quiet; then
             git commit -m "Inventory supplied illustration library and import portraits"
             git push

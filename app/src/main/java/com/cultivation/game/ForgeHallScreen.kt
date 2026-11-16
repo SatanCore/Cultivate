@@ -1,6 +1,11 @@
 package com.cultivation.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +49,19 @@ fun ForgeHallScreen(
     onOpenWorkshop: () -> Unit,
     onClose: () -> Unit
 ) {
+    val forgeAmbient = rememberInfiniteTransition(label = "forge-ambient")
+    val forgeGlow by forgeAmbient.animateFloat(
+        initialValue = .28f,
+        targetValue = .78f,
+        animationSpec = infiniteRepeatable(tween(1700), RepeatMode.Reverse),
+        label = "forge-fire-glow"
+    )
+    val swordDrift by forgeAmbient.animateFloat(
+        initialValue = -2f,
+        targetValue = 2f,
+        animationSpec = infiniteRepeatable(tween(2300), RepeatMode.Reverse),
+        label = "forge-sword-drift"
+    )
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(11.dp)
@@ -55,6 +74,13 @@ fun ForgeHallScreen(
                 contentDescription = "Кузница Чэня",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.matchParentSize()
+            )
+            Box(
+                modifier = Modifier.matchParentSize().background(
+                    Brush.radialGradient(
+                        listOf(ForgeGold.copy(alpha = forgeGlow * .24f), Color.Transparent)
+                    )
+                )
             )
             Box(
                 modifier = Modifier.matchParentSize().background(
@@ -77,7 +103,7 @@ fun ForgeHallScreen(
             modifier = Modifier.fillMaxWidth(),
             color = Color(0xE91A2A3B),
             shape = RoundedCornerShape(17.dp),
-            border = BorderStroke(1.dp, ForgeGold.copy(alpha = .42f))
+            border = BorderStroke(1.dp, ForgeGold.copy(alpha = .28f + forgeGlow * .30f))
         ) {
             Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("АКТИВНОЕ ОРУЖИЕ", color = ForgeGold, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.3.sp)
@@ -101,7 +127,7 @@ fun ForgeHallScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Image(painterResource(R.drawable.relic_sword), null, Modifier.size(38.dp))
+                Image(painterResource(R.drawable.relic_sword), null, Modifier.size(38.dp).graphicsLayer { translationY = swordDrift.dp.toPx() })
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("ЗАПАС МАТЕРИАЛОВ", color = Color(0xFFB9C9D8), fontSize = 8.sp, fontWeight = FontWeight.Black)
                     Text("$ironOre ед. железной руды", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)

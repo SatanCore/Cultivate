@@ -1072,11 +1072,13 @@ private fun CultivateApp() {
                 val springRemaining = formatRemainingTime(springReadyAt - nowMillis)
                 GameCard("Личная обитель", "Уровень $abodeLevel · $currentWorld · тихое место для роста") {
                     AbodeScene(abodeLevel, currentWorld, abodeSection) { selected -> abodeSection = selected }
-                    Text("Небольшой двор в стороне от Лунной Гавани. Здесь ты можешь укрыться от суеты, собирать Ци и постепенно превращать скромное убежище в настоящую резиденцию культиватора.", color = Color.LightGray)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        StatCard("Железная руда", ironOre.toString(), Modifier.weight(1f))
-                        StatCard("Травы", spiritHerbs.toString(), Modifier.weight(1f))
-                        StatCard("Духовная вода", spiritWater.toString(), Modifier.weight(1f))
+                    if (abodeSection != "alchemy") {
+                        Text("Небольшой двор в стороне от Лунной Гавани. Здесь ты можешь укрыться от суеты, собирать Ци и постепенно превращать скромное убежище в настоящую резиденцию культиватора.", color = Color.LightGray)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            StatCard("Железная руда", ironOre.toString(), Modifier.weight(1f))
+                            StatCard("Травы", spiritHerbs.toString(), Modifier.weight(1f))
+                            StatCard("Духовная вода", spiritWater.toString(), Modifier.weight(1f))
+                        }
                     }
                     when (abodeSection) {
                         "sanctuary" -> {
@@ -1115,32 +1117,58 @@ private fun CultivateApp() {
                             }, enabled = ironOre >= temperOre && stones >= temperCost, modifier = Modifier.fillMaxWidth()) { Text("Закалить оружие · $temperOre руды · $temperCost камней") }
                             Text("Кузнечный навык: ${1 + forgeTemper / 3} · каждая третья закалка повышает мастерство кузницы.", color = Color.LightGray, fontSize = 11.sp)
                         }
-                        "alchemy" -> {
-                            Text("Алхимическая печь", color = Gold, fontWeight = FontWeight.Bold)
-                            Text("Алхимия Смертного мира не творит чудес: простые травы и вода из родника превращаются в пилюли, помогающие пережить путь и ускорить накопление Ци.", color = Color.LightGray, fontSize = 12.sp)
-                            Text("Ранг алхимии: $alchemyRank / $maxAlchemyRank · готовых пилюль Ци: $qiPills · пилюль закалки: $bodyPills", color = Jade)
-                            Button(onClick = {
-                                if (spiritHerbs >= 6 && spiritWater >= 2) { spiritHerbs -= 6; spiritWater -= 2; qiPills++; message = "Создана пилюля сбора Ци." }
-                                else message = "Нужно 6 духовных трав и 2 порции духовной воды."
-                            }, enabled = spiritHerbs >= 6 && spiritWater >= 2, modifier = Modifier.fillMaxWidth()) { Text("Сварить пилюлю Ци · 6 трав + 2 воды") }
-                            Button(onClick = {
-                                if (spiritHerbs >= 5 && spiritWater >= 2) { spiritHerbs -= 5; spiritWater -= 2; bodyPills++; message = "Создана пилюля крепкого тела." }
-                                else message = "Нужно 5 духовных трав и 2 порции духовной воды."
-                            }, enabled = spiritHerbs >= 5 && spiritWater >= 2, modifier = Modifier.fillMaxWidth()) { Text("Сварить пилюлю закалки · 5 трав + 2 вода") }
-                            OutlinedButton(onClick = {
+                        "alchemy" -> AlchemyWorkshopScreen(
+                            alchemyRank = alchemyRank,
+                            maxAlchemyRank = maxAlchemyRank,
+                            spiritHerbs = spiritHerbs,
+                            spiritWater = spiritWater,
+                            qiPills = qiPills,
+                            bodyPills = bodyPills,
+                            onBrewQi = {
+                                if (spiritHerbs >= 6 && spiritWater >= 2) {
+                                    spiritHerbs -= 6
+                                    spiritWater -= 2
+                                    qiPills++
+                                    message = "Создана пилюля сбора Ци."
+                                } else message = "Нужно 6 духовных трав и 2 порции духовной воды."
+                            },
+                            onBrewBody = {
+                                if (spiritHerbs >= 5 && spiritWater >= 2) {
+                                    spiritHerbs -= 5
+                                    spiritWater -= 2
+                                    bodyPills++
+                                    message = "Создана пилюля крепкого тела."
+                                } else message = "Нужно 5 духовных трав и 2 порции духовной воды."
+                            },
+                            onUseQi = {
                                 val qiPower = 25 + alchemyRank * 5
-                                if (qiPills > 0) { qiPills--; qi = (qi + qiPower).coerceAtMost(9999); message = "Пилюля растворилась, даровав $qiPower Ци." }
-                                else message = "В запасе нет пилюль сбора Ци."
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Принять пилюлю Ци · +${25 + alchemyRank * 5}") }
-                            OutlinedButton(onClick = {
+                                if (qiPills > 0) {
+                                    qiPills--
+                                    qi = (qi + qiPower).coerceAtMost(9999)
+                                    message = "Пилюля растворилась, даровав $qiPower Ци."
+                                } else message = "В запасе нет пилюль сбора Ци."
+                            },
+                            onUseBody = {
                                 val bodyPower = 15 + alchemyRank * 2
-                                if (bodyPills > 0) { bodyPills--; bodyPillBonus += bodyPower; playerHp = (playerHp + bodyPower).coerceAtMost(playerMaxHp + bodyPower); message = "Тело укреплено навсегда: максимальное здоровье +$bodyPower." }
-                                else message = "В запасе нет пилюль закалки."
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Принять пилюлю закалки · здоровье +${15 + alchemyRank * 2} навсегда") }
-                            if (alchemyRank < maxAlchemyRank && spiritHerbs >= alchemyRank * 4 && spiritWater >= alchemyRank) {
-                                OutlinedButton(onClick = { spiritHerbs -= alchemyRank * 4; spiritWater -= alchemyRank; alchemyRank++; message = "Ранг алхимии повышен до $alchemyRank. Пилюли стали эффективнее." }, modifier = Modifier.fillMaxWidth()) { Text("Повысить ранг алхимии · травы ${alchemyRank * 4} + вода $alchemyRank") }
-                            } else Text(if (alchemyRank >= maxAlchemyRank) "Достигнут предел алхимии текущего мира: $maxAlchemyRank." else "Для следующего ранга нужны ${alchemyRank * 4} трав и $alchemyRank порций воды.", color = Color.LightGray, fontSize = 11.sp)
-                        }
+                                if (bodyPills > 0) {
+                                    bodyPills--
+                                    bodyPillBonus += bodyPower
+                                    playerHp = (playerHp + bodyPower).coerceAtMost(playerMaxHp + bodyPower)
+                                    message = "Тело укреплено навсегда: максимальное здоровье +$bodyPower."
+                                } else message = "В запасе нет пилюль закалки."
+                            },
+                            onUpgradeRank = {
+                                if (alchemyRank < maxAlchemyRank &&
+                                    spiritHerbs >= alchemyRank * 4 &&
+                                    spiritWater >= alchemyRank
+                                ) {
+                                    spiritHerbs -= alchemyRank * 4
+                                    spiritWater -= alchemyRank
+                                    alchemyRank++
+                                    message = "Ранг алхимии повышен до $alchemyRank. Пилюли стали эффективнее."
+                                } else message = "Для следующего ранга нужны ${alchemyRank * 4} трав и $alchemyRank порций воды."
+                            }
+                        )
                         "garden" -> {
                             Text("Сад духовных трав", color = Gold, fontWeight = FontWeight.Bold)
                             Text("На небольшом участке растут самые простые травы Смертного мира. Позже, в других мирах, сад сможет принимать семена с совершенно иной природой.", color = Color.LightGray, fontSize = 12.sp)

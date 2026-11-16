@@ -903,6 +903,7 @@ private fun CultivateApp() {
                 CinematicHomeScreen(
                     stage = stage, qi = qi, stones = stones, wins = wins,
                     storyChapter = storyChapter, combatPower = classBonus + classDefense + playerMaxHp,
+                    playerNickname = playerNickname, playerGender = playerGender, classIndex = chosenClass,
                     onNavigate = { target -> selectedMenu = target; selectedTownBuilding = "" },
                     onBuilding = { building -> selectedTownBuilding = building }
                 )
@@ -1968,6 +1969,7 @@ private fun CultivateApp() {
 @Composable
 private fun CinematicHomeScreen(
     stage: Int, qi: Int, stones: Int, wins: Int, storyChapter: Int, combatPower: Int,
+    playerNickname: String, playerGender: String, classIndex: Int,
     onNavigate: (Int) -> Unit, onBuilding: (String) -> Unit
 ) {
     BoxWithConstraints(Modifier.fillMaxSize().background(Color(0xFF081426))) {
@@ -1998,9 +2000,20 @@ private fun CinematicHomeScreen(
             Surface(color = Color(0xDD111B30), shape = MaterialTheme.shapes.extraLarge, tonalElevation = 8.dp) {
                 Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                     Surface(color = Color(0xFF293A59), shape = MaterialTheme.shapes.extraLarge) {
-                        Box(Modifier.size(42.dp), contentAlignment = Alignment.Center) {
-                            Text("道", color = Gold, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                        val safeClassIndex = classIndex.coerceIn(0, classNames.lastIndex)
+                        val heroPortrait = when (safeClassIndex) {
+                            0 -> if (playerGender == "female") R.drawable.blademaster_female else R.drawable.blademaster_male
+                            1 -> if (playerGender == "female") R.drawable.ironbody_female else R.drawable.ironbody_male
+                            2 -> if (playerGender == "female") R.drawable.elementalist_female else R.drawable.elementalist_male
+                            else -> if (playerGender == "female") R.drawable.spiritmystic_female else R.drawable.spiritmystic_male
                         }
+                        Image(
+                            painter = painterResource(heroPortrait),
+                            contentDescription = "Персонаж " + playerNickname.ifBlank { classNames[safeClassIndex] },
+                            modifier = Modifier.size(42.dp).clip(CircleShape)
+                                .border(1.dp, Gold.copy(alpha = .9f), CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
                     }
                     Spacer(Modifier.width(9.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {

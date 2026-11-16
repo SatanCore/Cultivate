@@ -2800,7 +2800,7 @@ private fun CharacterEquipmentSlot(
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.size(35.dp)
             )
-            Text(title, color = Gold, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            Text(title, color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
             Text(
                 itemName,
                 color = if (itemName == "Пусто") Color(0xFF9BA9BB) else rarityColor,
@@ -3256,7 +3256,7 @@ private fun TreasuryVaultHero(totalItems: Int, equippedItems: Int) {
         label = "treasury-vault-pulse"
     )
     Box(
-        Modifier.fillMaxWidth().height(148.dp).clip(RoundedCornerShape(20.dp))
+        Modifier.fillMaxWidth().height(166.dp).clip(RoundedCornerShape(20.dp))
     ) {
         Canvas(Modifier.fillMaxSize()) {
             drawRect(Brush.linearGradient(listOf(Color(0xFF0B1729), Color(0xFF1D3B4B), Color(0xFF121B31))))
@@ -3276,7 +3276,7 @@ private fun TreasuryVaultHero(totalItems: Int, equippedItems: Int) {
             painter = painterResource(R.drawable.treasury_vault_sigil),
             contentDescription = null,
             contentScale = ContentScale.Fit,
-            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 11.dp).size(126.dp).graphicsLayer {
+            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 9.dp).size(142.dp).graphicsLayer {
                 scaleX = pulse
                 scaleY = pulse
                 alpha = .92f
@@ -3323,7 +3323,7 @@ private fun TreasuryRelicTile(
     onClick: () -> Unit
 ) {
     Surface(
-        modifier = modifier.height(139.dp).clickable(onClick = onClick),
+        modifier = modifier.height(158.dp).clickable(onClick = onClick),
         color = if (selected) Color(0xEE29485A) else Color(0xE9142236),
         shape = RoundedCornerShape(14.dp),
         border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) Gold else rarityColor.copy(alpha = .72f)),
@@ -3332,12 +3332,12 @@ private fun TreasuryRelicTile(
     ) {
         Box(Modifier.fillMaxSize()) {
             Column(
-                Modifier.fillMaxSize().padding(horizontal = 4.dp, vertical = 7.dp),
+                Modifier.fillMaxSize().padding(horizontal = 5.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                RelicArtworkIcon(resourceId, rarityColor, Modifier.size(61.dp))
-                Text(title, color = if (selected) Color.White else Color(0xFFE2E8F0), fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 2, minLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 9.sp)
+                RelicArtworkIcon(resourceId, rarityColor, Modifier.size(76.dp))
+                Text(title, color = if (selected) Color.White else Color(0xFFE2E8F0), fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 2, minLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 10.sp)
                 Text(subtitle, color = rarityColor, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
             }
             if (equipped) {
@@ -3373,7 +3373,7 @@ private fun TreasuryWeaponDetail(
     ) {
         Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RelicArtworkIcon(weaponDrawable(item.type), rarityColor, Modifier.size(88.dp))
+                RelicArtworkIcon(weaponDrawable(item.type), rarityColor, Modifier.size(104.dp))
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("ИЗБРАННАЯ РЕЛИКВИЯ", color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
@@ -3421,7 +3421,7 @@ private fun TreasuryGearDetail(
     ) {
         Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RelicArtworkIcon(gearDrawable(item.slot), rarityColor, Modifier.size(88.dp))
+                RelicArtworkIcon(gearDrawable(item.slot), rarityColor, Modifier.size(104.dp))
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("ИЗБРАННАЯ ЧАСТЬ КОМПЛЕКТА", color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
@@ -3495,7 +3495,7 @@ private fun InventoryLoadoutRow(weapon: WeaponDefinition, equippedGear: List<Gea
 @Composable
 private fun InventoryLoadoutSlot(label: String, itemName: String, icon: Int, tint: Color, modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier.height(104.dp),
+        modifier = modifier.height(116.dp),
         color = Color(0xFF101C30),
         shape = MaterialTheme.shapes.large,
         border = BorderStroke(1.dp, tint.copy(alpha = .76f)),
@@ -3506,7 +3506,7 @@ private fun InventoryLoadoutSlot(label: String, itemName: String, icon: Int, tin
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
-            RelicArtworkIcon(icon, tint, Modifier.size(49.dp))
+            RelicArtworkIcon(icon, tint, Modifier.size(58.dp))
             Text(label, color = Gold, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
             Text(itemName, color = Color(0xFFD8E0EC), fontSize = 7.sp, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }

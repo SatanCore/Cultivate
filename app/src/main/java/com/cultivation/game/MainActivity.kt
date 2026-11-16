@@ -2573,6 +2573,36 @@ private fun CultivationPanel(
     var previousStage by remember { mutableStateOf(stage) }
     var breakthroughVisible by remember { mutableStateOf(false) }
     val breakthroughPulse = remember { Animatable(0f) }
+    val majorTribulation = stage == 7 || stage == 13 || stage == 19
+    val tribulationFrames = remember {
+        listOf(
+            R.drawable.cultivation_tribulation_lightning_00,
+            R.drawable.cultivation_tribulation_lightning_01,
+            R.drawable.cultivation_tribulation_lightning_02,
+            R.drawable.cultivation_tribulation_lightning_03,
+            R.drawable.cultivation_tribulation_lightning_04,
+            R.drawable.cultivation_tribulation_lightning_05,
+            R.drawable.cultivation_tribulation_lightning_06,
+            R.drawable.cultivation_tribulation_lightning_07,
+            R.drawable.cultivation_tribulation_lightning_08,
+            R.drawable.cultivation_tribulation_lightning_09,
+            R.drawable.cultivation_tribulation_lightning_10,
+            R.drawable.cultivation_tribulation_lightning_11
+        )
+    }
+    var tribulationFrame by remember { mutableIntStateOf(0) }
+    LaunchedEffect(breakthroughVisible, majorTribulation) {
+        if (breakthroughVisible && majorTribulation) {
+            repeat(2) {
+                tribulationFrames.indices.forEach { frame ->
+                    tribulationFrame = frame
+                    delay(75L)
+                }
+            }
+        } else {
+            tribulationFrame = 0
+        }
+    }
     LaunchedEffect(stage) {
         if (stage > previousStage) {
             previousStage = stage
@@ -2665,6 +2695,28 @@ private fun CultivationPanel(
             if (breakthroughVisible) {
                 val flashAlpha = breakthroughPulse.value.coerceIn(0f, 1f)
                 Box(Modifier.fillMaxSize().background(Color(0xFFBDEFD9).copy(alpha = flashAlpha * .18f)))
+                if (majorTribulation) {
+                    Image(
+                        painter = painterResource(R.drawable.cultivation_tribulation_storm),
+                        contentDescription = "Грозовое небо великого прорыва",
+                        modifier = Modifier.fillMaxSize().graphicsLayer(alpha = flashAlpha * .62f),
+                        contentScale = ContentScale.Crop
+                    )
+                    Image(
+                        painter = painterResource(R.drawable.cultivation_tribulation_crossing),
+                        contentDescription = null,
+                        modifier = Modifier.align(Alignment.Center).fillMaxWidth(.96f).height(248.dp)
+                            .graphicsLayer(alpha = flashAlpha * .34f, scaleX = .94f + .08f * flashAlpha, scaleY = .94f + .08f * flashAlpha),
+                        contentScale = ContentScale.Fit
+                    )
+                    Image(
+                        painter = painterResource(R.drawable.cultivation_tribulation_spear_lightning),
+                        contentDescription = null,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(top = 22.dp, end = 14.dp)
+                            .width(112.dp).height(202.dp).graphicsLayer(alpha = flashAlpha * .58f, rotationZ = -7f),
+                        contentScale = ContentScale.Fit
+                    )
+                }
                 Image(
                     painter = painterResource(R.drawable.cultivation_ascension_rays),
                     contentDescription = null,
@@ -2679,6 +2731,15 @@ private fun CultivationPanel(
                         .graphicsLayer(alpha = flashAlpha, scaleX = .76f + .24f * flashAlpha, scaleY = .76f + .24f * flashAlpha),
                     contentScale = ContentScale.Fit
                 )
+                if (majorTribulation) {
+                    Image(
+                        painter = painterResource(tribulationFrames[tribulationFrame.coerceIn(0, tribulationFrames.lastIndex)]),
+                        contentDescription = "Кадр небесной молнии",
+                        modifier = Modifier.align(Alignment.Center).size(238.dp)
+                            .graphicsLayer(alpha = flashAlpha * .84f, scaleX = .90f + .18f * flashAlpha, scaleY = .90f + .18f * flashAlpha),
+                        contentScale = ContentScale.Fit
+                    )
+                }
                 Image(
                     painter = painterResource(R.drawable.cultivation_event_breakthrough),
                     contentDescription = null,
@@ -2694,8 +2755,19 @@ private fun CultivationPanel(
                     shadowElevation = 8.dp
                 ) {
                     Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("ПРОРЫВ СВЕРШЁН", color = Color(0xFFFFD995), fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                        Text("${worldName(stage)} · ${stageName(stage)}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            if (majorTribulation) "НЕБЕСНАЯ ГРОЗА РАССЕЯЛАСЬ" else "ПРОРЫВ СВЕРШЁН",
+                            color = Color(0xFFFFD995),
+                            fontSize = if (majorTribulation) 10.sp else 13.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp
+                        )
+                        Text(
+                            if (majorTribulation) "Открыт путь: ${worldName(stage)}" else "${worldName(stage)} · ${stageName(stage)}",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }

@@ -906,7 +906,15 @@ private fun CultivateApp() {
                     storyChapter = storyChapter, combatPower = classBonus + classDefense + playerMaxHp,
                     playerNickname = playerNickname, playerGender = playerGender, classIndex = chosenClass,
                     onNavigate = { target -> selectedMenu = target; selectedTownBuilding = "" },
-                    onBuilding = { building -> selectedTownBuilding = building }
+                    onBuilding = { building ->
+                        if (building == "alchemy") {
+                            abodeSection = "alchemy"
+                            selectedMenu = 8
+                            selectedTownBuilding = ""
+                        } else {
+                            selectedTownBuilding = building
+                        }
+                    }
                 )
                 if (selectedTownBuilding.isNotBlank()) {
                     Column(
@@ -2119,8 +2127,8 @@ private fun CinematicHomeScreen(
         HomeHotspot("Клан", "Союз и развитие", "clan", Modifier.align(Alignment.Center).offset(x = -maxWidth * .30f, y = -maxHeight * .24f)) { onNavigate(6) }
         HomeHotspot("Обитель", "Культивация · ремёсла", "abode", Modifier.align(Alignment.Center).offset(y = -maxHeight * .27f)) { onNavigate(8) }
         HomeHotspot("Башня испытаний", "Этажи и награды", "tower", Modifier.align(Alignment.Center).offset(x = maxWidth * .30f, y = -maxHeight * .22f)) { onNavigate(2) }
-        HomeHotspot("Алхимия", "Пилюли и эликсиры", "alchemy", Modifier.align(Alignment.Center).offset(x = -maxWidth * .30f, y = maxHeight * .03f)) { onNavigate(8) }
-        HomeHotspot("Кузница", "Ковка и усиление", "forge", Modifier.align(Alignment.Center).offset(y = maxHeight * .02f)) { onNavigate(4) }
+        HomeHotspot("Алхимия", "Пилюли и эликсиры", "alchemy", Modifier.align(Alignment.Center).offset(x = -maxWidth * .30f, y = maxHeight * .03f)) { onBuilding("alchemy") }
+        HomeHotspot("Кузница", "Ковка и усиление", "forge", Modifier.align(Alignment.Center).offset(y = maxHeight * .02f)) { onBuilding("forge") }
         HomeHotspot("Арена", "Поединки и добыча", "arena", Modifier.align(Alignment.Center).offset(x = maxWidth * .30f, y = maxHeight * .04f)) { onNavigate(2) }
         HomeHotspot("Аукцион", "Торговля и редкости", "auction", Modifier.align(Alignment.Center).offset(x = -maxWidth * .30f, y = maxHeight * .29f)) { onBuilding("auction") }
         HomeHotspot("Доска заданий", "Поручения долины", "quests", Modifier.align(Alignment.Center).offset(y = maxHeight * .28f)) { onBuilding("quests") }

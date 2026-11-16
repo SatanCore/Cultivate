@@ -3941,6 +3941,28 @@ private fun VaultCounter(label: String, value: String) {
 }
 
 @Composable
+private fun InventoryItemArtwork(
+    resourceId: Int,
+    frameResource: Int,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Image(
+            painter = painterResource(resourceId),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize().padding(8.dp),
+            contentScale = ContentScale.Fit
+        )
+        Image(
+            painter = painterResource(frameResource),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit
+        )
+    }
+}
+
+@Composable
 private fun TreasuryRelicTile(
     modifier: Modifier = Modifier,
     title: String,
@@ -3961,7 +3983,7 @@ private fun TreasuryRelicTile(
         label = "relic-selection"
     )
     Surface(
-        modifier = modifier.height(158.dp).graphicsLayer {
+        modifier = modifier.height(184.dp).graphicsLayer {
             val scale = 1f + selectionProgress * .018f
             scaleX = scale
             scaleY = scale
@@ -3988,15 +4010,14 @@ private fun TreasuryRelicTile(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                RelicArtworkIcon(
+                InventoryItemArtwork(
                     resourceId,
-                    rarityColor,
-                    Modifier.size(76.dp).graphicsLayer {
+                    frameResource,
+                    Modifier.size(104.dp).graphicsLayer {
                         val scale = 1f + selectionProgress * .035f
                         scaleX = scale
                         scaleY = scale
-                    },
-                    frameResource
+                    }
                 )
                 Text(title, color = if (selected) Color.White else Color(0xFFE2E8F0), fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 2, minLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 10.sp)
                 Text(subtitle, color = rarityColor, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
@@ -4066,7 +4087,7 @@ private fun InventoryPowerComparison(score: Int, delta: Int?, equipped: Boolean)
 @Composable
 private fun RelicDetailShowcase(resourceId: Int, rarityColor: Color, frameResource: Int) {
     Box(
-        Modifier.size(122.dp),
+        Modifier.size(146.dp),
         contentAlignment = Alignment.Center
     ) {
         Canvas(Modifier.fillMaxSize()) {
@@ -4102,7 +4123,7 @@ private fun RelicDetailShowcase(resourceId: Int, rarityColor: Color, frameResour
                 drawLine(rarityColor.copy(alpha = .78f), start, end, 1.2.dp.toPx())
             }
         }
-        RelicArtworkIcon(resourceId, rarityColor, Modifier.size(100.dp), frameResource)
+        InventoryItemArtwork(resourceId, frameResource, Modifier.size(132.dp))
     }
 }
 
@@ -4296,7 +4317,7 @@ private fun InventoryLoadoutSlot(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            RelicArtworkIcon(icon, tint, Modifier.size(52.dp), frameResource)
+            InventoryItemArtwork(icon, frameResource, Modifier.size(58.dp))
             Text(
                 label, color = Gold, fontSize = 6.sp,
                 fontWeight = FontWeight.Black, maxLines = 1,

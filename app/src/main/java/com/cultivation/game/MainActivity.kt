@@ -3798,8 +3798,8 @@ private fun TreasuryRelicTile(
             1.dp + selectionProgress.dp,
             Gold.copy(alpha = .55f + selectionProgress * .45f)
         ),
-        tonalElevation = 2.dp + selectionProgress * 5.dp,
-        shadowElevation = 1.dp + selectionProgress * 5.dp
+        tonalElevation = 2.dp + 5.dp * selectionProgress,
+        shadowElevation = 1.dp + 5.dp * selectionProgress
     ) {
         Box(Modifier.fillMaxSize()) {
             Box(

@@ -3326,11 +3326,18 @@ private fun RelicArtworkIcon(
     modifier: Modifier = Modifier,
     frameResource: Int = R.drawable.ui_rarity_frame_02
 ) {
+    val frameTransition = rememberInfiniteTransition(label = "relic-rarity-frame")
+    val frameGlow by frameTransition.animateFloat(
+        initialValue = .72f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1900), RepeatMode.Reverse),
+        label = "relic-rarity-frame-glow"
+    )
     Surface(
         modifier = modifier,
         color = Color(0xFF101A2B),
         shape = CircleShape,
-        border = BorderStroke(2.dp, rarityColor.copy(alpha = .92f)),
+        border = BorderStroke(2.dp, rarityColor.copy(alpha = .58f + frameGlow * .38f)),
         tonalElevation = 7.dp,
         shadowElevation = 5.dp
     ) {
@@ -3342,8 +3349,8 @@ private fun RelicArtworkIcon(
                         center = Offset(size.width * .5f, size.height * .44f)
                     )
                 )
-                drawCircle(Gold.copy(alpha = .72f), radius = size.minDimension * .43f, style = Stroke(width = 1.dp.toPx()))
-                drawCircle(rarityColor.copy(alpha = .55f), radius = size.minDimension * .34f, style = Stroke(width = 1.dp.toPx()))
+                drawCircle(Gold.copy(alpha = .48f + frameGlow * .34f), radius = size.minDimension * .43f, style = Stroke(width = 1.dp.toPx()))
+                drawCircle(rarityColor.copy(alpha = .34f + frameGlow * .38f), radius = size.minDimension * .34f, style = Stroke(width = 1.dp.toPx()))
             }
             Image(
                 painter = painterResource(resourceId),
@@ -3354,7 +3361,9 @@ private fun RelicArtworkIcon(
             Image(
                 painter = painterResource(frameResource),
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize().padding(1.dp),
+                modifier = Modifier.fillMaxSize().padding(1.dp).graphicsLayer {
+                    alpha = .86f + frameGlow * .14f
+                },
                 contentScale = ContentScale.Fit
             )
         }

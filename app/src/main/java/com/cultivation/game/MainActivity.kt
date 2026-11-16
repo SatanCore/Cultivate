@@ -1428,6 +1428,12 @@ private fun CultivateApp() {
                             3 -> R.drawable.class_portrait_spiritmystic
                             else -> R.drawable.class_portrait_blademaster
                         },
+                        heroArtworkRes = when (chosenClass) {
+                            0 -> if (playerGender == "female") R.drawable.blademaster_female else R.drawable.blademaster_male
+                            1 -> if (playerGender == "female") R.drawable.ironbody_female else R.drawable.ironbody_male
+                            2 -> if (playerGender == "female") R.drawable.elementalist_female else R.drawable.elementalist_male
+                            else -> if (playerGender == "female") R.drawable.spiritmystic_female else R.drawable.spiritmystic_male
+                        },
                         petName = activePet.name,
                         petPortraitRes = petPortraitResource(activePet.id),
                         enemyPortraitRes = activeWorldBoss?.battlePortraitRes ?: activeWorldEncounter?.enemyPortraitRes ?: R.drawable.boss_mountain_lord,
@@ -4713,6 +4719,7 @@ private fun BattleScene(
     enemyHp: Int,
     enemyMaxHp: Int,
     playerPortraitRes: Int,
+    heroArtworkRes: Int,
     petName: String,
     petPortraitRes: Int,
     enemyPortraitRes: Int,
@@ -5107,7 +5114,7 @@ private fun BattleScene(
         }
 
         Image(
-            painter = painterResource(id = playerPortraitRes),
+            painter = painterResource(id = heroArtworkRes),
             contentDescription = "Боевой образ: $playerName",
             contentScale = ContentScale.Fit,
             modifier = Modifier

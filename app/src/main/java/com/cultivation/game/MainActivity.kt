@@ -301,7 +301,7 @@ private fun CultivateApp() {
         pageEnterTransition.animateTo(
             targetValue = 1f,
             animationSpec = tween(
-                durationMillis = 260,
+                durationMillis = 360,
                 easing = androidx.compose.animation.core.FastOutSlowInEasing
             )
         )
@@ -3755,7 +3755,7 @@ private fun TreasuryVaultScreen(
         }
         val weaponDetailReveal = remember(item.id) { Animatable(0f) }
         LaunchedEffect(item.id) {
-            weaponDetailReveal.animateTo(1f, tween(240, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+            weaponDetailReveal.animateTo(1f, tween(340, easing = androidx.compose.animation.core.FastOutSlowInEasing))
         }
         Dialog(onDismissRequest = { selectedWeapon = null }) {
             Surface(
@@ -3801,7 +3801,7 @@ private fun TreasuryVaultScreen(
         }
         val gearDetailReveal = remember(item.id) { Animatable(0f) }
         LaunchedEffect(item.id) {
-            gearDetailReveal.animateTo(1f, tween(240, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+            gearDetailReveal.animateTo(1f, tween(340, easing = androidx.compose.animation.core.FastOutSlowInEasing))
         }
         Dialog(onDismissRequest = { selectedGear = null }) {
             Surface(
@@ -3977,7 +3977,7 @@ private fun TreasuryRelicTile(
     val selectionProgress by animateFloatAsState(
         targetValue = if (selected) 1f else 0f,
         animationSpec = tween(
-            durationMillis = 240,
+            durationMillis = 340,
             easing = androidx.compose.animation.core.FastOutSlowInEasing
         ),
         label = "relic-selection"
@@ -4338,7 +4338,7 @@ private fun InventoryCategoryTab(label: String, icon: String, selected: Boolean,
     val selectionProgress by animateFloatAsState(
         targetValue = if (selected) 1f else 0f,
         animationSpec = tween(
-            durationMillis = 220,
+            durationMillis = 320,
             easing = androidx.compose.animation.core.FastOutSlowInEasing
         ),
         label = "inventory-tab-selection"

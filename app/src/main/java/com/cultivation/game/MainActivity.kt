@@ -6707,7 +6707,8 @@ private fun AuctionHallScreen(
                             selectedWeapon?.let { weaponDrawable(it.type) }
                                 ?: gearDrawable(selectedGear!!.slot),
                             rarityColor,
-                            Modifier.size(66.dp)
+                            Modifier.size(76.dp),
+                            rarityFrameResource(selectedRarity)
                         )
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text("ОСМОТР ЛОТА", color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)

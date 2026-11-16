@@ -101,7 +101,7 @@ fun ForgeHallScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Image(painterResource(R.drawable.icon_ore_iron), null, Modifier.size(38.dp))
+                Image(painterResource(R.drawable.relic_sword), null, Modifier.size(38.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("ЗАПАС МАТЕРИАЛОВ", color = Color(0xFFB9C9D8), fontSize = 8.sp, fontWeight = FontWeight.Black)
                     Text("$ironOre ед. железной руды", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)

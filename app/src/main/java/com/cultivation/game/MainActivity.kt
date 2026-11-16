@@ -3583,7 +3583,7 @@ private fun InventoryLoadoutRow(weapon: WeaponDefinition, equippedGear: List<Gea
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 7.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                InventoryLoadoutSlot("ОРУЖИЕ", weapon.name, weaponDrawable(weapon.type), weaponRarityColor(weapon.rarity), Modifier.width(88.dp))
+                InventoryLoadoutSlot("ОРУЖИЕ", weapon.name, weaponDrawable(weapon.type), weaponRarityColor(weapon.rarity), Modifier.width(96.dp))
                 GearSlot.values().forEach { slot ->
                     val item = equippedGear.firstOrNull { it.slot == slot }
                     InventoryLoadoutSlot(
@@ -3591,7 +3591,7 @@ private fun InventoryLoadoutRow(weapon: WeaponDefinition, equippedGear: List<Gea
                         item?.name ?: "Пусто",
                         gearDrawable(slot),
                         item?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF65758A),
-                        Modifier.width(88.dp)
+                        Modifier.width(96.dp)
                     )
                 }
             }
@@ -3602,7 +3602,7 @@ private fun InventoryLoadoutRow(weapon: WeaponDefinition, equippedGear: List<Gea
 @Composable
 private fun InventoryLoadoutSlot(label: String, itemName: String, icon: Int, tint: Color, modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier.height(116.dp),
+        modifier = modifier.height(128.dp),
         color = Color(0xFF101C30),
         shape = MaterialTheme.shapes.large,
         border = BorderStroke(1.dp, tint.copy(alpha = .76f)),
@@ -3613,7 +3613,7 @@ private fun InventoryLoadoutSlot(label: String, itemName: String, icon: Int, tin
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
-            RelicArtworkIcon(icon, tint, Modifier.size(58.dp))
+            RelicArtworkIcon(icon, tint, Modifier.size(68.dp))
             Text(label, color = Gold, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
             Text(itemName, color = Color(0xFFD8E0EC), fontSize = 7.sp, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
@@ -3693,7 +3693,7 @@ private fun WeaponInventoryCard(
     ) {
         Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RelicArtworkIcon(weaponDrawable(item.type), rarityColor, Modifier.size(76.dp))
+                RelicArtworkIcon(weaponDrawable(item.type), rarityColor, Modifier.size(90.dp))
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(item.name, color = rarityColor, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 2)
@@ -3750,7 +3750,7 @@ private fun GearInventoryCard(
     ) {
         Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RelicArtworkIcon(gearDrawable(item.slot), rarityColor, Modifier.size(76.dp))
+                RelicArtworkIcon(gearDrawable(item.slot), rarityColor, Modifier.size(90.dp))
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(item.name, color = rarityColor, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 2)

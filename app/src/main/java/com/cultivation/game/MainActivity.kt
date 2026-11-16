@@ -4126,21 +4126,55 @@ private fun InventoryLoadoutSlot(
 
 @Composable
 private fun InventoryCategoryTab(label: String, icon: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val selectionProgress by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = 220,
+            easing = androidx.compose.animation.core.FastOutSlowInEasing
+        ),
+        label = "inventory-tab-selection"
+    )
     Surface(
-        modifier = modifier.heightIn(min = 42.dp).clickable(onClick = onClick),
-        color = if (selected) Color(0xFF71502C) else Color(0xFF17263A),
+        modifier = modifier.heightIn(min = 42.dp).graphicsLayer {
+            val scale = 1f + selectionProgress * .025f
+            scaleX = scale
+            scaleY = scale
+        }.clickable(onClick = onClick),
+        color = androidx.compose.ui.graphics.lerp(Color(0xFF17263A), Color(0xFF71502C), selectionProgress),
         shape = MaterialTheme.shapes.medium,
-        border = BorderStroke(1.dp, if (selected) Gold else Color(0xFF45566C)),
-        tonalElevation = if (selected) 6.dp else 1.dp
+        border = BorderStroke(
+            1.dp + 1.dp * selectionProgress,
+            Gold.copy(alpha = .42f + selectionProgress * .58f)
+        ),
+        tonalElevation = 1.dp + 5.dp * selectionProgress,
+        shadowElevation = 1.dp + 2.dp * selectionProgress
     ) {
-        Row(
-            Modifier.padding(horizontal = 5.dp, vertical = 7.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            RpgIcon(icon, Modifier.size(22.dp))
-            Spacer(Modifier.width(4.dp))
-            Text(label, color = if (selected) Color(0xFFFFE7B4) else Color(0xFFC0CCDB), fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            RpgIcon(
+                icon,
+                Modifier.size(22.dp).graphicsLayer {
+                    val iconScale = 1f + selectionProgress * .12f
+                    scaleX = iconScale
+                    scaleY = iconScale
+                    alpha = .78f + selectionProgress * .22f
+                }
+            )
+            Text(
+                label,
+                color = androidx.compose.ui.graphics.lerp(Color(0xFFC0CCDB), Color(0xFFFFE7B4), selectionProgress),
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 1
+            )
+            Box(
+                Modifier.width(18.dp + 12.dp * selectionProgress)
+                    .height(2.dp)
+                    .background(Gold.copy(alpha = selectionProgress), RoundedCornerShape(2.dp))
+            )
         }
     }
 }

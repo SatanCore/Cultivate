@@ -17,6 +17,21 @@ jobs:
           for archive in art_source/Cultivate_ART_SOURCE_EXPANDED_PART_*.zip; do
             unzip -oq "$archive" -d /tmp/cultivate-art
           done
+          # Build a factual inventory of every raster illustration in the supplied archive set.
+          {
+            echo "# Cultivate art source inventory"
+            echo
+            echo "Generated from all 14 source archives during CI."
+            echo
+            echo "| Asset path | File type and dimensions |"
+            echo "|---|---|"
+            find /tmp/cultivate-art -type f \
+              \( -iname "*.png" -o -iname "*.webp" -o -iname "*.jpg" -o -iname "*.jpeg" \) \
+              -print0 | sort -z | while IFS= read -r -d "" asset; do
+                details=$(file -b "$asset" | tr "|" "/")
+                printf "| `%s` | %s |\n" "${asset#/tmp/cultivate-art/}" "$details"
+              done
+          } > ART_ASSET_INVENTORY.md
           source_dir="/tmp/cultivate-art/art_source/01_ready_alpha_assets/characters"
           target_dir="app/src/main/res/drawable-nodpi"
           test -s "$source_dir/blademaster_male_14118cf4.png"
@@ -30,9 +45,9 @@ jobs:
           cp "$source_dir/spiritmystic_female_446e7fa6.png" "$target_dir/spiritmystic_female.png"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$target_dir"/*_male.png "$target_dir"/*_female.png
+          git add "$target_dir"/*_male.png "$target_dir"/*_female.png ART_ASSET_INVENTORY.md
           if ! git diff --cached --quiet; then
-            git commit -m "Import gender-specific character portraits"
+            git commit -m "Inventory supplied illustration library and import portraits"
             git push
           fi
       - uses: actions/setup-java@v4

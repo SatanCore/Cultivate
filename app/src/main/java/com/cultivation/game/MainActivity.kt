@@ -2921,7 +2921,7 @@ private fun CharacterArmoryScreen(
                     CharacterEquipmentSlot(
                         "ОРУЖИЕ",
                         equippedWeapon.name,
-                        weaponDrawable(equippedWeapon.type),
+                        weaponArtworkDrawable(equippedWeapon.type, equippedWeapon.rarity),
                         weaponRarityColor(equippedWeapon.rarity),
                         Modifier.weight(1f),
                         rarityFrameResource(equippedWeapon.rarity),
@@ -2930,7 +2930,7 @@ private fun CharacterArmoryScreen(
                     CharacterEquipmentSlot(
                         "ШЛЕМ",
                         gearBySlot[GearSlot.HELMET]?.name ?: "Пусто",
-                        gearDrawable(GearSlot.HELMET),
+                        gearBySlot[GearSlot.HELMET]?.let { gearArtworkDrawable(GearSlot.HELMET, it.rarity) } ?: gearDrawable(GearSlot.HELMET),
                         gearBySlot[GearSlot.HELMET]?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF66758B),
                         Modifier.weight(1f),
                         gearBySlot[GearSlot.HELMET]?.let { rarityFrameResource(it.rarity) } ?: R.drawable.ui_rarity_frame_01,
@@ -2939,7 +2939,7 @@ private fun CharacterArmoryScreen(
                     CharacterEquipmentSlot(
                         "БРОНЯ",
                         gearBySlot[GearSlot.ARMOR]?.name ?: "Пусто",
-                        gearDrawable(GearSlot.ARMOR),
+                        gearBySlot[GearSlot.ARMOR]?.let { gearArtworkDrawable(GearSlot.ARMOR, it.rarity) } ?: gearDrawable(GearSlot.ARMOR),
                         gearBySlot[GearSlot.ARMOR]?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF66758B),
                         Modifier.weight(1f),
                         gearBySlot[GearSlot.ARMOR]?.let { rarityFrameResource(it.rarity) } ?: R.drawable.ui_rarity_frame_01,
@@ -3038,7 +3038,7 @@ private fun CharacterArmoryScreen(
                     CharacterEquipmentSlot(
                         "КОЛЬЦО",
                         gearBySlot[GearSlot.RING]?.name ?: "Пусто",
-                        gearDrawable(GearSlot.RING),
+                        gearBySlot[GearSlot.RING]?.let { gearArtworkDrawable(GearSlot.RING, it.rarity) } ?: gearDrawable(GearSlot.RING),
                         gearBySlot[GearSlot.RING]?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF66758B),
                         Modifier.fillMaxWidth().weight(1f),
                         gearBySlot[GearSlot.RING]?.let { rarityFrameResource(it.rarity) } ?: R.drawable.ui_rarity_frame_01,
@@ -3048,7 +3048,7 @@ private fun CharacterArmoryScreen(
                     CharacterEquipmentSlot(
                         "АРТЕФАКТ",
                         gearBySlot[GearSlot.ARTIFACT]?.name ?: "Пусто",
-                        gearDrawable(GearSlot.ARTIFACT),
+                        gearBySlot[GearSlot.ARTIFACT]?.let { gearArtworkDrawable(GearSlot.ARTIFACT, it.rarity) } ?: gearDrawable(GearSlot.ARTIFACT),
                         gearBySlot[GearSlot.ARTIFACT]?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF66758B),
                         Modifier.fillMaxWidth().weight(1f),
                         gearBySlot[GearSlot.ARTIFACT]?.let { rarityFrameResource(it.rarity) } ?: R.drawable.ui_rarity_frame_01,
@@ -3283,17 +3283,10 @@ private fun CharacterEquipmentSlot(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Image(
-                painter = painterResource(iconRes),
-                contentDescription = title,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.size(39.dp)
-            )
-            Image(
-                painter = painterResource(frameResource),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.size(43.dp).offset(y = (-38).dp)
+            InventoryItemArtwork(
+                resourceId = iconRes,
+                frameResource = frameResource,
+                modifier = Modifier.size(66.dp)
             )
             Text(title, color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
             Text(

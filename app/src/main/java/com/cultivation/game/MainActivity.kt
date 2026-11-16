@@ -1286,6 +1286,7 @@ private fun CultivateApp() {
                     cost = breakthroughCost,
                     bossRank = requiredBossRank,
                     bossLevel = bossLevel,
+                    classIndex = chosenClass, playerGender = playerGender, playerNickname = playerNickname,
                     onBreakthrough = {
                         if (qi >= breakthroughCost && bossLevel >= requiredBossRank) {
                             qi -= breakthroughCost
@@ -2146,7 +2147,11 @@ private fun HomeNavItem(title: String, symbol: String, target: Int, onNavigate: 
 }
 
 @Composable
-private fun CultivationPanel(stage: Int, qi: Int, cost: Int, bossRank: Int, bossLevel: Int, onBreakthrough: () -> Unit) {
+private fun CultivationPanel(
+    stage: Int, qi: Int, cost: Int, bossRank: Int, bossLevel: Int,
+    classIndex: Int, playerGender: String, playerNickname: String,
+    onBreakthrough: () -> Unit
+) {
     val progress = (qi.toFloat() / cost.coerceAtLeast(1)).coerceIn(0f, 1f)
     val worldIndex = when { stage >= 19 -> 3; stage >= 13 -> 2; stage >= 7 -> 1; else -> 0 }
     val background = when (worldIndex) { 0 -> R.drawable.world_mortal_bg; 1 -> R.drawable.world_spiritual_bg; 2 -> R.drawable.world_immortal_bg; else -> R.drawable.world_chaos_bg }
@@ -2189,6 +2194,20 @@ private fun CultivationPanel(stage: Int, qi: Int, cost: Int, bossRank: Int, boss
                 Text(worldName(stage).uppercase(), color = Color(0xFFFFD995), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
                 Text("СВЯЩЕННОЕ МЕСТО КУЛЬТИВАЦИИ", color = Color(0xFFD9E7E8), fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
             }
+            val safeClassIndex = classIndex.coerceIn(0, classNames.lastIndex)
+            val cultivatorPortrait = when (safeClassIndex) {
+                0 -> if (playerGender == "female") R.drawable.blademaster_female else R.drawable.blademaster_male
+                1 -> if (playerGender == "female") R.drawable.ironbody_female else R.drawable.ironbody_male
+                2 -> if (playerGender == "female") R.drawable.elementalist_female else R.drawable.elementalist_male
+                else -> if (playerGender == "female") R.drawable.spiritmystic_female else R.drawable.spiritmystic_male
+            }
+            Image(
+                painter = painterResource(cultivatorPortrait),
+                contentDescription = "Медитирующий персонаж " + playerNickname.ifBlank { classNames[safeClassIndex] },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 57.dp)
+                    .width(105.dp).height(166.dp).graphicsLayer(alpha = .94f),
+                contentScale = ContentScale.Fit
+            )
             Box(Modifier.align(Alignment.Center).size(116.dp), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.fillMaxSize()) {
                     val c = Offset(size.width / 2f, size.height / 2f)

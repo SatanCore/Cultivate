@@ -926,12 +926,25 @@ private fun CultivateApp() {
                             TextButton(onClick = { selectedTownBuilding = "" }) { Text("ЗАКРЫТЬ", color = Jade, fontSize = 10.sp) }
                         }
                 when (selectedTownBuilding) {
-                    "shop" -> GameCard("Лавка Мэй", "Торговка материалов") {
-                        Text("Мэй продаёт простые осколки духа для развития техник выше 20-го уровня.", color = Color.LightGray)
-                        Text("Осколок духа: 200 камней · в наличии: ${skillMaterials[0]}", color = Jade)
-                        Button(onClick = { if (stones >= 200) { stones -= 200; skillMaterials[0]++; message = "Куплен осколок духа." } else message = "Не хватает камней духа." }, enabled = stones >= 200, modifier = Modifier.fillMaxWidth()) { Text("Купить осколок · 200") }
-                        OutlinedButton(onClick = { selectedTownBuilding = "" }) { Text("Назад на площадь") }
-                    }
+                    "shop" -> MeiShopScreen(
+                        stones = stones,
+                        shardCount = skillMaterials[0],
+                        onBuy = { quantity ->
+                            val totalCost = quantity * 200
+                            if (quantity > 0 && stones >= totalCost) {
+                                stones -= totalCost
+                                skillMaterials[0] += quantity
+                                message = if (quantity == 1) {
+                                    "Куплен осколок духа."
+                                } else {
+                                    "Куплено осколков духа: $quantity."
+                                }
+                            } else {
+                                message = "Недостаточно камней духа."
+                            }
+                        },
+                        onClose = { selectedTownBuilding = "" }
+                    )
                     "auction" -> AuctionHallScreen(
                         stage = stage,
                         stones = stones,

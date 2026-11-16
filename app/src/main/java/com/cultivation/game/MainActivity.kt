@@ -4406,7 +4406,7 @@ private fun SectHallScreen(
             Column(Modifier.align(Alignment.TopStart).padding(14.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(if (mortal) "ЗАЛ КЛАНОВ" else "ЗАЛ ДУХОВНЫХ СЕКТ", color = Color(0xFFFFD995), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.8.sp)
                 Text(if (mortal) "Клятвы долины и наследие родов" else "Праведный и тёмный пути Дао", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black)
-                Text("\${worldName(stage)} · ступень $stage", color = Color(0xFFD3E1E8), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("${worldName(stage)} · ступень $stage", color = Color(0xFFD3E1E8), fontSize = 9.sp, fontWeight = FontWeight.Bold)
             }
             Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(13.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -4444,7 +4444,7 @@ private fun SectHallScreen(
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("НАСЛЕДИЯ И ОБИТЕЛИ", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-            Text("\${visibleFactions.size} найдено", color = Color(0xFF9FB3C4), fontSize = 8.sp, fontWeight = FontWeight.Bold)
+            Text("${visibleFactions.size} найдено", color = Color(0xFF9FB3C4), fontSize = 8.sp, fontWeight = FontWeight.Bold)
         }
         visibleFactions.forEach { index ->
             SectFactionCard(
@@ -4460,7 +4460,7 @@ private fun SectHallScreen(
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("ЕЖЕДНЕВНАЯ ПРИСЯГА", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
                     Text("50 камней духа · +35 Ци · +1 репутация", color = Color(0xFFD3DFE8), fontSize = 9.sp)
-                    Text(when { chosenSect < 0 -> "Сначала выбери своё объединение"; dailyDonated -> "Сегодняшний вклад уже принят"; stones < 50 -> "Не хватает \${50 - stones} камней духа"; else -> "Старейшины ждут твоего вклада" }, color = if (dailyDonated) Jade else Color(0xFFB9C8D7), fontSize = 8.sp)
+                    Text(when { chosenSect < 0 -> "Сначала выбери своё объединение"; dailyDonated -> "Сегодняшний вклад уже принят"; stones < 50 -> "Не хватает ${50 - stones} камней духа"; else -> "Старейшины ждут твоего вклада" }, color = if (dailyDonated) Jade else Color(0xFFB9C8D7), fontSize = 8.sp)
                 }
                 Button(onClick = onDonate, enabled = chosenSect >= 0 && !dailyDonated && stones >= 50, modifier = Modifier.height(38.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF806039), contentColor = Color.White, disabledContainerColor = Color(0xFF35404B))) {
                     Text(if (dailyDonated) "ВНЕСЕНО" else "ВНЕСТИ", fontSize = 8.sp, fontWeight = FontWeight.Black)
@@ -4493,7 +4493,7 @@ private fun SectFactionCard(
                     Image(painterResource(factionEmblemResource(index)), "Герб: $name", Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("НАСЛЕДИЕ \${index + 1}", color = if (joined) Gold else Jade, fontSize = 7.sp, fontWeight = FontWeight.Black, letterSpacing = .8.sp)
+                    Text("НАСЛЕДИЕ ${index + 1}", color = if (joined) Gold else Jade, fontSize = 7.sp, fontWeight = FontWeight.Black, letterSpacing = .8.sp)
                     Text(name, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black)
                     Text(lore, color = Color(0xFFB9C8D7), fontSize = 8.sp, lineHeight = 11.sp)
                 }

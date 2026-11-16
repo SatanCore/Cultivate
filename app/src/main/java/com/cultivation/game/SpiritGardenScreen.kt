@@ -120,8 +120,8 @@ internal fun SpiritGardenScreen(
                         drawPath(
                             Path().apply {
                                 moveTo(0f, h * .72f)
-                                quadraticTo(w * .24f, h * .58f, w * .48f, h * .72f)
-                                quadraticTo(w * .75f, h * .86f, w, h * .66f)
+                                cubicTo(w * .16f, h * .58f, w * .32f, h * .60f, w * .48f, h * .72f)
+                                cubicTo(w * .64f, h * .84f, w * .84f, h * .80f, w, h * .66f)
                                 lineTo(w, h)
                                 lineTo(0f, h)
                                 close()

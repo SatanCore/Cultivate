@@ -55,6 +55,11 @@ jobs:
           cp "$creature_dir/abyssal_demon_lord_b8aa0238.png" "$target_dir/creature_abyssal_lord.png"
           cp "$creature_dir/jade_qilin_85e3d4a2.png" "$target_dir/creature_jade_qilin.png"
           cp "$creature_dir/nine_tailed_fox_e79a3545.png" "$target_dir/creature_nine_tailed_fox.png"
+          # Import the real transparent equipment illustrations (not vector placeholders).
+          equipment_dir="/tmp/cultivate-art/art_source/01_ready_alpha_assets/equipment"
+          test -s "$equipment_dir/sword_azure_f6728011.png"
+          test -s "$equipment_dir/armor_01_d0ded429.png"
+          cp "$equipment_dir"/*.png "$target_dir"/
           # Three transparent rarity frames for icon slots and collection tiles.
           interface_dir="/tmp/cultivate-art/art_source/01_ready_alpha_assets/interface"
           cp "$interface_dir/rarity_frame_01_e6dd0bdb.png" "$target_dir/ui_rarity_frame_01.png"
@@ -83,7 +88,7 @@ jobs:
           cp "$effects_source_dir/event_breakthrough_ea680001.png" "$target_dir/cultivation_event_breakthrough.png"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$target_dir"/*_male.png "$target_dir"/*_female.png "$target_dir"/hero_full_*.webp "$target_dir"/creature_*.png "$target_dir"/ui_rarity_frame_*.png "$target_dir"/spirit_spring_frame_*.png "$target_dir"/cultivation_aura_*.png "$target_dir"/cultivation_ascension_rays.png "$target_dir"/cultivation_breakthrough_ascension.png "$target_dir"/cultivation_event_breakthrough.png ART_ASSET_INVENTORY.md
+          git add "$target_dir"/*_male.png "$target_dir"/*_female.png "$target_dir"/hero_full_*.webp "$target_dir"/creature_*.png "$target_dir"/armor_*.png "$target_dir"/sword_*.png "$target_dir"/ring_*.png "$target_dir"/robe_*.png "$target_dir"/talisman_*.png "$target_dir"/weapon_*.png "$target_dir"/ui_rarity_frame_*.png "$target_dir"/spirit_spring_frame_*.png "$target_dir"/cultivation_aura_*.png "$target_dir"/cultivation_ascension_rays.png "$target_dir"/cultivation_breakthrough_ascension.png "$target_dir"/cultivation_event_breakthrough.png ART_ASSET_INVENTORY.md
           if ! git diff --cached --quiet; then
             git commit -m "Inventory supplied illustration library and import portraits"
             git push

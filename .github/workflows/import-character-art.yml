@@ -2,6 +2,11 @@ name: Import character art assets
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'app/src/main/java/com/cultivation/game/MainActivity.kt'
+      - 'art_source/Cultivate_ART_SOURCE_EXPANDED_PART_*.zip'
 
 permissions:
   contents: write

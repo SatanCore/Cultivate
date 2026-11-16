@@ -180,6 +180,9 @@ fun worldEncounterMaxHp(location: ExplorationLocation): Int {
 fun WorldExplorationScreen(
     stage: Int,
     combatPower: Int,
+    classIndex: Int,
+    playerGender: String,
+    playerNickname: String,
     selectedWorldIndex: Int,
     onSelectWorld: (Int) -> Unit,
     explorationEnergy: Int,
@@ -195,6 +198,13 @@ fun WorldExplorationScreen(
     onExchangeFragments: (Int) -> Unit
 ) {
     val safeWorldIndex = selectedWorldIndex.coerceIn(0, daoWorldCatalog.lastIndex)
+    val safeClassIndex = classIndex.coerceIn(0, 3)
+    val heroPortrait = when (safeClassIndex) {
+        0 -> if (playerGender == "female") R.drawable.blademaster_female else R.drawable.blademaster_male
+        1 -> if (playerGender == "female") R.drawable.ironbody_female else R.drawable.ironbody_male
+        2 -> if (playerGender == "female") R.drawable.elementalist_female else R.drawable.elementalist_male
+        else -> if (playerGender == "female") R.drawable.spiritmystic_female else R.drawable.spiritmystic_male
+    }
     val world = daoWorldCatalog[safeWorldIndex]
     val locations = worldLocationCatalog.filter { it.worldIndex == safeWorldIndex }
     val selectedLocation = locations.firstOrNull { it.id == selectedLocationId } ?: locations.first()
@@ -228,6 +238,30 @@ fun WorldExplorationScreen(
     val nextWorld = daoWorldCatalog.getOrNull(safeWorldIndex + 1)
     val worldAccent = world.accent
     Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
+        Surface(
+            color = Color(0xE8172942),
+            shape = MaterialTheme.shapes.large,
+            border = BorderStroke(1.dp, worldAccent.copy(alpha = .5f))
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 11.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Image(
+                    painter = painterResource(heroPortrait),
+                    contentDescription = "Путешественник " + playerNickname.ifBlank { "Дао" },
+                    modifier = Modifier.size(48.dp).clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("ЭКСПЕДИЦИЯ ПУТЕШЕСТВЕННИКА", color = worldAccent, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    Text(playerNickname.ifBlank { "Странник Дао" }, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                    Text(classNamesForExpedition(safeClassIndex) + " · " + world.title, color = Color(0xFFC8D5E4), fontSize = 8.sp)
+                }
+                Text("✦", color = worldAccent, fontSize = 21.sp, fontWeight = FontWeight.Black)
+            }
+        }
         if (statusMessage.isNotBlank()) {
             Surface(
                 color = Color(0xCC17263A),

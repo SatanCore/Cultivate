@@ -3971,13 +3971,20 @@ private fun TreasuryWeaponDetail(
     canEquip: Boolean,
     onEquip: () -> Unit
 ) {
+    val detailGlow = rememberInfiniteTransition(label = "weapon-detail-rarity-glow")
+    val borderPulse by detailGlow.animateFloat(
+        initialValue = .72f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1800), RepeatMode.Reverse),
+        label = "weapon-detail-border-pulse"
+    )
     Surface(
         Modifier.fillMaxWidth(),
         color = Color(0xF0192B42),
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.5.dp, rarityColor.copy(alpha = .82f)),
+        border = BorderStroke(1.5.dp + .8.dp * borderPulse, rarityColor.copy(alpha = .55f + .35f * borderPulse)),
         tonalElevation = 8.dp,
-        shadowElevation = 5.dp
+        shadowElevation = 5.dp + 3.dp * borderPulse
     ) {
         Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -4021,13 +4028,20 @@ private fun TreasuryGearDetail(
     canEquip: Boolean,
     onEquip: () -> Unit
 ) {
+    val detailGlow = rememberInfiniteTransition(label = "gear-detail-rarity-glow")
+    val borderPulse by detailGlow.animateFloat(
+        initialValue = .72f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1950), RepeatMode.Reverse),
+        label = "gear-detail-border-pulse"
+    )
     Surface(
         Modifier.fillMaxWidth(),
         color = Color(0xF0192B42),
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.5.dp, rarityColor.copy(alpha = .82f)),
+        border = BorderStroke(1.5.dp + .8.dp * borderPulse, rarityColor.copy(alpha = .55f + .35f * borderPulse)),
         tonalElevation = 8.dp,
-        shadowElevation = 5.dp
+        shadowElevation = 5.dp + 3.dp * borderPulse
     ) {
         Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

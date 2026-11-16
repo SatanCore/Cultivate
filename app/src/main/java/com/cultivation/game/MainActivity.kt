@@ -1170,15 +1170,34 @@ private fun CultivateApp() {
                             }
                         )
                         "garden" -> {
-                            Text("Сад духовных трав", color = Gold, fontWeight = FontWeight.Bold)
-                            Text("На небольшом участке растут самые простые травы Смертного мира. Позже, в других мирах, сад сможет принимать семена с совершенно иной природой.", color = Color.LightGray, fontSize = 12.sp)
-                            Text(if (gardenReadyAt <= nowMillis) "Урожай созрел: можно собрать травы." else "До следующего урожая примерно $gardenRemaining.", color = Jade)
-                            Button(onClick = {
-                                val now = System.currentTimeMillis()
-                                if (now >= gardenReadyAt) { val harvest = 2 + abodeLevel; spiritHerbs += harvest; dailyGardenCollected = true; gardenReadyAt = now + 28_800_000L; if (Random.nextInt(100) < 3 && "moon_deer" !in ownedPetIds.split("|")) { ownedPetIds += "|moon_deer"; message = "Собрано трав: $harvest. Среди листьев появился лунный оленёнок — редкий питомец!" } else message = "Собрано духовных трав: $harvest. Следующий урожай примерно через 8 часов." }
-                                else message = "Сад ещё растёт. Вернись позже."
-                            }, enabled = gardenReadyAt <= nowMillis, modifier = Modifier.fillMaxWidth()) { Text("Собрать урожай · ${2 + abodeLevel} травы") }
-                            Text("Урожайность растёт вместе с уровнем обители.", color = Color.LightGray, fontSize = 11.sp)
+                            val gardenReady = gardenReadyAt <= nowMillis
+                            val gardenGrowth = if (gardenReady) 1f else
+                                (1f - ((gardenReadyAt - nowMillis) / 28_800_000f)).coerceIn(0f, 1f)
+                            SpiritGardenScreen(
+                                abodeLevel = abodeLevel,
+                                spiritHerbs = spiritHerbs,
+                                growth = gardenGrowth,
+                                timeRemaining = gardenRemaining,
+                                ready = gardenReady,
+                                harvestAmount = 2 + abodeLevel,
+                                onHarvest = {
+                                    val now = System.currentTimeMillis()
+                                    if (now >= gardenReadyAt) {
+                                        val harvest = 2 + abodeLevel
+                                        spiritHerbs += harvest
+                                        dailyGardenCollected = true
+                                        gardenReadyAt = now + 28_800_000L
+                                        if (Random.nextInt(100) < 3 && "moon_deer" !in ownedPetIds.split("|")) {
+                                            ownedPetIds += "|moon_deer"
+                                            message = "Собрано трав: $harvest. Среди листьев появился лунный оленёнок — редкий питомец!"
+                                        } else {
+                                            message = "Собрано духовных трав: $harvest. Следующий урожай примерно через 8 часов."
+                                        }
+                                    } else {
+                                        message = "Сад ещё растёт. Вернись позже."
+                                    }
+                                }
+                            )
                         }
                         "spring" -> {
                             Text("Родник духовной воды", color = Gold, fontWeight = FontWeight.Bold)

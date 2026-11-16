@@ -3466,8 +3466,15 @@ private fun TreasuryVaultHero(totalItems: Int, equippedItems: Int) {
     Box(
         Modifier.fillMaxWidth().height(166.dp).clip(RoundedCornerShape(20.dp))
     ) {
+        Image(
+            painter = painterResource(R.drawable.lunar_harbor_bg),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xAA0B1729), Color(0xCC1D3B4B), Color(0xEE121B31)))))
         Canvas(Modifier.fillMaxSize()) {
-            drawRect(Brush.linearGradient(listOf(Color(0xFF0B1729), Color(0xFF1D3B4B), Color(0xFF121B31))))
+            drawRect(Brush.linearGradient(listOf(Color(0x660B1729), Color(0x551D3B4B), Color(0x77121B31))))
             drawCircle(
                 Brush.radialGradient(listOf(Color(0x77E9BD70), Color(0x2278C6A3), Color.Transparent)),
                 radius = size.height * .88f,
@@ -3602,7 +3609,7 @@ private fun InventoryPowerComparison(score: Int, delta: Int?, equipped: Boolean)
 }
 
 @Composable
-private fun RelicDetailShowcase(resourceId: Int, rarityColor: Color) {
+private fun RelicDetailShowcase(resourceId: Int, rarityColor: Color, frameResource: Int) {
     Box(
         Modifier.size(122.dp),
         contentAlignment = Alignment.Center
@@ -3640,7 +3647,7 @@ private fun RelicDetailShowcase(resourceId: Int, rarityColor: Color) {
                 drawLine(rarityColor.copy(alpha = .78f), start, end, 1.2.dp.toPx())
             }
         }
-        RelicArtworkIcon(resourceId, rarityColor, Modifier.size(100.dp))
+        RelicArtworkIcon(resourceId, rarityColor, Modifier.size(100.dp), frameResource)
     }
 }
 
@@ -3665,7 +3672,7 @@ private fun TreasuryWeaponDetail(
     ) {
         Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RelicDetailShowcase(weaponDrawable(item.type), rarityColor)
+                RelicDetailShowcase(weaponDrawable(item.type), rarityColor, rarityFrameResource(item.rarity))
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("ИЗБРАННАЯ РЕЛИКВИЯ", color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
@@ -3715,7 +3722,7 @@ private fun TreasuryGearDetail(
     ) {
         Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RelicDetailShowcase(gearDrawable(item.slot), rarityColor)
+                RelicDetailShowcase(gearDrawable(item.slot), rarityColor, rarityFrameResource(item.rarity))
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("ИЗБРАННАЯ ЧАСТЬ КОМПЛЕКТА", color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
@@ -3771,7 +3778,7 @@ private fun InventoryLoadoutRow(weapon: WeaponDefinition, equippedGear: List<Gea
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 7.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                InventoryLoadoutSlot("ОРУЖИЕ", weapon.name, weaponDrawable(weapon.type), weaponRarityColor(weapon.rarity), Modifier.width(96.dp))
+                InventoryLoadoutSlot("ОРУЖИЕ", weapon.name, weaponDrawable(weapon.type), weaponRarityColor(weapon.rarity), Modifier.width(96.dp), rarityFrameResource(weapon.rarity))
                 GearSlot.values().forEach { slot ->
                     val item = equippedGear.firstOrNull { it.slot == slot }
                     InventoryLoadoutSlot(
@@ -3779,7 +3786,8 @@ private fun InventoryLoadoutRow(weapon: WeaponDefinition, equippedGear: List<Gea
                         item?.name ?: "Пусто",
                         gearDrawable(slot),
                         item?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF65758A),
-                        Modifier.width(96.dp)
+                        Modifier.width(96.dp),
+                        item?.let { rarityFrameResource(it.rarity) } ?: R.drawable.ui_rarity_frame_01
                     )
                 }
             }
@@ -3788,7 +3796,7 @@ private fun InventoryLoadoutRow(weapon: WeaponDefinition, equippedGear: List<Gea
 }
 
 @Composable
-private fun InventoryLoadoutSlot(label: String, itemName: String, icon: Int, tint: Color, modifier: Modifier = Modifier) {
+private fun InventoryLoadoutSlot(label: String, itemName: String, icon: Int, tint: Color, modifier: Modifier = Modifier, frameResource: Int = R.drawable.ui_rarity_frame_01) {
     Surface(
         modifier = modifier.height(128.dp),
         color = Color(0xFF101C30),
@@ -3801,7 +3809,7 @@ private fun InventoryLoadoutSlot(label: String, itemName: String, icon: Int, tin
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
-            RelicArtworkIcon(icon, tint, Modifier.size(68.dp))
+            RelicArtworkIcon(icon, tint, Modifier.size(76.dp), frameResource)
             Text(label, color = Gold, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
             Text(itemName, color = Color(0xFFD8E0EC), fontSize = 7.sp, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }

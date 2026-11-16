@@ -3,12 +3,16 @@ package com.cultivation.game
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,8 +31,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -56,6 +62,25 @@ internal fun SpiritSpringScreen(
         animationSpec = infiniteRepeatable(tween(2100), RepeatMode.Reverse),
         label = "spring-shimmer"
     )
+    val waterFrame by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 11.99f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "spring-water-frame"
+    )
+    val ripplePhase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "spring-water-ripple"
+    )
+    val frameIndex = waterFrame.toInt().coerceIn(0, 11)
     val safeProgress = progress.coerceIn(0f, 1f)
 
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -83,18 +108,40 @@ internal fun SpiritSpringScreen(
                         }
                     }
                 }
-                Box(modifier = Modifier.fillMaxWidth().height(166.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF152B3D))) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color(0xFF152B3D))
+                ) {
                     Image(
-                        painter = painterResource(R.drawable.abode_spring_scene),
-                        contentDescription = "Иллюстрация горного духовного родника",
+                        painter = painterResource(springWaterFrameResource(frameIndex)),
+                        contentDescription = "Анимированная иллюстрация горного духовного водопада",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.matchParentSize()
                     )
                     Box(
                         modifier = Modifier.matchParentSize().background(
-                            Brush.verticalGradient(listOf(Color(0x44101E35), Color(0x11101E35), Color(0xBB102333)))
+                            Brush.verticalGradient(listOf(Color(0x33101E35), Color(0x00101E35), Color(0xCC102333)))
                         )
                     )
+                    Canvas(Modifier.matchParentSize()) {
+                        val pool = Offset(size.width * .53f, size.height * .72f)
+                        val radius = size.minDimension * (.055f + ripplePhase * .13f)
+                        val alpha = (1f - ripplePhase) * .48f
+                        drawCircle(SpringIce.copy(alpha = alpha), radius, pool, style = Stroke(width = 1.5.dp.toPx()))
+                        drawCircle(SpringIce.copy(alpha = alpha * .62f), radius * .55f, pool, style = Stroke(width = 1.dp.toPx()))
+                        for (i in 0..17) {
+                            val phase = (ripplePhase + i * .113f) % 1f
+                            val x = size.width * ((i * 53 % 97) / 97f)
+                            val y = size.height * (.18f + phase * .72f)
+                            val moteAlpha = (.18f + shimmer * .42f) * (if (i % 4 == 0) 1f else .62f)
+                            drawCircle(
+                                if (i % 4 == 0) SpringGold.copy(alpha = moteAlpha) else SpringIce.copy(alpha = moteAlpha),
+                                if (i % 5 == 0) 2.dp.toPx() else 1.dp.toPx(),
+                                Offset(x, y)
+                            )
+                        }
+                    }
                     Box(
                         modifier = Modifier.align(Alignment.TopEnd).padding(9.dp)
                             .clip(RoundedCornerShape(10.dp)).background(Color(0xD9112938))
@@ -109,13 +156,23 @@ internal fun SpiritSpringScreen(
                             .border(1.dp, SpringGold.copy(alpha = .45f), RoundedCornerShape(10.dp))
                             .padding(horizontal = 9.dp, vertical = 6.dp)
                     ) {
-                        Text("ЧИСТОТА ВОДЫ  ·  ${(safeProgress * 100).toInt()}%", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                        Text("НАПОЛНЕНИЕ ИСТОЧНИКА  ·  ${(safeProgress * 100).toInt()}%", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                     }
                     Box(
-                        modifier = Modifier.align(Alignment.Center).size(72.dp)
-                            .background(Color(0x2286DCEB), RoundedCornerShape(36.dp))
-                            .border(1.dp, SpringIce.copy(alpha = shimmer), RoundedCornerShape(36.dp))
-                    )
+                        modifier = Modifier.align(Alignment.Center).size(78.dp)
+                            .clip(RoundedCornerShape(39.dp))
+                            .background(Color(0x3386DCEB))
+                            .border(1.dp, SpringIce.copy(alpha = shimmer), RoundedCornerShape(39.dp))
+                            .clickable(enabled = ready, onClick = onCollect),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            if (ready) "НАБРАТЬ" else "КУПЕЛЬ",
+                            color = Color.White,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
                 }
             }
         }
@@ -141,7 +198,7 @@ internal fun SpiritSpringScreen(
                     trackColor = Color(0xFF344A59)
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (ready) "Источник наполнен" else "Вода собирается: $timeRemaining", color = if (ready) SpringGold else Color(0xFFC4D7E1), fontSize = 10.sp, modifier = Modifier.weight(1f))
+                    Text(if (ready) "Источник наполнен · коснись купели" else "Вода собирается: $timeRemaining", color = if (ready) SpringGold else Color(0xFFC4D7E1), fontSize = 10.sp, modifier = Modifier.weight(1f))
                     Text(if (ready) "ГОТОВО" else "ВОССТАНОВЛЕНИЕ", color = SpringIce, fontSize = 8.sp, fontWeight = FontWeight.Black)
                 }
                 Button(
@@ -161,4 +218,20 @@ internal fun SpiritSpringScreen(
             }
         }
     }
+}
+
+
+private fun springWaterFrameResource(index: Int): Int = when (index.coerceIn(0, 11)) {
+    0 -> R.drawable.spirit_spring_frame_00
+    1 -> R.drawable.spirit_spring_frame_01
+    2 -> R.drawable.spirit_spring_frame_02
+    3 -> R.drawable.spirit_spring_frame_03
+    4 -> R.drawable.spirit_spring_frame_04
+    5 -> R.drawable.spirit_spring_frame_05
+    6 -> R.drawable.spirit_spring_frame_06
+    7 -> R.drawable.spirit_spring_frame_07
+    8 -> R.drawable.spirit_spring_frame_08
+    9 -> R.drawable.spirit_spring_frame_09
+    10 -> R.drawable.spirit_spring_frame_10
+    else -> R.drawable.spirit_spring_frame_11
 }

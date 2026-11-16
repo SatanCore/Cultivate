@@ -288,6 +288,8 @@ private fun CultivateApp() {
     var showExitDialog by remember { mutableStateOf(false) }
     var inventoryFilter by remember { mutableIntStateOf(0) }
     var petFilter by remember { mutableIntStateOf(0) }
+    var selectedPetDetailIndex by remember { mutableIntStateOf(-1) }
+    var showSkillNodeDialog by remember { mutableStateOf(false) }
     var selectedTownBuilding by remember { mutableStateOf("") }
     val pageScrollState = rememberScrollState()
     LaunchedEffect(selectedMenu, selectedTownBuilding) { pageScrollState.animateScrollTo(0) }
@@ -1861,36 +1863,63 @@ private fun CultivateApp() {
                             }
                         }
                         Text("ПУТЬ РАЗВИТИЯ · ВЫБЕРИ УЗЕЛ, ЧТОБЫ УЗНАТЬ ЕГО СИЛУ", color = Color(0xFFB8C7D8), fontSize = 8.sp, fontWeight = FontWeight.Bold)
-                        SkillTreeConstellation(
-                            classIndex = chosenClass,
-                            levels = skillTreeLevels,
-                            points = skillPoints,
-                            activeNode = activeSkillNode,
-                            selectedNode = inspectedSkillNode,
-                            characterLevel = stage.coerceAtMost(20),
-                            onSelectNode = { inspectedSkillNode = it }
-                        )
-                        SkillNodeDetailCard(
-                            classIndex = chosenClass,
-                            node = inspectedSkillNode,
-                            levels = skillTreeLevels,
-                            points = skillPoints,
-                            weapon = selectedWeapon,
-                            activeNode = activeSkillNode,
-                            characterLevel = stage.coerceAtMost(20),
-                            onLearn = { learnSkillNode(inspectedSkillNode) },
-                            onSetActive = {
-                                activeSkillNode = inspectedSkillNode
-                                rotationOrder.remove(inspectedSkillNode)
-                                rotationOrder.add(0, inspectedSkillNode)
+                        Text("ДРЕВО НАСЛЕДИЯ · 9 ТЕХНИК", color = Color(0xFFB8C7D8), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        (0..8).chunked(3).forEach { nodeRow ->
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                nodeRow.forEach { node ->
+                                    SkillQuickTile(
+                                        modifier = Modifier.weight(1f),
+                                        classIndex = chosenClass,
+                                        node = node,
+                                        levels = skillTreeLevels,
+                                        points = skillPoints,
+                                        activeNode = activeSkillNode,
+                                        characterLevel = stage.coerceAtMost(20),
+                                        onClick = {
+                                            inspectedSkillNode = node
+                                            showSkillNodeDialog = true
+                                        }
+                                    )
+                                }
                             }
-                        )
+                        }
                         Text(
                             "Боевой слот: ${skillDefinitions[chosenClass][activeSkillNode].name} · перезарядка ${skillCooldowns[activeSkillNode]} хода",
                             color = Gold,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold
                         )
+                        if (showSkillNodeDialog) {
+                            Dialog(onDismissRequest = { showSkillNodeDialog = false }) {
+                                Surface(
+                                    color = Color(0xFF101D2D),
+                                    shape = RoundedCornerShape(22.dp),
+                                    border = BorderStroke(1.dp, Gold.copy(alpha = .75f)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                            TextButton(onClick = { showSkillNodeDialog = false }) { Text("ЗАКРЫТЬ", color = Jade) }
+                                        }
+                                        SkillNodeDetailCard(
+                                            classIndex = chosenClass,
+                                            node = inspectedSkillNode,
+                                            levels = skillTreeLevels,
+                                            points = skillPoints,
+                                            weapon = selectedWeapon,
+                                            activeNode = activeSkillNode,
+                                            characterLevel = stage.coerceAtMost(20),
+                                            onLearn = { learnSkillNode(inspectedSkillNode) },
+                                            onSetActive = {
+                                                activeSkillNode = inspectedSkillNode
+                                                rotationOrder.remove(inspectedSkillNode)
+                                                rotationOrder.add(0, inspectedSkillNode)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     } else {
                         Text("Выбери одно из четырёх наследий в зале персонажа. Каждое открывает собственное древо из девяти техник и пассивных искусств.", color = Color(0xFFD2DCEB), fontSize = 11.sp)
                     }
@@ -2007,27 +2036,58 @@ private fun CultivateApp() {
                         else -> true
                     }
                 }
-                visiblePetEntries.forEach { (index, pet) ->
-                    val owned = pet.id in ownedPetIdsSet
-                    val isActive = pet.id == activePetId
-                    PetCompanionCard(
-                        pet = pet,
-                        owned = owned,
-                        active = isActive,
-                        level = petLevels[index],
-                        bondXp = petBondXp[index],
-                        ascension = petAscensions[index],
-                        onSelect = {
-                            if (owned && !isActive) {
-                                activePetId = pet.id
-                                message = pet.name + " теперь твой спутник."
-                            } else if (!owned) {
-                                message = "След: ${pet.dropHint}."
-                            } else {
-                                message = pet.name + " уже сопровождает тебя."
+                visiblePetEntries.chunked(3).forEach { petRow ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        petRow.forEach { (index, pet) ->
+                            val owned = pet.id in ownedPetIdsSet
+                            val isActive = pet.id == activePetId
+                            PetGalleryTile(
+                                modifier = Modifier.weight(1f),
+                                pet = pet,
+                                owned = owned,
+                                active = isActive,
+                                level = petLevels[index],
+                                onClick = { selectedPetDetailIndex = index }
+                            )
+                        }
+                        repeat(3 - petRow.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
+                if (selectedPetDetailIndex in petCatalog.indices) {
+                    val detailIndex = selectedPetDetailIndex
+                    val detailPet = petCatalog[detailIndex]
+                    val detailOwned = detailPet.id in ownedPetIdsSet
+                    Dialog(onDismissRequest = { selectedPetDetailIndex = -1 }) {
+                        Surface(
+                            color = Color(0xFF101D2D),
+                            shape = RoundedCornerShape(22.dp),
+                            border = BorderStroke(1.dp, petRarityColor(detailPet.id).copy(alpha = .85f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                    TextButton(onClick = { selectedPetDetailIndex = -1 }) { Text("ЗАКРЫТЬ", color = Jade) }
+                                }
+                                PetCompanionCard(
+                                    pet = detailPet,
+                                    owned = detailOwned,
+                                    active = detailPet.id == activePetId,
+                                    level = petLevels[detailIndex],
+                                    bondXp = petBondXp[detailIndex],
+                                    ascension = petAscensions[detailIndex],
+                                    onSelect = {
+                                        if (detailOwned) {
+                                            activePetId = detailPet.id
+                                            message = detailPet.name + " теперь твой спутник."
+                                        } else {
+                                            message = "След: ${detailPet.dropHint}."
+                                        }
+                                        selectedPetDetailIndex = -1
+                                    }
+                                )
                             }
                         }
-                    )
+                    }
                 }
             }
 
@@ -7339,6 +7399,68 @@ private fun abodeMaxLevel(stage: Int): Int = when {
 }
 
 private fun alchemyMaxRank(stage: Int): Int = abodeMaxLevel(stage)
+
+@Composable
+private fun SkillQuickTile(
+    modifier: Modifier,
+    classIndex: Int,
+    node: Int,
+    levels: List<Int>,
+    points: Int,
+    activeNode: Int,
+    characterLevel: Int,
+    onClick: () -> Unit
+) {
+    val definition = skillDefinitions[classIndex][node]
+    val learned = levels.getOrElse(classIndex * 9 + node) { 0 } == 1
+    val unlocked = skillNodeUnlocked(classIndex, node, levels, characterLevel)
+    val active = learned && definition.active && activeNode == node
+    val canLearn = !learned && unlocked && points > 0
+    val edge = when { active -> Gold; learned -> Jade; canLearn -> Color(0xFFB9D5A7); else -> Color(0xFF526176) }
+    Surface(
+        modifier = modifier.height(82.dp).clickable(onClick = onClick),
+        color = when { active -> Color(0xFF294A43); learned -> Color(0xFF1D3938); canLearn -> Color(0xFF20364B); else -> Color(0xFF111D2E) },
+        shape = RoundedCornerShape(13.dp),
+        border = BorderStroke(if (active) 2.dp else 1.dp, edge.copy(alpha = .9f)),
+        shadowElevation = if (active) 6.dp else 1.dp
+    ) {
+        Column(Modifier.fillMaxSize().padding(5.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            RpgIcon(skillNodeIcon(classIndex, node), Modifier.size(31.dp))
+            Text(definition.name, color = Color.White, fontSize = 7.sp, fontWeight = FontWeight.Bold, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 8.sp)
+            Text(when { active -> "В БОЮ"; learned -> "ИЗУЧЕНО"; canLearn -> "ДОСТУПНО"; else -> "РАНГ ${skillNodeRequiredLevel(node)}" }, color = edge, fontSize = 6.sp, fontWeight = FontWeight.Black, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun PetGalleryTile(
+    modifier: Modifier,
+    pet: PetDefinition,
+    owned: Boolean,
+    active: Boolean,
+    level: Int,
+    onClick: () -> Unit
+) {
+    val accent = petRarityColor(pet.id)
+    Surface(
+        modifier = modifier.height(142.dp).clickable(onClick = onClick),
+        color = if (active) Color(0xFF244B45) else Color(0xE916263A),
+        shape = RoundedCornerShape(15.dp),
+        border = BorderStroke(if (active) 2.dp else 1.dp, if (active) Jade else accent.copy(alpha = .55f)),
+        shadowElevation = if (active) 7.dp else 2.dp
+    ) {
+        Column(Modifier.fillMaxSize().padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Image(
+                painter = painterResource(petPortraitResource(pet.id)),
+                contentDescription = pet.name,
+                modifier = Modifier.size(72.dp),
+                contentScale = ContentScale.Fit
+            )
+            Text(pet.name, color = if (owned) Color(0xFFFFE5B0) else Color(0xFFADB8C8), fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Text(when { active -> "АКТИВНЫЙ"; owned -> "УР. $level · ВЫБРАТЬ"; else -> "ЗАКРЫТ · ПОДРОБНЕЕ" }, color = if (active) Jade else accent, fontSize = 6.sp, fontWeight = FontWeight.Black, maxLines = 1)
+        }
+    }
+}
 
 private fun petCombatTrait(petId: String): String = when (petId) {
     "jade_fox" -> "техники получают дополнительную силу"

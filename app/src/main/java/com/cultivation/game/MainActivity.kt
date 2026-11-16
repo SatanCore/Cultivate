@@ -3861,7 +3861,7 @@ private fun PetCompanionCard(
         shadowElevation = if (active) 8.dp else 3.dp
     ) {
         Row(Modifier.fillMaxWidth().padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
-            PetPortraitMedallion(pet.id, 98.dp, active)
+            PetPortraitMedallion(pet.id, 110.dp, active)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -3964,7 +3964,7 @@ private fun PetPortraitMedallion(
             painter = painterResource(id = petPortraitResource(petId)),
             contentDescription = petId,
             contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize(.74f)
+            modifier = Modifier.fillMaxSize(.80f)
         )
     }
 }
@@ -3992,7 +3992,7 @@ private fun PetActiveShowcase(
         shadowElevation = 8.dp
     ) {
         Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            PetPortraitMedallion(pet.id, 118.dp, true)
+            PetPortraitMedallion(pet.id, 136.dp, true)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(petRarityName(pet.id), color = rarity, fontSize = 8.sp, fontWeight = FontWeight.Black)
@@ -5991,7 +5991,7 @@ private fun PetCompanionArt(pet: PetDefinition) {
             drawRect(brush = Brush.verticalGradient(0f to Color.Transparent, .7f to Color.Transparent, 1f to Color(0xAA101820)))
         }
         Column(Modifier.align(Alignment.CenterEnd).padding(end = 14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            PetPortraitMedallion(pet.id, 94.dp, true)
+            PetPortraitMedallion(pet.id, 108.dp, true)
             Text(pet.name, color = Color(0xFFFFE5B0), fontSize = 10.sp, fontWeight = FontWeight.Black, maxLines = 1)
         }
         Text("СВЯТИЛИЩЕ ДУХОВНЫХ СПУТНИКОВ", Modifier.align(Alignment.BottomStart).padding(10.dp), color = Color(0xFFE8D6AD), fontSize = 9.sp, fontWeight = FontWeight.Black)

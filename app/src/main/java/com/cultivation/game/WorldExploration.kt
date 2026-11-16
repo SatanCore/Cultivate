@@ -336,23 +336,14 @@ fun WorldExplorationScreen(
             shadowElevation = 6.dp
         ) {
             Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        painter = painterResource(if (selectedLocation.isBoss) selectedLocation.battlePortraitRes else selectedLocation.enemyPortraitRes),
-                        contentDescription = selectedLocation.title,
-                        modifier = Modifier.size(52.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                    Spacer(Modifier.width(9.dp))
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            if (selectedLocation.isBoss) "ХРАНИТЕЛЬ МИРА" else if (selectedLocation.isElite) "ЭЛИТНЫЙ ПРОТИВНИК" else "ПРОТИВНИК ТЕРРИТОРИИ",
-                            color = worldAccent, fontSize = 8.sp, fontWeight = FontWeight.Black
-                        )
-                        Text(if (selectedLocation.isBoss) selectedLocation.title else selectedLocation.enemyName, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Black)
-                        Text(if (selectedLocation.isBoss) selectedLocation.subtitle else "${selectedLocation.title} · ${selectedLocation.subtitle}", color = Color(0xFFC9D5E4), fontSize = 9.sp)
-                    }
-                }
+                ExpeditionEncounterHero(
+                    portraitRes = if (selectedLocation.isBoss) selectedLocation.battlePortraitRes else selectedLocation.enemyPortraitRes,
+                    backgroundRes = world.backgroundRes,
+                    accent = worldAccent,
+                    eyebrow = if (selectedLocation.isBoss) "ХРАНИТЕЛЬ МИРА" else if (selectedLocation.isElite) "ЭЛИТНЫЙ ПРОТИВНИК" else "ПРОТИВНИК ТЕРРИТОРИИ",
+                    title = if (selectedLocation.isBoss) selectedLocation.title else selectedLocation.enemyName,
+                    subtitle = if (selectedLocation.isBoss) selectedLocation.subtitle else selectedLocation.title + " · " + selectedLocation.subtitle
+                )
                 Text(selectedLocation.description, color = Color(0xFFE0E8F2), fontSize = 10.sp)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     ExplorationRewardChip("Сила", selectedLocation.recommendedPower.toString(), Modifier.weight(1f))
@@ -402,6 +393,78 @@ fun WorldExplorationScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ExpeditionEncounterHero(
+    portraitRes: Int,
+    backgroundRes: Int,
+    accent: Color,
+    eyebrow: String,
+    title: String,
+    subtitle: String
+) {
+    Box(
+        modifier = Modifier.fillMaxWidth().height(158.dp).clip(RoundedCornerShape(15.dp))
+    ) {
+        Image(
+            painter = painterResource(backgroundRes),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.horizontalGradient(
+                    0f to Color(0xEE091421),
+                    .48f to Color(0xAA0C1928),
+                    1f to Color(0x22101A2A)
+                )
+            )
+        )
+        Canvas(Modifier.fillMaxSize()) {
+            val center = Offset(size.width * .79f, size.height * .52f)
+            drawCircle(
+                Brush.radialGradient(
+                    listOf(accent.copy(alpha = .48f), accent.copy(alpha = .12f), Color.Transparent),
+                    center = center,
+                    radius = size.height * .78f
+                ),
+                radius = size.height * .78f,
+                center = center
+            )
+            drawCircle(
+                accent.copy(alpha = .72f),
+                radius = size.height * .43f,
+                center = center,
+                style = Stroke(width = 1.4.dp.toPx())
+            )
+            drawCircle(
+                Color.White.copy(alpha = .22f),
+                radius = size.height * .35f,
+                center = center,
+                style = Stroke(width = .7.dp.toPx())
+            )
+        }
+        Image(
+            painter = painterResource(portraitRes),
+            contentDescription = title,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 7.dp).size(148.dp)
+        )
+        Column(
+            modifier = Modifier.align(Alignment.CenterStart).fillMaxWidth(.67f).padding(start = 13.dp, end = 2.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Text(eyebrow, color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.1.sp, maxLines = 1)
+            Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 2, lineHeight = 19.sp)
+            Text(subtitle, color = Color(0xFFD0DCE8), fontSize = 8.sp, maxLines = 2, lineHeight = 10.sp)
+        }
+        Box(
+            Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 9.dp).size(width = 25.dp, height = 2.dp)
+                .background(accent, RoundedCornerShape(2.dp))
+        )
     }
 }
 

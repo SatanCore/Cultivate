@@ -3352,7 +3352,7 @@ private fun TreasuryVaultScreen(
                             resourceId = weaponDrawable(item.type),
                             rarityColor = weaponRarityColor(item.rarity),
                             frameResource = rarityFrameResource(item.rarity),
-                            selected = false,
+                            selected = selectedWeapon?.id == item.id,
                             equipped = equipped,
                             onClick = { selectedWeapon = item; selectedGear = null }
                         )
@@ -3373,7 +3373,8 @@ private fun TreasuryVaultScreen(
                             subtitle = "${item.rarity.title} · ${gearPowerScore(item)}",
                             resourceId = gearDrawable(item.slot),
                             rarityColor = weaponRarityColor(item.rarity),
-                            selected = false,
+                            frameResource = rarityFrameResource(item.rarity),
+                            selected = selectedGear?.id == item.id,
                             equipped = equipped,
                             onClick = { selectedGear = item; selectedWeapon = null }
                         )
@@ -6790,7 +6791,7 @@ private fun AuctionLotTile(
 ) {
     val rarityColor = weaponRarityColor(rarity)
     Surface(
-        Modifier.width(132.dp).height(166.dp).clickable(onClick = onClick),
+        Modifier.width(144.dp).height(184.dp).clickable(onClick = onClick),
         color = Color(0xFF14243A),
         shape = RoundedCornerShape(14.dp),
         border = BorderStroke(if (selected) 2.dp else 1.dp, rarityColor.copy(alpha = if (selected) 1f else .58f)),
@@ -6804,39 +6805,54 @@ private fun AuctionLotTile(
                 contentScale = ContentScale.FillBounds
             )
             Column(
-                Modifier.fillMaxSize().padding(horizontal = 7.dp, vertical = 8.dp),
+                Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 9.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(5.dp)
             ) {
-                RelicArtworkIcon(resourceId, rarityColor, Modifier.size(58.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(subtitle.substringBefore(" · ").uppercase(), color = Color(0xFFD8E4EF), fontSize = 6.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                    if (selected) Text("ОСМОТР", color = Gold, fontSize = 6.sp, fontWeight = FontWeight.Black)
+                }
+                RelicArtworkIcon(resourceId, rarityColor, Modifier.size(70.dp), rarityFrameResource(rarity))
                 Text(
                     title,
                     color = Color.White,
-                    fontSize = 8.sp,
+                    fontSize = 9.sp,
                     fontWeight = FontWeight.Black,
                     maxLines = 2,
                     minLines = 2,
-                    lineHeight = 10.sp,
+                    lineHeight = 11.sp,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
-                Text(
-                    rarity.title.uppercase(),
-                    color = rarityColor,
-                    fontSize = 7.sp,
-                    fontWeight = FontWeight.Black
-                )
-                Text(
-                    "РЕЙТИНГ $score",
-                    color = Color(0xFFE1D3B5),
-                    fontSize = 7.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "$price камней",
-                    color = Gold,
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.Black
-                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        rarity.title.uppercase(),
+                        color = rarityColor,
+                        fontSize = 7.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                    Text(
+                        "СИЛА $score",
+                        color = Color(0xFFE1D3B5),
+                        fontSize = 7.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = if (selected) Color(0xFF365D4F) else Color(0xAA0A1728),
+                    shape = RoundedCornerShape(7.dp),
+                    border = BorderStroke(1.dp, rarityColor.copy(alpha = .48f))
+                ) {
+                    Text(
+                        "$price  ·  КАМНЕЙ",
+                        modifier = Modifier.padding(vertical = 5.dp),
+                        color = Gold,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Black,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
             }
         }
     }

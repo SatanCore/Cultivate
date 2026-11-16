@@ -338,7 +338,7 @@ fun WorldExplorationScreen(
             Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 ExpeditionEncounterHero(
                     portraitRes = if (selectedLocation.isBoss) selectedLocation.battlePortraitRes else selectedLocation.enemyPortraitRes,
-                    backgroundRes = worldLandscapeResource(safeWorldIndex),
+                    backgroundRes = expeditionLandscapeResource(safeWorldIndex),
                     accent = worldAccent,
                     eyebrow = if (selectedLocation.isBoss) "ХРАНИТЕЛЬ МИРА" else if (selectedLocation.isElite) "ЭЛИТНЫЙ ПРОТИВНИК" else "ПРОТИВНИК ТЕРРИТОРИИ",
                     title = if (selectedLocation.isBoss) selectedLocation.title else selectedLocation.enemyName,
@@ -394,6 +394,13 @@ fun WorldExplorationScreen(
             }
         }
     }
+}
+
+private fun expeditionLandscapeResource(index: Int): Int = when (index.coerceIn(0, 3)) {
+    0 -> R.drawable.world_mortal_landscape
+    1 -> R.drawable.world_spiritual_landscape
+    2 -> R.drawable.world_immortal_landscape
+    else -> R.drawable.world_chaos_landscape
 }
 
 @Composable

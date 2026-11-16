@@ -2163,54 +2163,66 @@ private fun HomeResource(symbol: String, label: String, value: String) {
 private fun HomeHotspot(title: String, subtitle: String, symbol: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val transition = rememberInfiniteTransition(label = "home-hotspot-$symbol")
     val pulse by transition.animateFloat(
-        initialValue = .28f,
-        targetValue = .72f,
-        animationSpec = infiniteRepeatable(tween(1750), RepeatMode.Reverse),
+        initialValue = .22f,
+        targetValue = .58f,
+        animationSpec = infiniteRepeatable(tween(1900), RepeatMode.Reverse),
         label = "home-hotspot-glow-$symbol"
     )
-    Surface(
-        modifier = modifier.width(86.dp).height(90.dp).clickable(onClick = onClick),
-        color = Color(0xD9101B2E), contentColor = Color.White,
-        shape = MaterialTheme.shapes.large,
-        border = BorderStroke(1.dp, Gold.copy(alpha = .42f)),
-        tonalElevation = 5.dp, shadowElevation = 7.dp
+    Box(
+        modifier = modifier.width(96.dp).height(112.dp).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
-        Box(Modifier.fillMaxSize()) {
-            Canvas(Modifier.matchParentSize()) {
-                val center = Offset(size.width / 2f, size.height * .43f)
-                drawRect(Brush.verticalGradient(listOf(Color(0x442D4A55), Color.Transparent)))
-                drawCircle(
-                    Brush.radialGradient(
-                        listOf(Color(0x6689D9C5).copy(alpha = pulse), Color(0x001A2D42)),
-                        center,
-                        size.minDimension * .55f
+        Canvas(Modifier.fillMaxSize()) {
+            val center = Offset(size.width * .5f, size.height * .43f)
+            drawCircle(
+                Brush.radialGradient(
+                    listOf(
+                        Color(0x6688D9C3).copy(alpha = pulse),
+                        Color(0x2289C9D2).copy(alpha = pulse),
+                        Color.Transparent
                     ),
-                    size.minDimension * .55f,
-                    center
-                )
-                drawCircle(
-                    Gold.copy(alpha = pulse * .42f),
-                    size.minDimension * .34f,
-                    center,
-                    style = Stroke(width = 1.dp.toPx())
-                )
-            }
-            Column(
-                Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 3.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Image(
-                    painter = painterResource(townBuildingResource(symbol)),
-                    contentDescription = "$title — $subtitle",
-                    modifier = Modifier.size(62.dp),
-                    contentScale = ContentScale.Fit
-                )
-                Text(
-                    title, color = Color(0xFFFFE8B5), fontSize = 8.5.sp,
-                    fontWeight = FontWeight.Black, maxLines = 1
-                )
-            }
+                    center = center,
+                    radius = size.minDimension * .62f
+                ),
+                radius = size.minDimension * .62f,
+                center = center
+            )
+            drawOval(
+                Brush.radialGradient(
+                    listOf(Color(0x5578C9B1), Color(0x2278C9B1), Color.Transparent)
+                ),
+                topLeft = Offset(size.width * .12f, size.height * .66f),
+                size = Size(size.width * .76f, size.height * .17f)
+            )
+            drawArc(
+                color = Gold.copy(alpha = .22f + pulse * .18f),
+                startAngle = 205f,
+                sweepAngle = 130f,
+                useCenter = false,
+                topLeft = Offset(size.width * .18f, size.height * .09f),
+                size = Size(size.width * .64f, size.height * .64f),
+                style = Stroke(width = 1.dp.toPx())
+            )
+        }
+        Column(
+            Modifier.fillMaxSize().padding(horizontal = 1.dp, vertical = 1.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Image(
+                painter = painterResource(townBuildingResource(symbol)),
+                contentDescription = "$title — $subtitle",
+                modifier = Modifier.width(94.dp).height(72.dp),
+                contentScale = ContentScale.Fit
+            )
+            Text(
+                title,
+                color = Color(0xFFFFE8B5),
+                fontSize = 8.5.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 1,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
         }
     }
 }

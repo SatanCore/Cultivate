@@ -257,7 +257,7 @@ fun WorldExplorationScreen(
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("ЭКСПЕДИЦИЯ ПУТЕШЕСТВЕННИКА", color = worldAccent, fontSize = 8.sp, fontWeight = FontWeight.Black)
                     Text(playerNickname.ifBlank { "Странник Дао" }, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
-                    Text(classNamesForExpedition(safeClassIndex) + " · " + world.title, color = Color(0xFFC8D5E4), fontSize = 8.sp)
+                    Text((when (safeClassIndex) { 0 -> "Мечник"; 1 -> "Закалённый воин"; 2 -> "Заклинатель стихий"; else -> "Мистик духов" }) + " · " + world.title, color = Color(0xFFC8D5E4), fontSize = 8.sp)
                 }
                 Text("✦", color = worldAccent, fontSize = 21.sp, fontWeight = FontWeight.Black)
             }

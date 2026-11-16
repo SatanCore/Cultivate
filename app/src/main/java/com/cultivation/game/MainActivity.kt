@@ -3705,7 +3705,7 @@ private fun TreasuryVaultScreen(
         }
         if (visibleWeapons.isNotEmpty()) {
             InventorySectionHeading("Оружейная галерея", "${visibleWeapons.size} предметов · нажми для подробностей", "weapon")
-            visibleWeapons.chunked(4).forEach { rowItems ->
+            visibleWeapons.chunked(3).forEach { rowItems ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     rowItems.forEach { item ->
                         val equipped = encodeWeaponInstance(item) == encodeWeaponInstance(equippedWeapon)
@@ -3721,13 +3721,13 @@ private fun TreasuryVaultScreen(
                             onClick = { selectedWeapon = item; selectedGear = null }
                         )
                     }
-                    repeat(4 - rowItems.size) { Spacer(Modifier.weight(1f)) }
+                    repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
         if (visibleGear.isNotEmpty()) {
             InventorySectionHeading("Доспехи и артефакты", "${visibleGear.size} предметов · нажми для подробностей", "equipment")
-            visibleGear.chunked(4).forEach { rowItems ->
+            visibleGear.chunked(3).forEach { rowItems ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     rowItems.forEach { item ->
                         val equipped = equippedGearBySlot[item.slot]?.let { encodeGearInstance(it) == encodeGearInstance(item) } == true
@@ -3992,7 +3992,7 @@ private fun TreasuryRelicTile(
         label = "relic-selection"
     )
     Surface(
-        modifier = modifier.height(184.dp).graphicsLayer {
+        modifier = modifier.height(202.dp).graphicsLayer {
             val scale = 1f + selectionProgress * .018f
             scaleX = scale
             scaleY = scale
@@ -4022,14 +4022,14 @@ private fun TreasuryRelicTile(
                 InventoryItemArtwork(
                     resourceId,
                     frameResource,
-                    Modifier.size(104.dp).graphicsLayer {
+                    Modifier.size(122.dp).graphicsLayer {
                         val scale = 1f + selectionProgress * .035f
                         scaleX = scale
                         scaleY = scale
                     }
                 )
-                Text(title, color = if (selected) Color.White else Color(0xFFE2E8F0), fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 2, minLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 10.sp)
-                Text(subtitle, color = rarityColor, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                Text(title, color = if (selected) Color.White else Color(0xFFE2E8F0), fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 2, minLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 12.sp)
+                Text(subtitle, color = rarityColor, fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
             }
             if (selected) {
                 Surface(

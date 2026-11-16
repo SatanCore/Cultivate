@@ -294,7 +294,18 @@ private fun CultivateApp() {
     var showSkillNodeDialog by remember { mutableStateOf(false) }
     var selectedTownBuilding by remember { mutableStateOf("") }
     val pageScrollState = rememberScrollState()
-    LaunchedEffect(selectedMenu, selectedTownBuilding) { pageScrollState.animateScrollTo(0) }
+    val pageEnterTransition = remember { Animatable(1f) }
+    LaunchedEffect(selectedMenu, selectedTownBuilding) {
+        pageScrollState.animateScrollTo(0)
+        pageEnterTransition.snapTo(0.965f)
+        pageEnterTransition.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(
+                durationMillis = 260,
+                easing = androidx.compose.animation.core.FastOutSlowInEasing
+            )
+        )
+    }
     var questClaimed by remember { mutableStateOf(prefs.getBoolean("town_quest_claimed", false)) }
     var storyChapter by remember { mutableIntStateOf(prefs.getInt("town_story_chapter", 0).coerceIn(0, 3)) }
     val skillMaterials = remember { mutableStateListOf<Int>().apply {
@@ -918,7 +929,13 @@ private fun CultivateApp() {
             )
         }
         if (selectedMenu == 0) {
-            Box(Modifier.fillMaxSize()) {
+            Box(
+                Modifier.fillMaxSize().graphicsLayer {
+                    alpha = pageEnterTransition.value
+                    scaleX = pageEnterTransition.value
+                    scaleY = pageEnterTransition.value
+                }
+            ) {
                 CinematicHomeScreen(
                     stage = stage, qi = qi, stones = stones, wins = wins,
                     storyChapter = storyChapter, combatPower = classBonus + classDefense + playerMaxHp,
@@ -1036,7 +1053,13 @@ private fun CultivateApp() {
                 }
             }
         } else {
-        Column(Modifier.fillMaxSize().background(Ink)) {
+        Column(
+            Modifier.fillMaxSize().background(Ink).graphicsLayer {
+                alpha = pageEnterTransition.value
+                scaleX = pageEnterTransition.value
+                scaleY = pageEnterTransition.value
+            }
+        ) {
         Column(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(pageScrollState).padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)

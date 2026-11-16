@@ -4626,6 +4626,12 @@ private fun BattleScene(
         else -> R.drawable.battle_impact_blade
     }
     val impactDamage = Regex("урон\\s+(\\d+)").find(actionText)?.groupValues?.getOrNull(1).orEmpty()
+    val signatureRes = when (playerPortraitRes) {
+        R.drawable.class_portrait_ironbody -> R.drawable.battle_signature_iron
+        R.drawable.class_portrait_elementalist -> R.drawable.battle_signature_elemental
+        R.drawable.class_portrait_spiritmystic -> R.drawable.battle_signature_spirit
+        else -> R.drawable.battle_signature_blade
+    }
     LaunchedEffect(actionText, enemyHp, playerHp) {
         if (combatAction) {
             impactProgress.snapTo(0f)
@@ -5118,7 +5124,169 @@ private fun BattleScene(
                         strokeWidth = if (index % 3 == 0) 3.2f * fade else 1.7f * fade
                     )
                 }
+                when (signatureRes) {
+                    R.drawable.battle_signature_blade -> {
+                        for (slash in 0..2) {
+                            val shift = (slash - 1) * radius * .17f
+                            val start = Offset(burstCenter.x - radius * .72f, burstCenter.y + radius * .40f + shift)
+                            val end = Offset(burstCenter.x + radius * .74f, burstCenter.y - radius * .46f + shift * .28f)
+                            val slashPath = Path().apply {
+                                moveTo(start.x, start.y)
+                                cubicTo(
+                                    burstCenter.x - radius * .18f, burstCenter.y + radius * .16f + shift,
+                                    burstCenter.x + radius * .24f, burstCenter.y - radius * .62f + shift,
+                                    end.x, end.y
+                                )
+                            }
+                            drawPath(
+                                slashPath,
+                                Brush.linearGradient(
+                                    listOf(
+                                        Color.Transparent,
+                                        Color(0xFFFFE7A7).copy(alpha = fade),
+                                        Color(0xFF8DF2D6).copy(alpha = fade * .88f),
+                                        Color.Transparent
+                                    ),
+                                    start = start,
+                                    end = end
+                                ),
+                                style = Stroke(width = (5.2f - slash * .8f) * fade.coerceAtLeast(.08f))
+                            )
+                        }
+                    }
+                    R.drawable.battle_signature_iron -> {
+                        drawOval(
+                            Color(0xFFFFD58C).copy(alpha = fade * .78f),
+                            topLeft = Offset(burstCenter.x - radius * 1.02f, burstCenter.y - radius * .34f),
+                            size = Size(radius * 2.04f, radius * .78f),
+                            style = Stroke(width = 4.2f * fade.coerceAtLeast(.08f))
+                        )
+                        drawOval(
+                            Color(0xFF8BE2B7).copy(alpha = fade * .72f),
+                            topLeft = Offset(burstCenter.x - radius * .74f, burstCenter.y - radius * .20f),
+                            size = Size(radius * 1.48f, radius * .48f),
+                            style = Stroke(width = 2.6f * fade.coerceAtLeast(.08f))
+                        )
+                        for (shard in 0..7) {
+                            val angle = shard * (Math.PI / 4.0)
+                            val inner = radius * .58f
+                            val outer = radius * (1.22f + (shard % 2) * .18f)
+                            val start = Offset(
+                                burstCenter.x + kotlin.math.cos(angle).toFloat() * inner,
+                                burstCenter.y + kotlin.math.sin(angle).toFloat() * inner * .62f
+                            )
+                            val end = Offset(
+                                burstCenter.x + kotlin.math.cos(angle).toFloat() * outer,
+                                burstCenter.y + kotlin.math.sin(angle).toFloat() * outer * .62f
+                            )
+                            drawLine(
+                                Color(0xFFFFD58C).copy(alpha = fade * .88f),
+                                start,
+                                end,
+                                strokeWidth = if (shard % 2 == 0) 4f * fade else 2.1f * fade
+                            )
+                        }
+                    }
+                    R.drawable.battle_signature_elemental -> {
+                        val elementColors = listOf(
+                            Color(0xFFFFA05F),
+                            Color(0xFF83DFFF),
+                            Color(0xFFFFE28B)
+                        )
+                        for (element in 0..2) {
+                            val angle = element * (Math.PI * 2.0 / 3.0) + progress.toDouble() * 1.8
+                            val start = Offset(
+                                burstCenter.x + kotlin.math.cos(angle).toFloat() * radius * .24f,
+                                burstCenter.y + kotlin.math.sin(angle).toFloat() * radius * .18f
+                            )
+                            val end = Offset(
+                                burstCenter.x + kotlin.math.cos(angle + 2.1).toFloat() * radius * 1.08f,
+                                burstCenter.y + kotlin.math.sin(angle + 2.1).toFloat() * radius * .72f
+                            )
+                            val elementPath = Path().apply {
+                                moveTo(start.x, start.y)
+                                cubicTo(
+                                    burstCenter.x + kotlin.math.cos(angle + .7).toFloat() * radius * 1.12f,
+                                    burstCenter.y + kotlin.math.sin(angle + .7).toFloat() * radius * .78f,
+                                    burstCenter.x + kotlin.math.cos(angle + 1.45).toFloat() * radius * .42f,
+                                    burstCenter.y + kotlin.math.sin(angle + 1.45).toFloat() * radius * .30f,
+                                    end.x, end.y
+                                )
+                            }
+                            drawPath(
+                                elementPath,
+                                Brush.linearGradient(
+                                    listOf(Color.Transparent, elementColors[element].copy(alpha = fade), Color.Transparent),
+                                    start = start,
+                                    end = end
+                                ),
+                                style = Stroke(width = 4.4f * fade.coerceAtLeast(.08f))
+                            )
+                            drawCircle(
+                                elementColors[element].copy(alpha = fade * .92f),
+                                radius * (.055f + element * .008f),
+                                end
+                            )
+                        }
+                    }
+                    else -> {
+                        for (ring in 0..2) {
+                            val ringRadius = radius * (.42f + ring * .24f)
+                            drawCircle(
+                                Color(0xFFB99AFF).copy(alpha = fade * (.72f - ring * .12f)),
+                                ringRadius,
+                                burstCenter,
+                                style = Stroke(width = (3.2f - ring * .55f) * fade.coerceAtLeast(.08f))
+                            )
+                        }
+                        for (seal in 0..7) {
+                            val angle = seal * (Math.PI / 4.0) - progress * 1.4f
+                            val point = Offset(
+                                burstCenter.x + kotlin.math.cos(angle).toFloat() * radius * .94f,
+                                burstCenter.y + kotlin.math.sin(angle).toFloat() * radius * .68f
+                            )
+                            drawCircle(Color(0xFFD8C3FF).copy(alpha = fade), 3.4f * fade.coerceAtLeast(.08f), point)
+                            drawLine(
+                                Color(0xFF8FE4D4).copy(alpha = fade * .78f),
+                                Offset(
+                                    burstCenter.x + kotlin.math.cos(angle).toFloat() * radius * .70f,
+                                    burstCenter.y + kotlin.math.sin(angle).toFloat() * radius * .50f
+                                ),
+                                point,
+                                strokeWidth = 2.1f * fade.coerceAtLeast(.08f)
+                            )
+                        }
+                    }
+                }
             }
+            Image(
+                painter = painterResource(id = signatureRes),
+                contentDescription = "Фирменная техника выбранного класса",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .offset(x = 42.dp, y = 28.dp)
+                    .size(224.dp)
+                    .graphicsLayer {
+                        alpha = (1f - progress).coerceIn(0f, 1f) * .88f
+                        rotationZ = when (signatureRes) {
+                            R.drawable.battle_signature_blade -> -34f + progress * 68f
+                            R.drawable.battle_signature_iron -> progress * 10f
+                            R.drawable.battle_signature_elemental -> -82f + progress * 164f
+                            else -> 42f - progress * 84f
+                        }
+                        scaleX = when (signatureRes) {
+                            R.drawable.battle_signature_blade -> .72f + progress * 1.18f
+                            R.drawable.battle_signature_iron -> .48f + progress * 1.22f
+                            else -> .58f + progress * 1.02f
+                        }
+                        scaleY = when (signatureRes) {
+                            R.drawable.battle_signature_blade -> 1.08f - progress * .20f
+                            R.drawable.battle_signature_iron -> .55f + progress * 1.15f
+                            else -> .62f + progress * .96f
+                        }
+                    }
+            )
             Image(
                 painter = painterResource(id = impactRes),
                 contentDescription = "Эффект боевого удара",

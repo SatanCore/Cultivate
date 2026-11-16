@@ -2641,6 +2641,7 @@ private fun CharacterArmoryScreen(
                         weaponDrawable(equippedWeapon.type),
                         weaponRarityColor(equippedWeapon.rarity),
                         Modifier.weight(1f),
+                        rarityFrameResource(equippedWeapon.rarity),
                         onOpenWeapons
                     )
                     CharacterEquipmentSlot(
@@ -2649,6 +2650,7 @@ private fun CharacterArmoryScreen(
                         gearDrawable(GearSlot.HELMET),
                         gearBySlot[GearSlot.HELMET]?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF66758B),
                         Modifier.weight(1f),
+                        gearBySlot[GearSlot.HELMET]?.let { rarityFrameResource(it.rarity) } ?: R.drawable.ui_rarity_frame_01,
                         onOpenGear
                     )
                     CharacterEquipmentSlot(
@@ -2657,6 +2659,7 @@ private fun CharacterArmoryScreen(
                         gearDrawable(GearSlot.ARMOR),
                         gearBySlot[GearSlot.ARMOR]?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF66758B),
                         Modifier.weight(1f),
+                        gearBySlot[GearSlot.ARMOR]?.let { rarityFrameResource(it.rarity) } ?: R.drawable.ui_rarity_frame_01,
                         onOpenGear
                     )
                 }
@@ -2755,6 +2758,7 @@ private fun CharacterArmoryScreen(
                         gearDrawable(GearSlot.RING),
                         gearBySlot[GearSlot.RING]?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF66758B),
                         Modifier.fillMaxWidth().weight(1f),
+                        gearBySlot[GearSlot.RING]?.let { rarityFrameResource(it.rarity) } ?: R.drawable.ui_rarity_frame_01,
                         onOpenGear
                     )
                     Spacer(Modifier.weight(.35f))
@@ -2764,6 +2768,7 @@ private fun CharacterArmoryScreen(
                         gearDrawable(GearSlot.ARTIFACT),
                         gearBySlot[GearSlot.ARTIFACT]?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF66758B),
                         Modifier.fillMaxWidth().weight(1f),
+                        gearBySlot[GearSlot.ARTIFACT]?.let { rarityFrameResource(it.rarity) } ?: R.drawable.ui_rarity_frame_01,
                         onOpenGear
                     )
                 }
@@ -2979,6 +2984,7 @@ private fun CharacterEquipmentSlot(
     iconRes: Int,
     rarityColor: Color,
     modifier: Modifier = Modifier,
+    frameResource: Int = R.drawable.ui_rarity_frame_01,
     onClick: () -> Unit
 ) {
     Surface(
@@ -2998,7 +3004,13 @@ private fun CharacterEquipmentSlot(
                 painter = painterResource(iconRes),
                 contentDescription = title,
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.size(35.dp)
+                modifier = Modifier.size(39.dp)
+            )
+            Image(
+                painter = painterResource(frameResource),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(43.dp).offset(y = (-38).dp)
             )
             Text(title, color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
             Text(
@@ -3120,7 +3132,12 @@ private fun gearDrawable(slot: GearSlot): Int = when (slot) {
 }
 
 @Composable
-private fun RelicArtworkIcon(resourceId: Int, rarityColor: Color, modifier: Modifier = Modifier) {
+private fun RelicArtworkIcon(
+    resourceId: Int,
+    rarityColor: Color,
+    modifier: Modifier = Modifier,
+    frameResource: Int = R.drawable.ui_rarity_frame_02
+) {
     Surface(
         modifier = modifier,
         color = Color(0xFF101A2B),
@@ -3144,6 +3161,12 @@ private fun RelicArtworkIcon(resourceId: Int, rarityColor: Color, modifier: Modi
                 painter = painterResource(resourceId),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize().padding(8.dp),
+                contentScale = ContentScale.Fit
+            )
+            Image(
+                painter = painterResource(frameResource),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize().padding(1.dp),
                 contentScale = ContentScale.Fit
             )
         }
@@ -3328,6 +3351,7 @@ private fun TreasuryVaultScreen(
                             subtitle = "${item.rarity.title} · ${weaponPowerScore(item)}",
                             resourceId = weaponDrawable(item.type),
                             rarityColor = weaponRarityColor(item.rarity),
+                            frameResource = rarityFrameResource(item.rarity),
                             selected = false,
                             equipped = equipped,
                             onClick = { selectedWeapon = item; selectedGear = null }
@@ -3501,6 +3525,7 @@ private fun TreasuryRelicTile(
     subtitle: String,
     resourceId: Int,
     rarityColor: Color,
+    frameResource: Int = R.drawable.ui_rarity_frame_02,
     selected: Boolean,
     equipped: Boolean,
     onClick: () -> Unit
@@ -3519,7 +3544,7 @@ private fun TreasuryRelicTile(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                RelicArtworkIcon(resourceId, rarityColor, Modifier.size(76.dp))
+                RelicArtworkIcon(resourceId, rarityColor, Modifier.size(76.dp), frameResource)
                 Text(title, color = if (selected) Color.White else Color(0xFFE2E8F0), fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 2, minLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 10.sp)
                 Text(subtitle, color = rarityColor, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
             }
@@ -6896,6 +6921,12 @@ private enum class WeaponRarity(val title: String, val realmGapShare: Double, va
     EPIC("Эпическое", 0.58, 0.18),
     LEGENDARY("Легендарное", 0.88, 0.23),
     MYTHIC("Мифическое", 1.08, 0.28)
+}
+
+private fun rarityFrameResource(rarity: WeaponRarity): Int = when (rarity) {
+    WeaponRarity.COMMON, WeaponRarity.UNCOMMON -> R.drawable.ui_rarity_frame_01
+    WeaponRarity.RARE, WeaponRarity.EPIC -> R.drawable.ui_rarity_frame_02
+    WeaponRarity.LEGENDARY, WeaponRarity.MYTHIC -> R.drawable.ui_rarity_frame_03
 }
 
 private data class WeaponDefinition(

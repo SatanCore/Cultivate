@@ -86,9 +86,22 @@ jobs:
           cp "$effects_source_dir/ascension_rays_c7a7e8af.png" "$target_dir/cultivation_ascension_rays.png"
           cp "$effects_source_dir/breakthrough_ascension_bf7758b4.png" "$target_dir/cultivation_breakthrough_ascension.png"
           cp "$effects_source_dir/event_breakthrough_ea680001.png" "$target_dir/cultivation_event_breakthrough.png"
+          # Import a dedicated heavenly-storm overlay and its 12-frame lightning impact.
+          tribulation_source_dir="/tmp/cultivate-art/art_source/02_processed_304/transparent_sprites/combat_and_effects"
+          test -s "$tribulation_source_dir/storm_clouds_a3348a87.png"
+          test -s "$tribulation_source_dir/tribulation_crossing_b1479cd1.png"
+          test -s "$tribulation_source_dir/spear_lightning_2310b8d3.png"
+          cp "$tribulation_source_dir/storm_clouds_a3348a87.png" "$target_dir/cultivation_tribulation_storm.png"
+          cp "$tribulation_source_dir/tribulation_crossing_b1479cd1.png" "$target_dir/cultivation_tribulation_crossing.png"
+          cp "$tribulation_source_dir/spear_lightning_2310b8d3.png" "$target_dir/cultivation_tribulation_spear_lightning.png"
+          lightning_frames_dir="/tmp/cultivate-art/art_source/animations_expanded/combat_and_effects/lightning_impact"
+          for frame in 00 01 02 03 04 05 06 07 08 09 10 11; do
+            test -s "$lightning_frames_dir/frame_${frame}.png"
+            cp "$lightning_frames_dir/frame_${frame}.png" "$target_dir/cultivation_tribulation_lightning_${frame}.png"
+          done
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$target_dir"/*_male.png "$target_dir"/*_female.png "$target_dir"/hero_full_*.webp "$target_dir"/creature_*.png "$target_dir"/armor_*.png "$target_dir"/sword_*.png "$target_dir"/ring_*.png "$target_dir"/robe_*.png "$target_dir"/talisman_*.png "$target_dir"/weapon_*.png "$target_dir"/ui_rarity_frame_*.png "$target_dir"/spirit_spring_frame_*.png "$target_dir"/cultivation_aura_*.png "$target_dir"/cultivation_ascension_rays.png "$target_dir"/cultivation_breakthrough_ascension.png "$target_dir"/cultivation_event_breakthrough.png ART_ASSET_INVENTORY.md
+          git add "$target_dir"/*_male.png "$target_dir"/*_female.png "$target_dir"/hero_full_*.webp "$target_dir"/creature_*.png "$target_dir"/armor_*.png "$target_dir"/sword_*.png "$target_dir"/ring_*.png "$target_dir"/robe_*.png "$target_dir"/talisman_*.png "$target_dir"/weapon_*.png "$target_dir"/ui_rarity_frame_*.png "$target_dir"/spirit_spring_frame_*.png "$target_dir"/cultivation_aura_*.png "$target_dir"/cultivation_ascension_rays.png "$target_dir"/cultivation_breakthrough_ascension.png "$target_dir"/cultivation_event_breakthrough.png "$target_dir"/cultivation_tribulation_*.png ART_ASSET_INVENTORY.md
           if ! git diff --cached --quiet; then
             git commit -m "Inventory supplied illustration library and import portraits"
             git push

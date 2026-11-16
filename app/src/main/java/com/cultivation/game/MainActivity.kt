@@ -3660,7 +3660,10 @@ private fun TreasuryVaultScreen(
     onEquipGear: (GearDefinition) -> Unit
 ) {
     val visibleWeapons = if (filter == 2) emptyList() else weapons.sortedByDescending { weaponPowerScore(it) }
-    val visibleGear = if (filter == 1) emptyList() else gear.sortedByDescending { gearPowerScore(it) }
+    var selectedGearSlot by remember { mutableStateOf<GearSlot?>(null) }
+    val visibleGear = if (filter == 1) emptyList() else gear
+        .filter { selectedGearSlot == null || it.slot == selectedGearSlot }
+        .sortedByDescending { gearPowerScore(it) }
     var selectedWeapon by remember { mutableStateOf<WeaponDefinition?>(null) }
     var selectedGear by remember { mutableStateOf<GearDefinition?>(null) }
     val equippedGearBySlot = equippedGear.associateBy { it.slot }
@@ -3677,7 +3680,20 @@ private fun TreasuryVaultScreen(
             InventoryCategoryTab("ОРУЖИЕ · ${weapons.size}", "weapon", filter == 1, Modifier.weight(1f)) { onFilterChange(1) }
             InventoryCategoryTab("БРОНЯ · ${gear.size}", "equipment", filter == 2, Modifier.weight(1f)) { onFilterChange(2) }
         }
-        InventoryLoadoutRow(weapon = equippedWeapon, equippedGear = equippedGear)
+        InventoryLoadoutRow(
+            weapon = equippedWeapon,
+            equippedGear = equippedGear,
+            onOpenWeapon = { onFilterChange(1); selectedGearSlot = null; selectedWeapon = null; selectedGear = null },
+            onOpenGear = { slot -> onFilterChange(2); selectedGearSlot = slot; selectedWeapon = null; selectedGear = null }
+        )
+        if (filter == 2) {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                InventoryCategoryTab("ВСЯ БРОНЯ", "equipment", selectedGearSlot == null, Modifier.width(112.dp)) { selectedGearSlot = null }
+                GearSlot.values().forEach { slot ->
+                    InventoryCategoryTab(slot.title.uppercase(), "equipment", selectedGearSlot == slot, Modifier.width(112.dp)) { selectedGearSlot = slot }
+                }
+            }
+        }
         if (totalItems == 0) {
             Surface(Modifier.fillMaxWidth(), color = Color(0xDD17263A), shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, Gold.copy(alpha = .42f))) {
                 Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -4243,7 +4259,12 @@ private fun lootRarityColor(rarity: String): Color = when (rarity.uppercase()) {
 }
 
 @Composable
-private fun InventoryLoadoutRow(weapon: WeaponDefinition, equippedGear: List<GearDefinition>) {
+private fun InventoryLoadoutRow(
+    weapon: WeaponDefinition,
+    equippedGear: List<GearDefinition>,
+    onOpenWeapon: () -> Unit,
+    onOpenGear: (GearSlot) -> Unit
+) {
     Surface(
         color = Color(0xE9111F32),
         shape = RoundedCornerShape(16.dp),
@@ -4271,7 +4292,8 @@ private fun InventoryLoadoutRow(weapon: WeaponDefinition, equippedGear: List<Gea
                 InventoryLoadoutSlot(
                     "ОРУЖИЕ", weapon.name, weaponArtworkDrawable(weapon.type, weapon.rarity),
                     weaponRarityColor(weapon.rarity), Modifier.weight(1f),
-                    rarityFrameResource(weapon.rarity)
+                    rarityFrameResource(weapon.rarity),
+                    onClick = onOpenWeapon
                 )
                 GearSlot.values().forEach { slot ->
                     val item = equippedGear.firstOrNull { it.slot == slot }
@@ -4281,7 +4303,8 @@ private fun InventoryLoadoutRow(weapon: WeaponDefinition, equippedGear: List<Gea
                         item?.let { gearArtworkDrawable(slot, it.rarity) } ?: gearDrawable(slot),
                         item?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF65758A),
                         Modifier.weight(1f),
-                        item?.let { rarityFrameResource(it.rarity) } ?: R.drawable.ui_rarity_frame_01
+                        item?.let { rarityFrameResource(it.rarity) } ?: R.drawable.ui_rarity_frame_01,
+                        onClick = { onOpenGear(slot) }
                     )
                 }
             }
@@ -4296,10 +4319,11 @@ private fun InventoryLoadoutSlot(
     icon: Int,
     tint: Color,
     modifier: Modifier = Modifier,
-    frameResource: Int = R.drawable.ui_rarity_frame_01
+    frameResource: Int = R.drawable.ui_rarity_frame_01,
+    onClick: () -> Unit = {}
 ) {
     Surface(
-        modifier = modifier.height(104.dp),
+        modifier = modifier.height(104.dp).clickable(onClick = onClick),
         color = Color(0xFF101C30),
         shape = RoundedCornerShape(10.dp),
         border = BorderStroke(1.dp, tint.copy(alpha = .78f)),

@@ -3414,6 +3414,49 @@ private fun InventoryPowerComparison(score: Int, delta: Int?, equipped: Boolean)
 }
 
 @Composable
+private fun RelicDetailShowcase(resourceId: Int, rarityColor: Color) {
+    Box(
+        Modifier.size(122.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(Modifier.fillMaxSize()) {
+            val center = Offset(size.width * .5f, size.height * .5f)
+            val radius = size.minDimension * .48f
+            drawCircle(
+                Brush.radialGradient(
+                    listOf(rarityColor.copy(alpha = .38f), rarityColor.copy(alpha = .12f), Color.Transparent),
+                    center = center,
+                    radius = radius
+                ),
+                radius = radius,
+                center = center
+            )
+            drawCircle(
+                rarityColor.copy(alpha = .72f),
+                radius = size.minDimension * .455f,
+                center = center,
+                style = Stroke(width = 1.6.dp.toPx())
+            )
+            drawCircle(
+                Gold.copy(alpha = .48f),
+                radius = size.minDimension * .405f,
+                center = center,
+                style = Stroke(width = .8.dp.toPx())
+            )
+            for (index in 0 until 8) {
+                val angle = index * (Math.PI / 4.0)
+                val inner = size.minDimension * .43f
+                val outer = size.minDimension * .48f
+                val start = Offset(center.x + kotlin.math.cos(angle).toFloat() * inner, center.y + kotlin.math.sin(angle).toFloat() * inner)
+                val end = Offset(center.x + kotlin.math.cos(angle).toFloat() * outer, center.y + kotlin.math.sin(angle).toFloat() * outer)
+                drawLine(rarityColor.copy(alpha = .78f), start, end, 1.2.dp.toPx())
+            }
+        }
+        RelicArtworkIcon(resourceId, rarityColor, Modifier.size(100.dp))
+    }
+}
+
+@Composable
 private fun TreasuryWeaponDetail(
     item: WeaponDefinition,
     score: Int,
@@ -3434,7 +3477,7 @@ private fun TreasuryWeaponDetail(
     ) {
         Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RelicArtworkIcon(weaponDrawable(item.type), rarityColor, Modifier.size(104.dp))
+                RelicDetailShowcase(weaponDrawable(item.type), rarityColor)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("ИЗБРАННАЯ РЕЛИКВИЯ", color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
@@ -3484,7 +3527,7 @@ private fun TreasuryGearDetail(
     ) {
         Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RelicArtworkIcon(gearDrawable(item.slot), rarityColor, Modifier.size(104.dp))
+                RelicDetailShowcase(gearDrawable(item.slot), rarityColor)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("ИЗБРАННАЯ ЧАСТЬ КОМПЛЕКТА", color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)

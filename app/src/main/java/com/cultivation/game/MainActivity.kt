@@ -4557,6 +4557,29 @@ private fun BattleScene(
     telegraphAccent: Color
 ) {
     val transition = rememberInfiniteTransition(label = "cinematic-battle")
+    val heroBreath by transition.animateFloat(
+        -1f, 1f,
+        infiniteRepeatable(tween(1750), RepeatMode.Reverse),
+        label = "battle-hero-breath"
+    )
+    val enemyHover by transition.animateFloat(
+        -1f, 1f,
+        infiniteRepeatable(tween(1450), RepeatMode.Reverse),
+        label = "battle-enemy-hover"
+    )
+    val petHover by transition.animateFloat(
+        -1f, 1f,
+        infiniteRepeatable(tween(2050), RepeatMode.Reverse),
+        label = "battle-pet-hover"
+    )
+    val runeRotation by transition.animateFloat(
+        0f, 360f,
+        infiniteRepeatable(
+            tween(32000, easing = androidx.compose.animation.core.LinearEasing),
+            RepeatMode.Restart
+        ),
+        label = "battle-arena-rune-rotation"
+    )
     val impactProgress = remember { Animatable(1f) }
     val combatAction = actionText.contains("урон", ignoreCase = true) ||
         actionText.contains("КРИТИЧЕСКИЙ УДАР", ignoreCase = true) ||
@@ -4601,6 +4624,26 @@ private fun BattleScene(
     )
     val playerRatio = (playerHp.toFloat() / playerMaxHp.coerceAtLeast(1)).coerceIn(0f, 1f)
     val enemyRatio = (enemyHp.toFloat() / enemyMaxHp.coerceAtLeast(1)).coerceIn(0f, 1f)
+    val bossPhase = when {
+        enemyRatio <= .33f -> 3
+        enemyRatio <= .66f -> 2
+        else -> 1
+    }
+    val phaseAccent = when (bossPhase) {
+        3 -> Color(0xFFC38AFF)
+        2 -> Color(0xFFFF986F)
+        else -> enemyAccent
+    }
+    val phaseTitle = when (bossPhase) {
+        3 -> "ПРЕДЕЛ · ПРОБУЖДЕНИЕ ЯДРА"
+        2 -> "НАТИСК · РАСКРЫТИЕ СИЛЫ"
+        else -> "ИСПЫТАНИЕ · ИЗУЧЕНИЕ ПРОТИВНИКА"
+    }
+    val phasePulse by transition.animateFloat(
+        .96f, 1.045f,
+        infiniteRepeatable(tween(if (bossPhase == 3) 420 else 1050), RepeatMode.Reverse),
+        label = "battle-boss-phase-pulse"
+    )
     val bossName = enemyTitle.ifBlank {
         when {
             bossLevel >= 20 -> "Владыка Разлома"
@@ -4684,6 +4727,21 @@ private fun BattleScene(
             )
         }
 
+        Image(
+            painter = painterResource(R.drawable.battle_arena_rune),
+            contentDescription = "Древняя печать боевой арены",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .size(246.dp)
+                .graphicsLayer {
+                    rotationZ = runeRotation
+                    alpha = .16f + pulse * .075f
+                    scaleX = phasePulse
+                    scaleY = phasePulse
+                }
+        )
+
         Row(
             Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(8.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -4709,6 +4767,49 @@ private fun BattleScene(
                 barColor = enemyAccent,
                 isDefeated = enemyHp <= 0
             )
+        }
+
+        if (!telegraphActive && enemyHp > 0 && playerHp > 0) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 62.dp)
+                    .graphicsLayer {
+                        scaleX = phasePulse
+                        scaleY = phasePulse
+                    },
+                color = Color(0xE8101A2B),
+                shape = MaterialTheme.shapes.extraLarge,
+                border = BorderStroke(1.dp, phaseAccent.copy(alpha = .82f)),
+                shadowElevation = 7.dp
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.battle_arena_rune),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = -runeRotation }
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Text(
+                            "ФАЗА $bossPhase",
+                            color = phaseAccent,
+                            fontSize = 7.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        Text(
+                            phaseTitle,
+                            color = Color(0xFFF5E8D0),
+                            fontSize = 7.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
         }
 
         if (telegraphActive && enemyHp > 0 && playerHp > 0) {
@@ -4787,7 +4888,14 @@ private fun BattleScene(
                 .padding(start = 8.dp, bottom = 18.dp)
                 .width(132.dp)
                 .height(176.dp)
-                .graphicsLayer { translationY = -pulse * 2.5f }
+                .graphicsLayer {
+                    translationY = -pulse * 2.5f + heroBreath * 2.1f
+                    translationX = heroBreath * 1.4f +
+                        if (combatAction && impactProgress.value < .22f) {
+                            (1f - impactProgress.value / .22f) * 6f
+                        } else 0f
+                    rotationZ = heroBreath * .22f
+                }
         )
 
         Box(
@@ -4797,8 +4905,8 @@ private fun BattleScene(
                 .background(
                     Brush.radialGradient(
                         listOf(
-                            enemyAccent.copy(alpha = .34f * pulse),
-                            enemyAccent.copy(alpha = .12f * pulse),
+                            phaseAccent.copy(alpha = .34f * pulse),
+                            phaseAccent.copy(alpha = .12f * pulse),
                             Color.Transparent
                         )
                     ),
@@ -4816,8 +4924,15 @@ private fun BattleScene(
                 .width(158.dp)
                 .height(202.dp)
                 .graphicsLayer {
-                    scaleX = 1f + pulse * .012f
-                    scaleY = 1f + pulse * .012f
+                    val hitShake = if (combatAction && impactProgress.value < .30f) {
+                        kotlin.math.sin((impactProgress.value * 72f).toDouble()).toFloat() *
+                            (1f - impactProgress.value / .30f) * 8f
+                    } else 0f
+                    translationX = hitShake
+                    translationY = enemyHover * 3.4f
+                    rotationZ = enemyHover * .42f
+                    scaleX = phasePulse + pulse * .008f
+                    scaleY = phasePulse + pulse * .008f
                 }
         )
 
@@ -4832,7 +4947,10 @@ private fun BattleScene(
                     painter = painterResource(id = petPortraitRes),
                     contentDescription = petName,
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(47.dp)
+                    modifier = Modifier.size(47.dp).graphicsLayer {
+                        translationY = petHover * 3.dp.toPx()
+                        rotationZ = petHover * 1.1f
+                    }
                 )
                 Column(Modifier.padding(end = 6.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text("СПУТНИК", color = Color(0xFFBDEDE1), fontSize = 7.sp, fontWeight = FontWeight.Black)

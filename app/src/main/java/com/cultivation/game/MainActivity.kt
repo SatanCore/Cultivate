@@ -3607,8 +3607,22 @@ private fun TreasuryVaultScreen(
             delta < 0 -> "Уступает текущему оружию на ${-delta} очков"
             else -> "Рейтинг совпадает с текущим оружием"
         }
+        val weaponDetailReveal = remember(item.id) { Animatable(0f) }
+        LaunchedEffect(item.id) {
+            weaponDetailReveal.animateTo(1f, tween(240, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+        }
         Dialog(onDismissRequest = { selectedWeapon = null }) {
-            Surface(Modifier.fillMaxWidth(), color = Color(0xFF14243A), shape = RoundedCornerShape(22.dp), border = BorderStroke(1.5.dp, weaponRarityColor(item.rarity))) {
+            Surface(
+                Modifier.fillMaxWidth().graphicsLayer {
+                    val reveal = weaponDetailReveal.value
+                    scaleX = .94f + reveal * .06f
+                    scaleY = .94f + reveal * .06f
+                    alpha = .55f + reveal * .45f
+                },
+                color = Color(0xFF14243A),
+                shape = RoundedCornerShape(22.dp),
+                border = BorderStroke(1.5.dp, weaponRarityColor(item.rarity))
+            ) {
                 Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("ПРЕДМЕТ", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
@@ -3639,8 +3653,22 @@ private fun TreasuryVaultScreen(
             delta < 0 -> "Уступает надетому предмету на ${-delta} очков"
             else -> "Рейтинг совпадает с надетой реликвией"
         }
+        val gearDetailReveal = remember(item.id) { Animatable(0f) }
+        LaunchedEffect(item.id) {
+            gearDetailReveal.animateTo(1f, tween(240, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+        }
         Dialog(onDismissRequest = { selectedGear = null }) {
-            Surface(Modifier.fillMaxWidth(), color = Color(0xFF14243A), shape = RoundedCornerShape(22.dp), border = BorderStroke(1.5.dp, weaponRarityColor(item.rarity))) {
+            Surface(
+                Modifier.fillMaxWidth().graphicsLayer {
+                    val reveal = gearDetailReveal.value
+                    scaleX = .94f + reveal * .06f
+                    scaleY = .94f + reveal * .06f
+                    alpha = .55f + reveal * .45f
+                },
+                color = Color(0xFF14243A),
+                shape = RoundedCornerShape(22.dp),
+                border = BorderStroke(1.5.dp, weaponRarityColor(item.rarity))
+            ) {
                 Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("ПРЕДМЕТ", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))

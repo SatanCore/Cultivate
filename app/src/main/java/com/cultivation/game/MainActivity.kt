@@ -2161,37 +2161,56 @@ private fun HomeResource(symbol: String, label: String, value: String) {
 
 @Composable
 private fun HomeHotspot(title: String, subtitle: String, symbol: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val transition = rememberInfiniteTransition(label = "home-hotspot-$symbol")
+    val pulse by transition.animateFloat(
+        initialValue = .28f,
+        targetValue = .72f,
+        animationSpec = infiniteRepeatable(tween(1750), RepeatMode.Reverse),
+        label = "home-hotspot-glow-$symbol"
+    )
     Surface(
-        modifier = modifier.width(76.dp).height(78.dp).clickable(onClick = onClick),
-        color = Color(0xC9101B2E), contentColor = Color.White,
+        modifier = modifier.width(86.dp).height(90.dp).clickable(onClick = onClick),
+        color = Color(0xD9101B2E), contentColor = Color.White,
         shape = MaterialTheme.shapes.large,
-        border = BorderStroke(0.8.dp, Gold.copy(alpha = .28f)),
-        tonalElevation = 3.dp, shadowElevation = 4.dp
+        border = BorderStroke(1.dp, Gold.copy(alpha = .42f)),
+        tonalElevation = 5.dp, shadowElevation = 7.dp
     ) {
-        Column(
-            Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 3.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                Canvas(Modifier.fillMaxSize()) {
-                    drawCircle(
-                        Brush.radialGradient(listOf(Color(0x6689D9C5), Color(0x001A2D42))),
-                        size.minDimension * .48f,
-                        Offset(size.width / 2f, size.height / 2f)
-                    )
-                }
+        Box(Modifier.fillMaxSize()) {
+            Canvas(Modifier.matchParentSize()) {
+                val center = Offset(size.width / 2f, size.height * .43f)
+                drawRect(Brush.verticalGradient(listOf(Color(0x442D4A55), Color.Transparent)))
+                drawCircle(
+                    Brush.radialGradient(
+                        listOf(Color(0x6689D9C5).copy(alpha = pulse), Color(0x001A2D42)),
+                        center,
+                        size.minDimension * .55f
+                    ),
+                    size.minDimension * .55f,
+                    center
+                )
+                drawCircle(
+                    Gold.copy(alpha = pulse * .42f),
+                    size.minDimension * .34f,
+                    center,
+                    style = Stroke(width = 1.dp.toPx())
+                )
+            }
+            Column(
+                Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 3.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
                 Image(
                     painter = painterResource(townBuildingResource(symbol)),
                     contentDescription = "$title — $subtitle",
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.size(62.dp),
                     contentScale = ContentScale.Fit
                 )
+                Text(
+                    title, color = Color(0xFFFFE8B5), fontSize = 8.5.sp,
+                    fontWeight = FontWeight.Black, maxLines = 1
+                )
             }
-            Text(
-                title, color = Color(0xFFFFE8B5), fontSize = 8.sp,
-                fontWeight = FontWeight.Bold, maxLines = 1
-            )
         }
     }
 }

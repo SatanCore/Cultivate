@@ -2468,6 +2468,32 @@ private fun CharacterArmoryScreen(
                                         )
                                     )
                             )
+                            Surface(
+                                modifier = Modifier.align(Alignment.TopCenter).padding(top = 7.dp),
+                                color = Color(0xD90B1728),
+                                shape = RoundedCornerShape(20.dp),
+                                border = BorderStroke(1.dp, Gold.copy(alpha = .72f))
+                            ) {
+                                Column(
+                                    Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                                ) {
+                                    Text(
+                                        playerNickname.ifBlank { "БЕЗЫМЯННЫЙ КУЛЬТИВАТОР" },
+                                        color = Color(0xFFFFE8B4),
+                                        fontSize = 7.sp,
+                                        fontWeight = FontWeight.Black,
+                                        maxLines = 1
+                                    )
+                                    Text(
+                                        classNames[selected].uppercase(),
+                                        color = Jade,
+                                        fontSize = 6.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
                         }
                     }
                     Surface(

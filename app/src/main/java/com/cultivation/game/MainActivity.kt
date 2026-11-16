@@ -2097,35 +2097,34 @@ private fun CinematicHomeScreen(
         }
 
         Surface(
-            Modifier.align(Alignment.CenterStart).padding(start = 12.dp).width(174.dp).clickable { onBuilding("quests") },
-            color = Color(0xE8172238), shape = MaterialTheme.shapes.large, tonalElevation = 10.dp
+            Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 76.dp).width(154.dp)
+                .clickable { onBuilding("quests") },
+            color = Color(0xD9122033),
+            shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, Color(0x66D9B875)),
+            tonalElevation = 7.dp
         ) {
-            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text("СЮЖЕТ · ГЛАВА ${storyChapter + 1}", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                Text("Тень в долине", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                Text("Исследуй горы и укрепи своё Дао.", color = Color(0xFFE4E8F0), fontSize = 10.sp)
-                Divider(color = Color(0x66D9B875))
-                Text("ЕЖЕДНЕВНЫЕ ПОРУЧЕНИЯ", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                Text("◇ Медитация  ·  получить Ци", color = Color.White, fontSize = 10.sp)
-                Text("◇ Победить стража  ·  ${wins.coerceAtMost(1)}/1", color = Color.White, fontSize = 10.sp)
-                Text("◇ Продолжить путь Дао", color = Color.White, fontSize = 10.sp)
+            Column(Modifier.padding(horizontal = 9.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text("ГЛАВА ${storyChapter + 1} · СЮЖЕТ", color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                Text("Тень в долине", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("Победи стража · ${wins.coerceAtMost(1)}/1", color = Color(0xFFE4E8F0), fontSize = 8.sp)
                 LinearProgressIndicator(
-                    progress = { (wins.coerceAtMost(1)).toFloat() },
+                    progress = { wins.coerceAtMost(1).toFloat() },
                     modifier = Modifier.fillMaxWidth().height(3.dp),
                     color = Jade, trackColor = Color(0xFF43516A)
                 )
             }
         }
 
-        HomeHotspot("Клан", "Союз и развитие", "clan", Modifier.align(Alignment.Center).offset(x = -maxWidth * .22f, y = -maxHeight * .08f)) { onNavigate(6) }
-        HomeHotspot("Обитель", "Культивация · ремёсла", "abode", Modifier.align(Alignment.Center).offset(x = maxWidth * .01f, y = -maxHeight * .25f)) { onNavigate(8) }
-        HomeHotspot("Башня испытаний", "Этажи и награды", "tower", Modifier.align(Alignment.Center).offset(x = maxWidth * .31f, y = -maxHeight * .19f)) { onNavigate(2) }
-        HomeHotspot("Алхимия", "Пилюли и эликсиры", "alchemy", Modifier.align(Alignment.Center).offset(x = -maxWidth * .18f, y = maxHeight * .19f)) { onNavigate(8) }
-        HomeHotspot("Кузница", "Ковка и усиление", "forge", Modifier.align(Alignment.Center).offset(x = maxWidth * .01f, y = maxHeight * .16f)) { onNavigate(4) }
-        HomeHotspot("Арена", "Поединки и добыча", "arena", Modifier.align(Alignment.Center).offset(x = maxWidth * .24f, y = maxHeight * .04f)) { onNavigate(2) }
-        HomeHotspot("Аукцион", "Торговля и редкости", "auction", Modifier.align(Alignment.Center).offset(x = maxWidth * .37f, y = maxHeight * .17f)) { onBuilding("auction") }
-        HomeHotspot("Доска заданий", "Поручения долины", "quests", Modifier.align(Alignment.Center).offset(x = maxWidth * .13f, y = maxHeight * .20f)) { onBuilding("quests") }
-        HomeHotspot("Лавка", "Предметы и ресурсы", "shop", Modifier.align(Alignment.Center).offset(x = maxWidth * .38f, y = maxHeight * .21f)) { onBuilding("shop") }
+        HomeHotspot("Клан", "Союз и развитие", "clan", Modifier.align(Alignment.Center).offset(x = -maxWidth * .30f, y = -maxHeight * .24f)) { onNavigate(6) }
+        HomeHotspot("Обитель", "Культивация · ремёсла", "abode", Modifier.align(Alignment.Center).offset(y = -maxHeight * .27f)) { onNavigate(8) }
+        HomeHotspot("Башня испытаний", "Этажи и награды", "tower", Modifier.align(Alignment.Center).offset(x = maxWidth * .30f, y = -maxHeight * .22f)) { onNavigate(2) }
+        HomeHotspot("Алхимия", "Пилюли и эликсиры", "alchemy", Modifier.align(Alignment.Center).offset(x = -maxWidth * .30f, y = maxHeight * .03f)) { onNavigate(8) }
+        HomeHotspot("Кузница", "Ковка и усиление", "forge", Modifier.align(Alignment.Center).offset(y = maxHeight * .02f)) { onNavigate(4) }
+        HomeHotspot("Арена", "Поединки и добыча", "arena", Modifier.align(Alignment.Center).offset(x = maxWidth * .30f, y = maxHeight * .04f)) { onNavigate(2) }
+        HomeHotspot("Аукцион", "Торговля и редкости", "auction", Modifier.align(Alignment.Center).offset(x = -maxWidth * .30f, y = maxHeight * .29f)) { onBuilding("auction") }
+        HomeHotspot("Доска заданий", "Поручения долины", "quests", Modifier.align(Alignment.Center).offset(y = maxHeight * .28f)) { onBuilding("quests") }
+        HomeHotspot("Лавка", "Предметы и ресурсы", "shop", Modifier.align(Alignment.Center).offset(x = maxWidth * .30f, y = maxHeight * .29f)) { onBuilding("shop") }
         HomeHotspot("Ярмарка", "Событие долины", "quests", Modifier.align(Alignment.TopEnd).padding(top = 78.dp, end = 12.dp)) { onBuilding("event") }
 
         Row(
@@ -2169,7 +2168,7 @@ private fun HomeHotspot(title: String, subtitle: String, symbol: String, modifie
         label = "home-hotspot-glow-$symbol"
     )
     Box(
-        modifier = modifier.width(96.dp).height(112.dp).clickable(onClick = onClick),
+        modifier = modifier.width(112.dp).height(126.dp).clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Canvas(Modifier.fillMaxSize()) {
@@ -2212,7 +2211,7 @@ private fun HomeHotspot(title: String, subtitle: String, symbol: String, modifie
             Image(
                 painter = painterResource(townBuildingResource(symbol)),
                 contentDescription = "$title — $subtitle",
-                modifier = Modifier.width(94.dp).height(72.dp),
+                modifier = Modifier.width(108.dp).height(88.dp),
                 contentScale = ContentScale.Fit
             )
             Text(

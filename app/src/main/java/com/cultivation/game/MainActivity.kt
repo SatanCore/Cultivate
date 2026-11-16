@@ -286,6 +286,7 @@ private fun CultivateApp() {
     var selectedWeapon by remember { mutableIntStateOf(prefs.getInt("weapon_type",0).coerceIn(0,3)) }
     var selectedMenu by remember { mutableIntStateOf(0) }
     var showExitDialog by remember { mutableStateOf(false) }
+    var showMoreNavigation by remember { mutableStateOf(false) }
     var inventoryFilter by remember { mutableIntStateOf(0) }
     var petFilter by remember { mutableIntStateOf(0) }
     var selectedPetDetailIndex by remember { mutableIntStateOf(-1) }
@@ -879,10 +880,23 @@ private fun CultivateApp() {
     ) {
         BackHandler {
             when {
+                showMoreNavigation -> showMoreNavigation = false
                 selectedTownBuilding.isNotBlank() -> selectedTownBuilding = ""
                 selectedMenu != 0 -> { selectedMenu = 0; selectedTownBuilding = "" }
                 else -> showExitDialog = true
             }
+        }
+        if (showMoreNavigation) {
+            MoreNavigationDialog(
+                selectedMenu = selectedMenu,
+                stage = stage,
+                onNavigate = { target ->
+                    selectedMenu = target
+                    selectedTownBuilding = ""
+                    showMoreNavigation = false
+                },
+                onDismiss = { showMoreNavigation = false }
+            )
         }
         if (showExitDialog) {
             AlertDialog(
@@ -1021,8 +1035,9 @@ private fun CultivateApp() {
                 }
             }
         } else {
+        Column(Modifier.fillMaxSize().background(Ink)) {
         Column(
-            Modifier.fillMaxSize().background(Ink).verticalScroll(pageScrollState).padding(18.dp),
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(pageScrollState).padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -1037,29 +1052,6 @@ private fun CultivateApp() {
                 }
             }
 
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = Color(0xCC17263A),
-                shape = MaterialTheme.shapes.large,
-                border = BorderStroke(1.dp, Gold.copy(alpha = .34f))
-            ) {
-                Column(Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                        HomeNavItem("Город", "worlds", 0) { selectedMenu = 0; selectedTownBuilding = "" }
-                        HomeNavItem("Путь", "cultivation", 1) { selectedMenu = 1; selectedTownBuilding = "" }
-                        HomeNavItem("Арена", "arena", 2) { selectedMenu = 2; selectedTownBuilding = "" }
-                        HomeNavItem("Персонаж", "character", 3) { selectedMenu = 3; selectedTownBuilding = "" }
-                        HomeNavItem("Склад", "inventory", 4) { selectedMenu = 4; selectedTownBuilding = "" }
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                        HomeNavItem("Навыки", "skills", 5) { selectedMenu = 5; selectedTownBuilding = "" }
-                        HomeNavItem(if (stage < 7) "Кланы" else "Секты", "clan", 6) { selectedMenu = 6; selectedTownBuilding = "" }
-                        HomeNavItem("Питомцы", "pets", 7) { selectedMenu = 7; selectedTownBuilding = "" }
-                        HomeNavItem("Обитель", "abode", 8) { selectedMenu = 8; selectedTownBuilding = "" }
-                        HomeNavItem("Миры", "worlds", 9) { selectedMenu = 9; selectedTownBuilding = "" }
-                    }
-                }
-            }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     when (selectedMenu) {
@@ -2094,6 +2086,16 @@ private fun CultivateApp() {
             Text(message, color = Gold, fontSize = 14.sp)
             Text("Прогресс сохраняется автоматически на этом устройстве.", color = Color.Gray, fontSize = 11.sp)
         }
+        CultivateBottomNavigation(
+            selectedMenu = selectedMenu,
+            onNavigate = { target ->
+                selectedMenu = target
+                selectedTownBuilding = ""
+                showMoreNavigation = false
+                if (target == 8 && abodeSection.isBlank()) abodeSection = "sanctuary"
+            },
+            onMore = { showMoreNavigation = true }
+        )
         }
     }
 }
@@ -2291,6 +2293,103 @@ private fun HomeHotspot(title: String, subtitle: String, symbol: String, modifie
                 maxLines = 1,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
+        }
+    }
+}
+
+@Composable
+private fun CultivateBottomNavigation(
+    selectedMenu: Int,
+    onNavigate: (Int) -> Unit,
+    onMore: () -> Unit
+) {
+    val primary = listOf(
+        Triple("Путь", "cultivation", 1),
+        Triple("Бой", "arena", 2),
+        Triple("Герой", "character", 3),
+        Triple("Сумка", "inventory", 4)
+    )
+    Surface(
+        color = Color(0xF20B1728),
+        tonalElevation = 10.dp,
+        shadowElevation = 12.dp,
+        border = BorderStroke(1.dp, Color(0x334E718E))
+    ) {
+        Row(
+            Modifier.fillMaxWidth().navigationBarsPadding().height(66.dp).padding(horizontal = 5.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            primary.forEach { (label, icon, target) ->
+                val selected = selectedMenu == target
+                Column(
+                    Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(13.dp))
+                        .background(if (selected) Color(0xFF25443F) else Color.Transparent)
+                        .clickable { onNavigate(target) }.padding(vertical = 3.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    RpgIcon(icon, Modifier.size(25.dp))
+                    Text(label, color = if (selected) Gold else Color(0xFFB9C7D8), fontSize = 8.sp, fontWeight = if (selected) FontWeight.Black else FontWeight.Medium)
+                }
+            }
+            val moreSelected = selectedMenu in listOf(5, 6, 7, 8, 9)
+            Column(
+                Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(13.dp))
+                    .background(if (moreSelected) Color(0xFF25443F) else Color.Transparent)
+                    .clickable(onClick = onMore).padding(vertical = 3.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                RpgIcon("menu", Modifier.size(25.dp))
+                Text("Ещё", color = if (moreSelected) Gold else Color(0xFFB9C7D8), fontSize = 8.sp, fontWeight = if (moreSelected) FontWeight.Black else FontWeight.Medium)
+            }
+        }
+    }
+}
+
+@Composable
+private fun MoreNavigationDialog(
+    selectedMenu: Int,
+    stage: Int,
+    onNavigate: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val destinations = listOf(
+        Triple("Боевые искусства", "skills", 5),
+        Triple(if (stage < 7) "Клан" else "Секта", "clan", 6),
+        Triple("Духовные звери", "pets", 7),
+        Triple("Личная обитель", "abode", 8),
+        Triple("Экспедиции и миры", "worlds", 9)
+    )
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            color = Color(0xFF101D2D),
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.dp, Gold.copy(alpha = .65f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("МИР ДАО", color = Gold, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
+                Text("Дополнительные разделы", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Black)
+                destinations.forEach { (label, icon, target) ->
+                    val selected = selectedMenu == target
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().clickable { onNavigate(target) },
+                        color = if (selected) Color(0xFF25443F) else Color(0xFF192A3F),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, if (selected) Jade else Color(0x335E7891))
+                    ) {
+                        Row(Modifier.padding(horizontal = 12.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                            RpgIcon(icon, Modifier.size(29.dp))
+                            Spacer(Modifier.width(10.dp))
+                            Text(label, Modifier.weight(1f), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(if (selected) "ОТКРЫТО" else "›", color = if (selected) Jade else Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
+                }
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("ЗАКРЫТЬ", color = Jade) }
+            }
         }
     }
 }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,8 +27,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
@@ -234,35 +237,17 @@ fun WorldExplorationScreen(
                 Text(statusMessage, Modifier.fillMaxWidth().padding(9.dp), color = Color(0xFFE8D8B7), fontSize = 9.sp, maxLines = 3)
             }
         }
-        Surface(
-            color = Color(0xEE14253B),
-            shape = MaterialTheme.shapes.extraLarge,
-            border = BorderStroke(1.dp, worldAccent.copy(alpha = .72f)),
-            shadowElevation = 8.dp
-        ) {
-            Box(Modifier.fillMaxWidth().height(224.dp)) {
-                Image(
-                    painter = painterResource(world.backgroundRes),
-                    contentDescription = world.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-                WorldAmbientEffects(worldAccent, Modifier.fillMaxSize())
-                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
-                    0f to Color(0x44101A2D),
-                    .48f to Color(0x55101A2D),
-                    1f to Color(0xF20B1424)
-                )))
-                Column(
-                    Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(13.dp),
-                    verticalArrangement = Arrangement.spacedBy(3.dp)
-                ) {
-                    Text("КАРТА ЭКСПЕДИЦИЙ · МИР ${safeWorldIndex + 1}", color = worldAccent, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                    Text(world.title, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                    Text(world.description, color = Color(0xFFE0E8F2), fontSize = 10.sp, maxLines = 2)
-                }
-            }
-        }
+        WorldRouteMap(
+            world = world,
+            stage = stage,
+            locations = locations,
+            locationProgress = locationProgress,
+            defeatedBossIds = defeatedBossIds,
+            pendingBossId = pendingBossId,
+            pendingEncounterId = pendingEncounterId,
+            selectedLocationId = selectedLocation.id,
+            onSelectLocation = onSelectLocation
+        )
 
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -308,26 +293,7 @@ fun WorldExplorationScreen(
             ExplorationMetric("МОЩЬ", combatPower.toString(), "текущая", Modifier.weight(1f), worldAccent)
         }
 
-        Text("ТЕРРИТОРИИ И ИСПЫТАНИЯ", color = ExpeditionGold, fontSize = 10.sp, fontWeight = FontWeight.Black)
-        locations.forEach { location ->
-            val index = worldLocationCatalog.indexOfFirst { it.id == location.id }.coerceAtLeast(0)
-            val progress = locationProgress.getOrElse(index) { 0 }.coerceIn(0, location.progressGoal)
-            val isBossUnlocked = !location.isBoss || normalLocations.all { normal ->
-                val normalIndex = worldLocationCatalog.indexOfFirst { it.id == normal.id }
-                locationProgress.getOrElse(normalIndex) { 0 } >= normal.progressGoal
-            }
-            val locked = stage < location.requiredStage || !isBossUnlocked
-            val completed = if (location.isBoss) location.id in defeatedBossIds else progress >= location.progressGoal
-            WorldLocationCard(
-                location = location,
-                progress = progress,
-                locked = locked,
-                completed = completed,
-                selected = selectedLocation.id == location.id,
-                pending = location.id == pendingBossId || location.id == pendingEncounterId,
-                onClick = { onSelectLocation(location.id) }
-            )
-        }
+
 
         Surface(
             color = Color(0xE8172942),
@@ -399,6 +365,220 @@ fun WorldExplorationScreen(
                     ) {
                         Text("ОБМЕН · 5", fontSize = 8.sp, fontWeight = FontWeight.Black)
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WorldRouteMap(
+    world: DaoWorldInfo,
+    stage: Int,
+    locations: List<ExplorationLocation>,
+    locationProgress: List<Int>,
+    defeatedBossIds: Set<String>,
+    pendingBossId: String,
+    pendingEncounterId: String,
+    selectedLocationId: String,
+    onSelectLocation: (String) -> Unit
+) {
+    val normalLocations = locations.filterNot { it.isBoss }
+    val nodeLocked = locations.map { location ->
+        val bossUnlocked = !location.isBoss || normalLocations.all { normal ->
+            val index = worldLocationCatalog.indexOfFirst { it.id == normal.id }
+            locationProgress.getOrElse(index) { 0 } >= normal.progressGoal
+        }
+        stage < location.requiredStage || !bossUnlocked
+    }
+    val nodeCompleted = locations.map { location ->
+        val index = worldLocationCatalog.indexOfFirst { it.id == location.id }
+        if (location.isBoss) location.id in defeatedBossIds
+        else locationProgress.getOrElse(index) { 0 } >= location.progressGoal
+    }
+    val nodePending = locations.map { location ->
+        location.id == pendingBossId || location.id == pendingEncounterId
+    }
+    val positions = listOf(
+        Offset(0.13f, 0.68f),
+        Offset(0.39f, 0.43f),
+        Offset(0.65f, 0.68f),
+        Offset(0.87f, 0.43f)
+    )
+
+    Surface(
+        color = Color(0xEE14253B),
+        shape = MaterialTheme.shapes.extraLarge,
+        border = BorderStroke(1.dp, world.accent.copy(alpha = .72f)),
+        shadowElevation = 8.dp
+    ) {
+        BoxWithConstraints(Modifier.fillMaxWidth().height(282.dp)) {
+            Image(
+                painter = painterResource(world.backgroundRes),
+                contentDescription = world.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            Box(
+                Modifier.fillMaxSize().background(
+                    Brush.verticalGradient(
+                        0f to Color(0xAA0A1422),
+                        .48f to Color(0x44101A2D),
+                        1f to Color(0xD90B1424)
+                    )
+                )
+            )
+            WorldAmbientEffects(world.accent, Modifier.fillMaxSize())
+            Canvas(Modifier.fillMaxSize()) {
+                val points = locations.indices.map { index ->
+                    val point = positions.getOrElse(index) { Offset(.5f, .5f) }
+                    Offset(size.width * point.x, size.height * point.y)
+                }
+                for (index in 0 until points.lastIndex) {
+                    drawLine(
+                        color = Color(0xCC07111D),
+                        start = points[index],
+                        end = points[index + 1],
+                        strokeWidth = 9.dp.toPx()
+                    )
+                    drawLine(
+                        color = if (nodeCompleted[index]) ExpeditionJade.copy(alpha = .95f)
+                        else world.accent.copy(alpha = .78f),
+                        start = points[index],
+                        end = points[index + 1],
+                        strokeWidth = 3.dp.toPx()
+                    )
+                }
+                points.forEachIndexed { index, point ->
+                    drawCircle(
+                        color = Color(0xAA091523),
+                        radius = 28.dp.toPx(),
+                        center = point
+                    )
+                    drawCircle(
+                        color = when {
+                            nodeCompleted[index] -> ExpeditionJade
+                            nodePending[index] -> Color(0xFFFF9B71)
+                            nodeLocked[index] -> Color(0xFF8A96A8)
+                            else -> world.accent
+                        }.copy(alpha = .8f),
+                        radius = 27.dp.toPx(),
+                        center = point,
+                        style = Stroke(width = 1.2.dp.toPx())
+                    )
+                }
+            }
+            Column(
+                Modifier.align(Alignment.TopStart)
+                    .fillMaxWidth()
+                    .padding(start = 13.dp, top = 11.dp, end = 54.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    "КАРТА ЭКСПЕДИЦИЙ · МИР ${world.index + 1}",
+                    color = world.accent,
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Black
+                )
+                Text(world.title, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Black)
+                Text(
+                    world.description,
+                    color = Color(0xFFE0E8F2),
+                    fontSize = 8.sp,
+                    maxLines = 2
+                )
+            }
+            Image(
+                painter = painterResource(R.drawable.world_expedition_compass),
+                contentDescription = "Компас экспедиции",
+                modifier = Modifier.align(Alignment.TopEnd).padding(9.dp).size(35.dp),
+                contentScale = ContentScale.Fit
+            )
+            locations.forEachIndexed { index, location ->
+                val position = positions.getOrElse(index) { Offset(.5f, .5f) }
+                val locked = nodeLocked[index]
+                val completed = nodeCompleted[index]
+                val pending = nodePending[index]
+                val selected = location.id == selectedLocationId
+                val accent = when {
+                    completed -> ExpeditionJade
+                    pending -> Color(0xFFFF9B71)
+                    locked -> Color(0xFF8995A8)
+                    selected -> world.accent
+                    else -> world.accent.copy(alpha = .85f)
+                }
+                Column(
+                    modifier = Modifier
+                        .offset(
+                            x = maxWidth * position.x - 36.dp,
+                            y = maxHeight * position.y - 24.dp
+                        )
+                        .width(72.dp)
+                        .clickable { onSelectLocation(location.id) },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Surface(
+                        modifier = Modifier.size(48.dp),
+                        color = Color(0xFF0B1728),
+                        shape = CircleShape,
+                        border = BorderStroke(if (selected) 2.5.dp else 1.2.dp, accent),
+                        shadowElevation = if (selected) 9.dp else 4.dp
+                    ) {
+                        Box(Modifier.fillMaxSize().padding(4.dp)) {
+                            Image(
+                                painter = painterResource(location.iconRes),
+                                contentDescription = location.title,
+                                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                            if (locked) {
+                                Box(
+                                    Modifier.fillMaxSize().background(Color(0xAA07111F)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("✦", color = Color(0xFFE8C88F), fontSize = 18.sp, fontWeight = FontWeight.Black)
+                                }
+                            }
+                            if (completed) {
+                                Box(
+                                    Modifier.align(Alignment.TopEnd).size(15.dp)
+                                        .background(ExpeditionJade, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("✓", color = Color(0xFF10251E), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                                }
+                            } else if (pending) {
+                                Box(
+                                    Modifier.align(Alignment.TopEnd).size(15.dp)
+                                        .background(Color(0xFFFF9B71), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("!", color = Color(0xFF32170F), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                                }
+                            }
+                        }
+                    }
+                    Text(
+                        location.title,
+                        color = if (selected || completed) Color.White else Color(0xFFE2E8F0),
+                        fontSize = 7.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1
+                    )
+                    Text(
+                        when {
+                            completed -> "ИССЛЕДОВАНО"
+                            pending -> "БОЙ ОЖИДАЕТ"
+                            locked -> "ЗАПЕЧАТАНО"
+                            selected -> "ВЫБРАНО"
+                            else -> "ДОСТУПНО"
+                        },
+                        color = accent,
+                        fontSize = 6.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
                 }
             }
         }

@@ -1200,28 +1200,32 @@ private fun CultivateApp() {
                             )
                         }
                         "spring" -> {
-                            Text("Родник духовной воды", color = Gold, fontWeight = FontWeight.Bold)
-                            Text("Горный источник собирает чистую воду из потоков Ци. Запас восстанавливается со временем; уровень обители увеличивает объём каждого сбора.", color = Color.LightGray, fontSize = 12.sp)
-                            Text(if (springReadyAt <= nowMillis) "Источник наполнен: вода готова к сбору." else "Источник восстановится примерно через $springRemaining.", color = Jade)
-                            LinearProgressIndicator(
-                                progress = { if (springReadyAt <= nowMillis) 1f else (1f - ((springReadyAt - nowMillis) / 28_800_000f)).coerceIn(0f, 1f) },
-                                modifier = Modifier.fillMaxWidth(),
-                                color = Color(0xFF73D9E6),
-                                trackColor = Color(0xFF263E50)
+                            val springReady = springReadyAt <= nowMillis
+                            val springProgress = if (springReady) 1f else
+                                (1f - ((springReadyAt - nowMillis) / 28_800_000f)).coerceIn(0f, 1f)
+                            SpiritSpringScreen(
+                                abodeLevel = abodeLevel,
+                                spiritWater = spiritWater,
+                                progress = springProgress,
+                                timeRemaining = springRemaining,
+                                ready = springReady,
+                                collectAmount = 1 + abodeLevel / 3,
+                                onCollect = {
+                                    val now = System.currentTimeMillis()
+                                    if (now >= springReadyAt) {
+                                        spiritWater += 1 + abodeLevel / 3
+                                        springReadyAt = now + 28_800_000L
+                                        if (Random.nextInt(100) < 3 && "river_koi" !in ownedPetIds.split("|")) {
+                                            ownedPetIds += "|river_koi"
+                                            message = "В роднике вспыхнула золотая чешуя! Ты приручил духовного карпа."
+                                        } else {
+                                            message = "Набрана духовная вода из родника."
+                                        }
+                                    } else {
+                                        message = "Родник ещё не восстановился."
+                                    }
+                                }
                             )
-                            Button(onClick = {
-                                val now = System.currentTimeMillis()
-                                if (now >= springReadyAt) {
-                                    spiritWater += 1 + abodeLevel / 3
-                                    springReadyAt = now + 28_800_000L
-                                    if (Random.nextInt(100) < 3 && "river_koi" !in ownedPetIds.split("|")) {
-                                        ownedPetIds += "|river_koi"
-                                        message = "В роднике вспыхнула золотая чешуя! Ты приручил духовного карпа."
-                                    } else message = "Набрана духовная вода из родника."
-                                } else message = "Родник ещё не восстановился."
-                            }, enabled = springReadyAt <= nowMillis, modifier = Modifier.fillMaxWidth()) {
-                                Text(if (springReadyAt <= nowMillis) "Набрать духовную воду · ${1 + abodeLevel / 3}" else "Родник восстанавливается")
-                            }
                         }
                         "worlds" -> {
                             Text("Четыре мира Дао", color = Gold, fontWeight = FontWeight.Bold)

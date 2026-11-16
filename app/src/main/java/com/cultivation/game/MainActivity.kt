@@ -1724,6 +1724,7 @@ private fun CultivateApp() {
             if (selectedMenu == 4) {
                 TreasuryVaultScreen(
                     stage = stage,
+                    classIndex = chosenClass,
                     weapons = ownedWeapons,
                     gear = ownedGear,
                     equippedWeapon = equippedWeapon,
@@ -3289,6 +3290,7 @@ private fun LootRevealIcon(item: LootRevealItem, rarityColor: Color) {
 @Composable
 private fun TreasuryVaultScreen(
     stage: Int,
+    classIndex: Int,
     weapons: List<WeaponDefinition>,
     gear: List<GearDefinition>,
     equippedWeapon: WeaponDefinition,
@@ -3311,7 +3313,7 @@ private fun TreasuryVaultScreen(
         Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        TreasuryVaultHero(totalItems = weapons.size + gear.size, equippedItems = 1 + equippedGear.size)
+        TreasuryVaultHero(totalItems = weapons.size + gear.size, equippedItems = 1 + equippedGear.size, classIndex = chosenClass)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             InventoryCategoryTab("ВСЁ · ${weapons.size + gear.size}", "inventory", filter == 0, Modifier.weight(1f)) { onFilterChange(0) }
             InventoryCategoryTab("ОРУЖИЕ · ${weapons.size}", "weapon", filter == 1, Modifier.weight(1f)) { onFilterChange(1) }
@@ -3443,7 +3445,7 @@ private fun TreasuryVaultScreen(
 }
 
 @Composable
-private fun TreasuryVaultHero(totalItems: Int, equippedItems: Int) {
+private fun TreasuryVaultHero(totalItems: Int, equippedItems: Int, classIndex: Int) {
     val transition = rememberInfiniteTransition(label = "treasury-vault-glow")
     val pulse by transition.animateFloat(
         initialValue = .94f,
@@ -3475,16 +3477,33 @@ private fun TreasuryVaultHero(totalItems: Int, equippedItems: Int) {
             drawCircle(Color(0x66E7C27A), size.height * .42f, Offset(size.width * .82f, size.height * .5f), style = Stroke(width = 1.2.dp.toPx()))
             drawCircle(Color(0x3378C6A3), size.height * .34f, Offset(size.width * .82f, size.height * .5f), style = Stroke(width = 1.dp.toPx()))
         }
-        Image(
-            painter = painterResource(R.drawable.treasury_vault_sigil),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 9.dp).size(142.dp).graphicsLayer {
-                scaleX = pulse
-                scaleY = pulse
-                alpha = .92f
-            }
-        )
+        Box(
+            Modifier.align(Alignment.CenterEnd).padding(end = 8.dp).size(width = 126.dp, height = 158.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(R.drawable.character_halo_frame),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize().graphicsLayer {
+                    scaleX = pulse
+                    scaleY = pulse
+                    alpha = .94f
+                }
+            )
+            Image(
+                painter = painterResource(classHeroResource(classIndex)),
+                contentDescription = "Персонаж: ${classNames[classIndex.coerceIn(0, 3)]}",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize().padding(horizontal = 7.dp, vertical = 5.dp)
+            )
+            Image(
+                painter = painterResource(classSigilResource(classIndex)),
+                contentDescription = "Эмблема класса",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.align(Alignment.BottomEnd).size(39.dp).offset(x = 2.dp, y = 2.dp)
+            )
+        }
         Column(
             Modifier.align(Alignment.CenterStart).fillMaxWidth(.67f).padding(start = 15.dp, end = 4.dp),
             verticalArrangement = Arrangement.spacedBy(5.dp)
@@ -3498,6 +3517,20 @@ private fun TreasuryVaultHero(totalItems: Int, equippedItems: Int) {
             }
         }
     }
+}
+
+private fun classHeroResource(classIndex: Int): Int = when (classIndex.coerceIn(0, 3)) {
+    0 -> R.drawable.hero_full_blademaster
+    1 -> R.drawable.hero_full_ironbody
+    2 -> R.drawable.hero_full_elementalist
+    else -> R.drawable.hero_full_spiritmystic
+}
+
+private fun classSigilResource(classIndex: Int): Int = when (classIndex.coerceIn(0, 3)) {
+    0 -> R.drawable.class_sigil_blademaster
+    1 -> R.drawable.class_sigil_ironbody
+    2 -> R.drawable.class_sigil_elementalist
+    else -> R.drawable.class_sigil_spiritmystic
 }
 
 @Composable

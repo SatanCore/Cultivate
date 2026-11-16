@@ -2443,6 +2443,31 @@ private fun CultivationPanel(
     val worldIndex = when { stage >= 19 -> 3; stage >= 13 -> 2; stage >= 7 -> 1; else -> 0 }
     val background = when (worldIndex) { 0 -> R.drawable.world_mortal_bg; 1 -> R.drawable.world_spiritual_bg; 2 -> R.drawable.world_immortal_bg; else -> R.drawable.world_chaos_bg }
     val transition = rememberInfiniteTransition(label = "cultivation-sanctuary")
+    val auraFrames = remember(worldIndex) {
+        if (worldIndex >= 2) listOf(R.drawable.cultivation_aura_void_00, R.drawable.cultivation_aura_void_01, R.drawable.cultivation_aura_void_02, R.drawable.cultivation_aura_void_03, R.drawable.cultivation_aura_void_04, R.drawable.cultivation_aura_void_05, R.drawable.cultivation_aura_void_06, R.drawable.cultivation_aura_void_07, R.drawable.cultivation_aura_void_08, R.drawable.cultivation_aura_void_09, R.drawable.cultivation_aura_void_10, R.drawable.cultivation_aura_void_11) else listOf(R.drawable.cultivation_aura_gold_00, R.drawable.cultivation_aura_gold_01, R.drawable.cultivation_aura_gold_02, R.drawable.cultivation_aura_gold_03, R.drawable.cultivation_aura_gold_04, R.drawable.cultivation_aura_gold_05, R.drawable.cultivation_aura_gold_06, R.drawable.cultivation_aura_gold_07, R.drawable.cultivation_aura_gold_08, R.drawable.cultivation_aura_gold_09, R.drawable.cultivation_aura_gold_10, R.drawable.cultivation_aura_gold_11)
+    }
+    var auraFrame by remember(worldIndex) { mutableStateOf(0) }
+    LaunchedEffect(worldIndex) {
+        while (true) {
+            delay(95L)
+            auraFrame = (auraFrame + 1) % auraFrames.size
+        }
+    }
+    var previousStage by remember { mutableStateOf(stage) }
+    var breakthroughVisible by remember { mutableStateOf(false) }
+    val breakthroughPulse = remember { Animatable(0f) }
+    LaunchedEffect(stage) {
+        if (stage > previousStage) {
+            previousStage = stage
+            breakthroughVisible = true
+            breakthroughPulse.snapTo(1f)
+            breakthroughPulse.animateTo(0f, tween(1600))
+            delay(250L)
+            breakthroughVisible = false
+        } else {
+            previousStage = stage
+        }
+    }
     val pulse by transition.animateFloat(.82f, 1.12f, infiniteRepeatable(tween(2100), RepeatMode.Reverse), label = "core-pulse")
     val rotation by transition.animateFloat(0f, 360f, infiniteRepeatable(tween(26000), RepeatMode.Restart), label = "meridian-rotation")
     val flow by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(3200), RepeatMode.Restart), label = "qi-flow")
@@ -2450,6 +2475,12 @@ private fun CultivationPanel(
         Box(Modifier.fillMaxWidth().height(286.dp), contentAlignment = Alignment.Center) {
             Image(painter = painterResource(background), contentDescription = "Пейзаж " + worldName(stage), modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xB9081423), Color(0x54101B2D), Color(0xE9081423)))))
+            Image(
+                painter = painterResource(auraFrames[auraFrame]),
+                contentDescription = null,
+                modifier = Modifier.align(Alignment.Center).size(248.dp).graphicsLayer(alpha = .78f),
+                contentScale = ContentScale.Fit
+            )
             Canvas(Modifier.fillMaxSize()) {
                 val center = Offset(size.width * .5f, size.height * .53f)
                 val radius = size.minDimension * .34f
@@ -2513,6 +2544,43 @@ private fun CultivationPanel(
                     Text("$qi / $cost Ци", color = Color(0xFFFFE5AE), fontSize = 12.sp, fontWeight = FontWeight.Black)
                 }
                 LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(7.dp), color = Color(0xFF8BE0BC), trackColor = Color(0x88445468))
+            }
+            if (breakthroughVisible) {
+                val flashAlpha = breakthroughPulse.value.coerceIn(0f, 1f)
+                Box(Modifier.fillMaxSize().background(Color(0xFFBDEFD9).copy(alpha = flashAlpha * .18f)))
+                Image(
+                    painter = painterResource(R.drawable.cultivation_ascension_rays),
+                    contentDescription = null,
+                    modifier = Modifier.align(Alignment.Center).size(230.dp)
+                        .graphicsLayer(alpha = flashAlpha, scaleX = .82f + .28f * flashAlpha, scaleY = .82f + .28f * flashAlpha),
+                    contentScale = ContentScale.Fit
+                )
+                Image(
+                    painter = painterResource(R.drawable.cultivation_breakthrough_ascension),
+                    contentDescription = null,
+                    modifier = Modifier.align(Alignment.Center).size(172.dp)
+                        .graphicsLayer(alpha = flashAlpha, scaleX = .76f + .24f * flashAlpha, scaleY = .76f + .24f * flashAlpha),
+                    contentScale = ContentScale.Fit
+                )
+                Image(
+                    painter = painterResource(R.drawable.cultivation_event_breakthrough),
+                    contentDescription = null,
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 38.dp)
+                        .width(244.dp).height(76.dp).graphicsLayer(alpha = flashAlpha),
+                    contentScale = ContentScale.Fit
+                )
+                Surface(
+                    modifier = Modifier.align(Alignment.Center).padding(top = 112.dp),
+                    color = Color(0xEE10243A),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, Color(0xFFE5BD72).copy(alpha = flashAlpha)),
+                    shadowElevation = 8.dp
+                ) {
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("ПРОРЫВ СВЕРШЁН", color = Color(0xFFFFD995), fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Text("${worldName(stage)} · ${stageName(stage)}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
         Surface(modifier = Modifier.fillMaxWidth(), color = Color(0xE9192A3D), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, Color(0x5578C6A3)), tonalElevation = 5.dp) {

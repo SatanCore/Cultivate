@@ -67,9 +67,23 @@ jobs:
             test -s "$spring_frames_dir/frame_${frame}.png"
             cp "$spring_frames_dir/frame_${frame}.png" "$target_dir/spirit_spring_frame_${frame}.png"
           done
+          # Import two 12-frame, 256px cultivation auras. The gold sequence
+          # serves the first three Dao worlds; the void sequence marks Chaos.
+          aura_source_dir="/tmp/cultivate-art/art_source/animations_expanded/characters"
+          for frame in 00 01 02 03 04 05 06 07 08 09 10 11; do
+            test -s "$aura_source_dir/cultivation_aura_gold/frame_${frame}.png"
+            test -s "$aura_source_dir/cultivation_aura_void/frame_${frame}.png"
+            cp "$aura_source_dir/cultivation_aura_gold/frame_${frame}.png" "$target_dir/cultivation_aura_gold_${frame}.png"
+            cp "$aura_source_dir/cultivation_aura_void/frame_${frame}.png" "$target_dir/cultivation_aura_void_${frame}.png"
+          done
+          # Separate transparent effects are layered only during a successful breakthrough.
+          effects_source_dir="/tmp/cultivate-art/art_source/02_processed_304/transparent_sprites/combat_and_effects"
+          cp "$effects_source_dir/ascension_rays_c7a7e8af.png" "$target_dir/cultivation_ascension_rays.png"
+          cp "$effects_source_dir/breakthrough_ascension_bf7758b4.png" "$target_dir/cultivation_breakthrough_ascension.png"
+          cp "$effects_source_dir/event_breakthrough_ea680001.png" "$target_dir/cultivation_event_breakthrough.png"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$target_dir"/*_male.png "$target_dir"/*_female.png "$target_dir"/hero_full_*.webp "$target_dir"/creature_*.png "$target_dir"/ui_rarity_frame_*.png "$target_dir"/spirit_spring_frame_*.png ART_ASSET_INVENTORY.md
+          git add "$target_dir"/*_male.png "$target_dir"/*_female.png "$target_dir"/hero_full_*.webp "$target_dir"/creature_*.png "$target_dir"/ui_rarity_frame_*.png "$target_dir"/spirit_spring_frame_*.png "$target_dir"/cultivation_aura_*.png "$target_dir"/cultivation_ascension_rays.png "$target_dir"/cultivation_breakthrough_ascension.png "$target_dir"/cultivation_event_breakthrough.png ART_ASSET_INVENTORY.md
           if ! git diff --cached --quiet; then
             git commit -m "Inventory supplied illustration library and import portraits"
             git push

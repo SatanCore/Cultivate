@@ -2266,6 +2266,18 @@ private fun HomeHotspot(title: String, subtitle: String, symbol: String, modifie
         animationSpec = infiniteRepeatable(tween(1900), RepeatMode.Reverse),
         label = "home-hotspot-glow-$symbol"
     )
+    val drift by transition.animateFloat(
+        initialValue = -2.5f,
+        targetValue = 2.5f,
+        animationSpec = infiniteRepeatable(tween(2600, easing = androidx.compose.animation.core.FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "home-hotspot-drift-$symbol"
+    )
+    val breathe by transition.animateFloat(
+        initialValue = .975f,
+        targetValue = 1.025f,
+        animationSpec = infiniteRepeatable(tween(2100), RepeatMode.Reverse),
+        label = "home-hotspot-breathe-$symbol"
+    )
     Box(
         modifier = modifier.width(112.dp).height(126.dp).clickable(onClick = onClick),
         contentAlignment = Alignment.Center
@@ -2310,7 +2322,11 @@ private fun HomeHotspot(title: String, subtitle: String, symbol: String, modifie
             Image(
                 painter = painterResource(townBuildingResource(symbol)),
                 contentDescription = "$title — $subtitle",
-                modifier = Modifier.width(108.dp).height(88.dp),
+                modifier = Modifier.width(108.dp).height(88.dp).graphicsLayer {
+                    translationY = drift.dp.toPx()
+                    scaleX = breathe
+                    scaleY = breathe
+                },
                 contentScale = ContentScale.Fit
             )
             Text(
@@ -2424,11 +2440,53 @@ private fun MoreNavigationDialog(
 
 @Composable
 private fun HomeNavItem(title: String, symbol: String, target: Int, onNavigate: (Int) -> Unit) {
+    val transition = rememberInfiniteTransition(label = "home-nav-$symbol")
+    val breathe by transition.animateFloat(
+        initialValue = .96f,
+        targetValue = 1.045f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500 + target * 65, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "home-nav-breathe-$symbol"
+    )
+    val halo by transition.animateFloat(
+        initialValue = .16f,
+        targetValue = .42f,
+        animationSpec = infiniteRepeatable(tween(1500 + target * 65), RepeatMode.Reverse),
+        label = "home-nav-halo-$symbol"
+    )
     Column(
         Modifier.clickable { onNavigate(target) }.padding(horizontal = 3.dp, vertical = 2.dp),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        RpgIcon(symbol, Modifier.size(29.dp))
+        Box(Modifier.size(34.dp), contentAlignment = Alignment.Center) {
+            Canvas(Modifier.fillMaxSize()) {
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        listOf(Color(0xFF8EDFC4).copy(alpha = halo), Color.Transparent)
+                    ),
+                    radius = size.minDimension * .49f
+                )
+                drawArc(
+                    color = Gold.copy(alpha = .22f + halo * .55f),
+                    startAngle = 205f,
+                    sweepAngle = 130f,
+                    useCenter = false,
+                    topLeft = Offset(size.width * .12f, size.height * .12f),
+                    size = Size(size.width * .76f, size.height * .76f),
+                    style = Stroke(width = 1.dp.toPx())
+                )
+            }
+            RpgIcon(
+                symbol,
+                Modifier.size(29.dp).graphicsLayer {
+                    scaleX = breathe
+                    scaleY = breathe
+                }
+            )
+        }
         Text(title, color = Color(0xFFE8D9B9), fontSize = 8.sp, fontWeight = FontWeight.Medium, maxLines = 1)
     }
 }

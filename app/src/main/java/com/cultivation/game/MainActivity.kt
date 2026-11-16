@@ -3414,6 +3414,80 @@ private fun gearDrawable(slot: GearSlot): Int = when (slot) {
     GearSlot.ARTIFACT -> R.drawable.relic_artifact
 }
 
+private fun weaponArtworkDrawable(type: Int, rarity: WeaponRarity): Int {
+    val tier = rarity.ordinal
+    return when (type) {
+        0 -> when (tier) {
+            0 -> R.drawable.sword_azure_f6728011
+            1 -> R.drawable.sword_jade_7deea1ea
+            2 -> R.drawable.sword_frost_ad183210
+            3 -> R.drawable.sword_flame_7bd34ad0
+            4 -> R.drawable.sword_gold_ec42c176
+            else -> R.drawable.sword_void_ea1b4e66
+        }
+        1 -> when (tier) {
+            0 -> R.drawable.weapon_01_afd19ae9
+            1 -> R.drawable.weapon_02_2097daa2
+            2 -> R.drawable.weapon_03_d445f2f2
+            3 -> R.drawable.weapon_04_cf6526d6
+            4 -> R.drawable.weapon_05_4299e206
+            else -> R.drawable.weapon_06_900f74a7
+        }
+        2 -> when (tier) {
+            0 -> R.drawable.weapon_03_d445f2f2
+            1 -> R.drawable.weapon_04_cf6526d6
+            2 -> R.drawable.weapon_05_4299e206
+            3 -> R.drawable.weapon_06_900f74a7
+            4 -> R.drawable.weapon_07_d352da0c
+            else -> R.drawable.weapon_08_a294d41e
+        }
+        else -> when (tier) {
+            0 -> R.drawable.weapon_05_4299e206
+            1 -> R.drawable.weapon_06_900f74a7
+            2 -> R.drawable.weapon_07_d352da0c
+            else -> R.drawable.weapon_08_a294d41e
+        }
+    }
+}
+
+private fun gearArtworkDrawable(slot: GearSlot, rarity: WeaponRarity): Int {
+    val tier = rarity.ordinal
+    return when (slot) {
+        GearSlot.HELMET -> when (tier) {
+            0 -> R.drawable.armor_09_07623153
+            1 -> R.drawable.armor_10_1319e8b9
+            2 -> R.drawable.armor_11_66de61ae
+            3 -> R.drawable.armor_12_29b39c6e
+            4 -> R.drawable.armor_13_6703e688
+            else -> R.drawable.armor_14_bab4b9a5
+        }
+        GearSlot.ARMOR -> when (tier) {
+            0 -> R.drawable.armor_01_d0ded429
+            1 -> R.drawable.armor_02_f72e8bc8
+            2 -> R.drawable.armor_03_1aae1981
+            3 -> R.drawable.armor_04_20b8d5e0
+            4 -> R.drawable.armor_05_fdd8809f
+            else -> R.drawable.armor_06_dcc18be4
+        }
+        GearSlot.RING -> when (tier) {
+            0 -> R.drawable.ring_azure_e45caa61
+            1 -> R.drawable.ring_jade_7afc2497
+            2 -> R.drawable.ring_crimson_ce3fd2a1
+            3 -> R.drawable.ring_void_483d7eed
+            4 -> R.drawable.ring_yin_yang_6be31e6a
+            else -> R.drawable.ring_gold_933bcc78
+        }
+        GearSlot.ARTIFACT -> when (tier) {
+            0 -> R.drawable.talisman_azure_e2d51c63
+            1 -> R.drawable.talisman_jade_57bf50fd
+            2 -> R.drawable.talisman_flame_0fdddd70
+            3 -> R.drawable.talisman_frost_7e9854a2
+            4 -> R.drawable.talisman_gold_b9e95be2
+            else -> R.drawable.talisman_void_e2774aa1
+        }
+    }
+}
+
 @Composable
 private fun RelicArtworkIcon(
     resourceId: Int,
@@ -3630,7 +3704,7 @@ private fun TreasuryVaultScreen(
                             modifier = Modifier.weight(1f),
                             title = item.name,
                             subtitle = "${item.rarity.title} · ${weaponPowerScore(item)}",
-                            resourceId = weaponDrawable(item.type),
+                            resourceId = weaponArtworkDrawable(item.type, item.rarity),
                             rarityColor = weaponRarityColor(item.rarity),
                             frameResource = rarityFrameResource(item.rarity),
                             selected = selectedWeapon?.id == item.id,
@@ -3652,7 +3726,7 @@ private fun TreasuryVaultScreen(
                             modifier = Modifier.weight(1f),
                             title = item.name,
                             subtitle = "${item.rarity.title} · ${gearPowerScore(item)}",
-                            resourceId = gearDrawable(item.slot),
+                            resourceId = gearArtworkDrawable(item.slot, item.rarity),
                             rarityColor = weaponRarityColor(item.rarity),
                             frameResource = rarityFrameResource(item.rarity),
                             selected = selectedGear?.id == item.id,
@@ -4060,7 +4134,7 @@ private fun TreasuryWeaponDetail(
     ) {
         Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RelicDetailShowcase(weaponDrawable(item.type), rarityColor, rarityFrameResource(item.rarity))
+                RelicDetailShowcase(weaponArtworkDrawable(item.type, item.rarity), rarityColor, rarityFrameResource(item.rarity))
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("ИЗБРАННАЯ РЕЛИКВИЯ", color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
@@ -4117,7 +4191,7 @@ private fun TreasuryGearDetail(
     ) {
         Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RelicDetailShowcase(gearDrawable(item.slot), rarityColor, rarityFrameResource(item.rarity))
+                RelicDetailShowcase(gearArtworkDrawable(item.slot, item.rarity), rarityColor, rarityFrameResource(item.rarity))
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("ИЗБРАННАЯ ЧАСТЬ КОМПЛЕКТА", color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
@@ -4181,7 +4255,7 @@ private fun InventoryLoadoutRow(weapon: WeaponDefinition, equippedGear: List<Gea
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 InventoryLoadoutSlot(
-                    "ОРУЖИЕ", weapon.name, weaponDrawable(weapon.type),
+                    "ОРУЖИЕ", weapon.name, weaponArtworkDrawable(weapon.type, weapon.rarity),
                     weaponRarityColor(weapon.rarity), Modifier.weight(1f),
                     rarityFrameResource(weapon.rarity)
                 )
@@ -4190,7 +4264,7 @@ private fun InventoryLoadoutRow(weapon: WeaponDefinition, equippedGear: List<Gea
                     InventoryLoadoutSlot(
                         slot.title.uppercase(),
                         item?.name ?: "Пусто",
-                        gearDrawable(slot),
+                        item?.let { gearArtworkDrawable(slot, it.rarity) } ?: gearDrawable(slot),
                         item?.let { weaponRarityColor(it.rarity) } ?: Color(0xFF65758A),
                         Modifier.weight(1f),
                         item?.let { rarityFrameResource(it.rarity) } ?: R.drawable.ui_rarity_frame_01

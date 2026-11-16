@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.random.Random
@@ -3116,172 +3117,153 @@ private fun TreasuryVaultScreen(
 ) {
     val visibleWeapons = if (filter == 2) emptyList() else weapons.sortedByDescending { weaponPowerScore(it) }
     val visibleGear = if (filter == 1) emptyList() else gear.sortedByDescending { gearPowerScore(it) }
-    var selectedKey by remember(filter) { mutableStateOf("") }
-    val selectedWeapon = visibleWeapons.firstOrNull { selectedKey == "W:${encodeWeaponInstance(it)}" }
-        ?: if (selectedKey.isBlank()) visibleWeapons.firstOrNull() else null
-    val selectedGear = visibleGear.firstOrNull { selectedKey == "G:${encodeGearInstance(it)}" }
-        ?: if (selectedKey.isBlank() && selectedWeapon == null) visibleGear.firstOrNull() else null
+    var selectedWeapon by remember { mutableStateOf<WeaponDefinition?>(null) }
+    var selectedGear by remember { mutableStateOf<GearDefinition?>(null) }
     val equippedGearBySlot = equippedGear.associateBy { it.slot }
     val nextWeaponStage = listOf(1, 4, 7, 10, 13, 16).firstOrNull { it > stage }
+    val totalItems = visibleWeapons.size + visibleGear.size
 
     Column(
         Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(11.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        TreasuryVaultHero(
-            totalItems = weapons.size + gear.size,
-            equippedItems = 1 + equippedGear.size
-        )
-        InventoryLoadoutRow(weapon = equippedWeapon, equippedGear = equippedGear)
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = Color(0xE9152B3B),
-            shape = RoundedCornerShape(15.dp),
-            border = BorderStroke(1.dp, Jade.copy(alpha = .48f))
-        ) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 11.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.treasury_vault_sigil),
-                    contentDescription = null,
-                    modifier = Modifier.size(42.dp)
-                )
-                Spacer(Modifier.width(9.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("ПРОБУЖДЕНИЕ КОМПЛЕКТА", color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
-                    Text(
-                        setBonus.description.ifBlank { "Надевай части одного набора: бонус пробуждается при сборе двух и четырёх реликвий." },
-                        color = Color(0xFFD5E0E8),
-                        fontSize = 9.sp,
-                        maxLines = 3
-                    )
-                    Text("Занято слотов: ${equippedGear.size}/4", color = Jade, fontSize = 8.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
+        TreasuryVaultHero(totalItems = weapons.size + gear.size, equippedItems = 1 + equippedGear.size)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             InventoryCategoryTab("ВСЁ · ${weapons.size + gear.size}", "inventory", filter == 0, Modifier.weight(1f)) { onFilterChange(0) }
             InventoryCategoryTab("ОРУЖИЕ · ${weapons.size}", "weapon", filter == 1, Modifier.weight(1f)) { onFilterChange(1) }
             InventoryCategoryTab("БРОНЯ · ${gear.size}", "equipment", filter == 2, Modifier.weight(1f)) { onFilterChange(2) }
         }
-
-        if (visibleWeapons.isEmpty() && visibleGear.isEmpty()) {
-            Surface(
-                Modifier.fillMaxWidth(),
-                color = Color(0xDD17263A),
-                shape = RoundedCornerShape(18.dp),
-                border = BorderStroke(1.dp, Gold.copy(alpha = .42f))
-            ) {
-                Column(
-                    Modifier.fillMaxWidth().padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Image(painterResource(R.drawable.treasury_vault_sigil), null, Modifier.size(82.dp))
-                    Text("СОКРОВИЩНИЦА ПОКА ПУСТА", color = Gold, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                    Text("Побеждай стражей и исследуй миры, чтобы находить новые реликвии.", color = Color(0xFFC5D1DF), fontSize = 10.sp)
+        Surface(
+            Modifier.fillMaxWidth(),
+            color = Color(0xAA14243A),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, Color(0x446E879E))
+        ) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("ЭКИПИРОВАНО", color = Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.width(8.dp))
+                Text(equippedWeapon.name, color = Color.White, fontSize = 8.sp, maxLines = 1, modifier = Modifier.weight(1f))
+                Text("${equippedGear.size}/4 слота", color = Jade, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        if (totalItems == 0) {
+            Surface(Modifier.fillMaxWidth(), color = Color(0xDD17263A), shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, Gold.copy(alpha = .42f))) {
+                Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Image(painterResource(R.drawable.treasury_vault_sigil), null, Modifier.size(62.dp))
+                    Text("СОКРОВИЩНИЦА ПОКА ПУСТА", color = Gold, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    Text("Побеждай стражей и исследуй миры, чтобы находить новые реликвии.", color = Color(0xFFC5D1DF), fontSize = 9.sp)
                 }
             }
         }
-
         if (visibleWeapons.isNotEmpty()) {
-            InventorySectionHeading("Оружейная галерея", "${visibleWeapons.size} реликвий", "weapon")
-            visibleWeapons.chunked(3).forEach { rowItems ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            InventorySectionHeading("Оружейная галерея", "${visibleWeapons.size} предметов · нажми для подробностей", "weapon")
+            visibleWeapons.chunked(4).forEach { rowItems ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     rowItems.forEach { item ->
-                        val key = "W:${encodeWeaponInstance(item)}"
                         val equipped = encodeWeaponInstance(item) == encodeWeaponInstance(equippedWeapon)
-                        val selected = selectedKey == key || (selectedKey.isBlank() && selectedWeapon == item)
                         TreasuryRelicTile(
                             modifier = Modifier.weight(1f),
                             title = item.name,
                             subtitle = "${item.rarity.title} · ${weaponPowerScore(item)}",
                             resourceId = weaponDrawable(item.type),
                             rarityColor = weaponRarityColor(item.rarity),
-                            selected = selected,
+                            selected = false,
                             equipped = equipped,
-                            onClick = { selectedKey = key }
+                            onClick = { selectedWeapon = item; selectedGear = null }
                         )
                     }
-                    repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
+                    repeat(4 - rowItems.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
-
         if (visibleGear.isNotEmpty()) {
-            InventorySectionHeading("Зал доспехов и артефактов", "${visibleGear.size} реликвий", "equipment")
-            visibleGear.chunked(3).forEach { rowItems ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            InventorySectionHeading("Доспехи и артефакты", "${visibleGear.size} предметов · нажми для подробностей", "equipment")
+            visibleGear.chunked(4).forEach { rowItems ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     rowItems.forEach { item ->
-                        val key = "G:${encodeGearInstance(item)}"
                         val equipped = equippedGearBySlot[item.slot]?.let { encodeGearInstance(it) == encodeGearInstance(item) } == true
-                        val selected = selectedKey == key || (selectedKey.isBlank() && selectedWeapon == null && selectedGear == item)
                         TreasuryRelicTile(
                             modifier = Modifier.weight(1f),
                             title = item.name,
                             subtitle = "${item.rarity.title} · ${gearPowerScore(item)}",
                             resourceId = gearDrawable(item.slot),
                             rarityColor = weaponRarityColor(item.rarity),
-                            selected = selected,
+                            selected = false,
                             equipped = equipped,
-                            onClick = { selectedKey = key }
+                            onClick = { selectedGear = item; selectedWeapon = null }
                         )
                     }
-                    repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
+                    repeat(4 - rowItems.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
-
-        selectedWeapon?.let { item ->
-            val delta = weaponPowerScore(item) - weaponPowerScore(equippedWeapon)
-            val equipped = encodeWeaponInstance(item) == encodeWeaponInstance(equippedWeapon)
-            val comparison = when {
-                equipped -> "Эта реликвия уже находится в активном комплекте"
-                delta > 0 -> "Сильнее текущего оружия на $delta очков"
-                delta < 0 -> "Уступает текущему оружию на ${-delta} очков"
-                else -> "Рейтинг совпадает с текущим оружием"
-            }
-            TreasuryWeaponDetail(
-                item = item,
-                score = weaponPowerScore(item),
-                rarityColor = weaponRarityColor(item.rarity),
-                comparison = comparison,
-                powerDelta = delta,
-                equipped = equipped,
-                canEquip = stage >= item.requiredStage,
-                onEquip = { onEquipWeapon(item) }
-            )
-        }
-
-        selectedGear?.let { item ->
-            val current = equippedGearBySlot[item.slot]
-            val delta = if (current == null) gearPowerScore(item) else gearPowerScore(item) - gearPowerScore(current)
-            val equipped = current?.let { encodeGearInstance(it) == encodeGearInstance(item) } == true
-            val comparison = when {
-                equipped -> "Эта реликвия уже надета"
-                current == null -> "Слот свободен · предмет готов к экипировке"
-                delta > 0 -> "Сильнее надетого предмета на $delta очков"
-                delta < 0 -> "Уступает надетому предмету на ${-delta} очков"
-                else -> "Рейтинг совпадает с надетой реликвией"
-            }
-            TreasuryGearDetail(
-                item = item,
-                score = gearPowerScore(item),
-                rarityColor = weaponRarityColor(item.rarity),
-                setName = gearSetNames[item.setId] ?: item.setId,
-                comparison = comparison,
-                powerDelta = if (current == null) null else delta,
-                equipped = equipped,
-                canEquip = stage >= item.requiredStage,
-                onEquip = { onEquipGear(item) }
-            )
-        }
-
         if (nextWeaponStage != null && filter != 2) {
             val preview = weaponCatalog.first { it.requiredStage == nextWeaponStage }
             InventoryNextDropCard(preview.name, preview.rarity.title, stageName(nextWeaponStage), weaponRarityColor(preview.rarity))
+        }
+    }
+
+    selectedWeapon?.let { item ->
+        val delta = weaponPowerScore(item) - weaponPowerScore(equippedWeapon)
+        val equipped = encodeWeaponInstance(item) == encodeWeaponInstance(equippedWeapon)
+        val comparison = when {
+            equipped -> "Эта реликвия уже находится в активном комплекте"
+            delta > 0 -> "Сильнее текущего оружия на $delta очков"
+            delta < 0 -> "Уступает текущему оружию на ${-delta} очков"
+            else -> "Рейтинг совпадает с текущим оружием"
+        }
+        Dialog(onDismissRequest = { selectedWeapon = null }) {
+            Surface(Modifier.fillMaxWidth(), color = Color(0xFF14243A), shape = RoundedCornerShape(22.dp), border = BorderStroke(1.5.dp, weaponRarityColor(item.rarity))) {
+                Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("ПРЕДМЕТ", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
+                        TextButton(onClick = { selectedWeapon = null }) { Text("ЗАКРЫТЬ") }
+                    }
+                    TreasuryWeaponDetail(
+                        item = item,
+                        score = weaponPowerScore(item),
+                        rarityColor = weaponRarityColor(item.rarity),
+                        comparison = comparison,
+                        powerDelta = delta,
+                        equipped = equipped,
+                        canEquip = stage >= item.requiredStage,
+                        onEquip = { onEquipWeapon(item); selectedWeapon = null }
+                    )
+                }
+            }
+        }
+    }
+    selectedGear?.let { item ->
+        val current = equippedGearBySlot[item.slot]
+        val delta = if (current == null) gearPowerScore(item) else gearPowerScore(item) - gearPowerScore(current)
+        val equipped = current?.let { encodeGearInstance(it) == encodeGearInstance(item) } == true
+        val comparison = when {
+            equipped -> "Эта реликвия уже надета"
+            current == null -> "Слот свободен · предмет готов к экипировке"
+            delta > 0 -> "Сильнее надетого предмета на $delta очков"
+            delta < 0 -> "Уступает надетому предмету на ${-delta} очков"
+            else -> "Рейтинг совпадает с надетой реликвией"
+        }
+        Dialog(onDismissRequest = { selectedGear = null }) {
+            Surface(Modifier.fillMaxWidth(), color = Color(0xFF14243A), shape = RoundedCornerShape(22.dp), border = BorderStroke(1.5.dp, weaponRarityColor(item.rarity))) {
+                Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("ПРЕДМЕТ", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
+                        TextButton(onClick = { selectedGear = null }) { Text("ЗАКРЫТЬ") }
+                    }
+                    TreasuryGearDetail(
+                        item = item,
+                        score = gearPowerScore(item),
+                        rarityColor = weaponRarityColor(item.rarity),
+                        setName = gearSetNames[item.setId] ?: item.setId,
+                        comparison = comparison,
+                        powerDelta = if (current == null) null else delta,
+                        equipped = equipped,
+                        canEquip = stage >= item.requiredStage,
+                        onEquip = { onEquipGear(item); selectedGear = null }
+                    )
+                }
+            }
         }
     }
 }

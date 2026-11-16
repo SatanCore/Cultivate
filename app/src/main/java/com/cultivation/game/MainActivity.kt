@@ -3313,7 +3313,7 @@ private fun TreasuryVaultScreen(
         Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        TreasuryVaultHero(totalItems = weapons.size + gear.size, equippedItems = 1 + equippedGear.size, classIndex = chosenClass)
+        TreasuryVaultHero(totalItems = weapons.size + gear.size, equippedItems = 1 + equippedGear.size, classIndex = classIndex)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             InventoryCategoryTab("ВСЁ · ${weapons.size + gear.size}", "inventory", filter == 0, Modifier.weight(1f)) { onFilterChange(0) }
             InventoryCategoryTab("ОРУЖИЕ · ${weapons.size}", "weapon", filter == 1, Modifier.weight(1f)) { onFilterChange(1) }

@@ -338,7 +338,7 @@ fun WorldExplorationScreen(
             Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 ExpeditionEncounterHero(
                     portraitRes = if (selectedLocation.isBoss) selectedLocation.battlePortraitRes else selectedLocation.enemyPortraitRes,
-                    backgroundRes = world.backgroundRes,
+                    backgroundRes = worldLandscapeResource(safeWorldIndex),
                     accent = worldAccent,
                     eyebrow = if (selectedLocation.isBoss) "ХРАНИТЕЛЬ МИРА" else if (selectedLocation.isElite) "ЭЛИТНЫЙ ПРОТИВНИК" else "ПРОТИВНИК ТЕРРИТОРИИ",
                     title = if (selectedLocation.isBoss) selectedLocation.title else selectedLocation.enemyName,

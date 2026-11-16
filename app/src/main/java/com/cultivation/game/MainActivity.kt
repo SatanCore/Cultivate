@@ -2100,6 +2100,8 @@ private fun CultivateApp() {
     }
 }
 
+}
+
 @Composable
 private fun CinematicHomeScreen(
     stage: Int, qi: Int, stones: Int, wins: Int, storyChapter: Int, combatPower: Int,

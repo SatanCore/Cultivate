@@ -1889,7 +1889,7 @@ private fun CultivateApp() {
 
             if (selectedMenu == 7) GameCard("Духовный зверинец", "Активный спутник · " + activePet.name) {
                 Text("Собирай древних зверей, открывай их резонанс с классом и укрепляй связь в личном святилище.", color = Color(0xFFD2DCEB), fontSize = 11.sp)
-                PetCompanionArt()
+                PetCompanionArt(activePet)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     PetResourceBadge("qi", "Эссенция", petEssence.toString(), Modifier.weight(1f))
                     PetResourceBadge("lotus", "Ядра", petCores.toString(), Modifier.weight(1f))
@@ -5758,29 +5758,34 @@ private fun BattleActionButton(
 }
 
 @Composable
-private fun PetCompanionArt() {
-    val transition = rememberInfiniteTransition(label = "spirit-fox-art")
-    val breath by transition.animateFloat(.985f, 1.025f, infiniteRepeatable(tween(1900), RepeatMode.Reverse), label = "fox-breath")
-    val glow by transition.animateFloat(.25f, .8f, infiniteRepeatable(tween(1200), RepeatMode.Reverse), label = "fox-glow")
+private fun PetCompanionArt(pet: PetDefinition) {
+    val transition = rememberInfiniteTransition(label = "spirit-companion-art")
+    val breath by transition.animateFloat(.985f, 1.025f, infiniteRepeatable(tween(1900), RepeatMode.Reverse), label = "companion-breath")
+    val glow by transition.animateFloat(.25f, .8f, infiniteRepeatable(tween(1200), RepeatMode.Reverse), label = "companion-glow")
+    val rarity = petRarityColor(pet.id)
     Box(Modifier.fillMaxWidth().height(174.dp)) {
         Image(
             painter = painterResource(id = R.drawable.pet_companion_banner),
-            contentDescription = "Культиватор и его дух-лис",
+            contentDescription = "Святилище духовных спутников",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = breath; scaleY = breath }
         )
         Canvas(Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-            for (i in 0..13) {
+            for (i in 0..17) {
                 val x = ((i * .173f + glow * .12f) % 1f) * w
                 val y = h * (.18f + ((i * 29) % 68) / 100f)
-                drawCircle(Color(0xFFB9F7FF).copy(alpha = glow * .55f), if (i % 3 == 0) 2.8f else 1.5f, Offset(x, y))
+                drawCircle(rarity.copy(alpha = glow * .62f), if (i % 3 == 0) 2.8f else 1.5f, Offset(x, y))
             }
-            drawRect(brush = Brush.horizontalGradient(0f to Color(0x66101820), .45f to Color.Transparent, 1f to Color(0x55101820)))
-            drawRect(brush = Brush.verticalGradient(0f to Color.Transparent, .7f to Color.Transparent, 1f to Color(0x99101820)))
+            drawRect(brush = Brush.horizontalGradient(0f to Color(0x77101820), .48f to Color.Transparent, 1f to Color(0x66101820)))
+            drawRect(brush = Brush.verticalGradient(0f to Color.Transparent, .7f to Color.Transparent, 1f to Color(0xAA101820)))
         }
-        Text("ДУХОВНЫЕ СПУТНИКИ", Modifier.align(Alignment.BottomStart).padding(10.dp), color = Color(0xFFE8D6AD), fontSize = 10.sp, fontWeight = FontWeight.Black)
+        Column(Modifier.align(Alignment.CenterEnd).padding(end = 14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            PetPortraitMedallion(pet.id, 94.dp, true)
+            Text(pet.name, color = Color(0xFFFFE5B0), fontSize = 10.sp, fontWeight = FontWeight.Black, maxLines = 1)
+        }
+        Text("СВЯТИЛИЩЕ ДУХОВНЫХ СПУТНИКОВ", Modifier.align(Alignment.BottomStart).padding(10.dp), color = Color(0xFFE8D6AD), fontSize = 9.sp, fontWeight = FontWeight.Black)
     }
 }
 

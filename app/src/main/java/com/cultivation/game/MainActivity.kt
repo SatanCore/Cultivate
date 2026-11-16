@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 private val Ink = Color(0xFF101820)
@@ -4581,6 +4582,8 @@ private fun BattleScene(
         label = "battle-arena-rune-rotation"
     )
     val impactProgress = remember { Animatable(1f) }
+    val strikeLunge = remember { Animatable(0f) }
+    val arenaShake = remember { Animatable(0f) }
     val combatAction = actionText.contains("урон", ignoreCase = true) ||
         actionText.contains("КРИТИЧЕСКИЙ УДАР", ignoreCase = true) ||
         actionText.contains("Рёв Каменного Тигра", ignoreCase = true) ||
@@ -4602,9 +4605,23 @@ private fun BattleScene(
     LaunchedEffect(actionText, enemyHp, playerHp) {
         if (combatAction) {
             impactProgress.snapTo(0f)
-            impactProgress.animateTo(1f, tween(620))
+            strikeLunge.snapTo(0f)
+            arenaShake.snapTo(0f)
+            launch {
+                impactProgress.animateTo(1f, tween(620))
+            }
+            launch {
+                strikeLunge.animateTo(1f, tween(125))
+                strikeLunge.animateTo(0f, tween(255))
+            }
+            launch {
+                arenaShake.animateTo(1f, tween(55))
+                arenaShake.animateTo(0f, tween(230))
+            }
         } else {
             impactProgress.snapTo(1f)
+            strikeLunge.snapTo(0f)
+            arenaShake.snapTo(0f)
         }
     }
     val pulse by transition.animateFloat(
@@ -4653,7 +4670,13 @@ private fun BattleScene(
         }
     }
 
-    Box(Modifier.fillMaxWidth().height(326.dp)) {
+    Box(
+        Modifier.fillMaxWidth().height(326.dp).graphicsLayer {
+            val kick = arenaShake.value
+            translationX = kotlin.math.sin((kick * 42f).toDouble()).toFloat() * kick * 8f
+            translationY = kotlin.math.cos((kick * 31f).toDouble()).toFloat() * kick * 2.5f
+        }
+    ) {
         Image(
             painter = painterResource(id = arenaBackgroundRes),
             contentDescription = "Лунная арена у горного святилища",
@@ -4890,7 +4913,7 @@ private fun BattleScene(
                 .height(176.dp)
                 .graphicsLayer {
                     translationY = -pulse * 2.5f + heroBreath * 2.1f
-                    translationX = heroBreath * 1.4f +
+                    translationX = heroBreath * 1.4f + strikeLunge.value * 22f +
                         if (combatAction && impactProgress.value < .22f) {
                             (1f - impactProgress.value / .22f) * 6f
                         } else 0f
@@ -4970,6 +4993,61 @@ private fun BattleScene(
 
         if (combatAction && impactProgress.value < .96f) {
             val progress = impactProgress.value
+            Image(
+                painter = painterResource(R.drawable.battle_impact_ring),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .offset(x = 42.dp, y = 28.dp)
+                    .size(218.dp)
+                    .graphicsLayer {
+                        alpha = (1f - progress).coerceIn(0f, 1f) * .82f
+                        scaleX = .42f + progress * 1.28f
+                        scaleY = .42f + progress * 1.28f
+                        rotationZ = progress * 18f
+                    }
+            )
+            Canvas(Modifier.fillMaxSize()) {
+                val burstCenter = Offset(size.width * .72f, size.height * .69f)
+                val radius = 18f + progress * 104f
+                val fade = (1f - progress).coerceIn(0f, 1f)
+                drawCircle(
+                    Color(0xFFFFE5A5).copy(alpha = fade * .72f),
+                    radius,
+                    burstCenter,
+                    style = Stroke(width = 3.8f * fade.coerceAtLeast(.08f))
+                )
+                drawCircle(
+                    phaseAccent.copy(alpha = fade * .62f),
+                    radius * .68f,
+                    burstCenter,
+                    style = Stroke(width = 2.1f * fade.coerceAtLeast(.08f))
+                )
+                for (index in 0..11) {
+                    val angle = index * (Math.PI / 6.0)
+                    val inner = radius * .78f
+                    val outer = radius * (1.06f + (index % 3) * .12f)
+                    val start = Offset(
+                        burstCenter.x + kotlin.math.cos(angle).toFloat() * inner,
+                        burstCenter.y + kotlin.math.sin(angle).toFloat() * inner * .72f
+                    )
+                    val end = Offset(
+                        burstCenter.x + kotlin.math.cos(angle).toFloat() * outer,
+                        burstCenter.y + kotlin.math.sin(angle).toFloat() * outer * .72f
+                    )
+                    drawLine(
+                        Brush.linearGradient(
+                            listOf(Color.Transparent, phaseAccent.copy(alpha = fade * .9f), Color.Transparent),
+                            start = start,
+                            end = end
+                        ),
+                        start,
+                        end,
+                        strokeWidth = if (index % 3 == 0) 3.2f * fade else 1.7f * fade
+                    )
+                }
+            }
             Image(
                 painter = painterResource(id = impactRes),
                 contentDescription = "Эффект боевого удара",

@@ -4100,12 +4100,13 @@ private fun ClassPortraitCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                Modifier.width(108.dp).height(132.dp)
+                Modifier.width(126.dp).height(154.dp)
                     .background(
                         Brush.radialGradient(
                             listOf(
-                                (if (selected) Color(0xFF6CB7D1) else Color(0xFF4D638A)).copy(alpha = .42f + glow * .12f),
-                                Color(0xFF101A2D),
+                                (if (selected) Color(0xFF8ED8E8) else Color(0xFF607DA8)).copy(alpha = .48f + glow * .16f),
+                                Color(0xFF172943),
+                                Color(0xFF0B1423),
                                 Color.Transparent
                             )
                         ),
@@ -4113,14 +4114,51 @@ private fun ClassPortraitCard(
                     ),
                 contentAlignment = Alignment.Center
             ) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val center = Offset(size.width * .5f, size.height * .5f)
+                    drawCircle(
+                        Brush.radialGradient(
+                            listOf(
+                                (if (selected) Color(0x667DD8D1) else Color(0x444D83B5)),
+                                Color.Transparent
+                            ),
+                            center = center,
+                            radius = size.minDimension * .66f
+                        ),
+                        radius = size.minDimension * .66f,
+                        center = center
+                    )
+                    drawCircle(
+                        if (selected) Gold.copy(alpha = .72f + glow * .25f) else Color(0x665B7898),
+                        radius = size.minDimension * .465f,
+                        center = center,
+                        style = Stroke(width = 1.4.dp.toPx())
+                    )
+                    drawCircle(
+                        Color(0x667FC7D4),
+                        radius = size.minDimension * .435f,
+                        center = center,
+                        style = Stroke(width = .7.dp.toPx())
+                    )
+                }
                 Image(
                     painter = painterResource(id = portraitRes),
                     contentDescription = "$name — иллюстрированный образ класса",
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize().padding(2.dp)
                 )
+                if (selected) {
+                    Surface(
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 5.dp),
+                        color = Color(0xE52B594F),
+                        shape = RoundedCornerShape(20.dp),
+                        border = BorderStroke(1.dp, Jade.copy(alpha = .9f))
+                    ) {
+                        Text("ПУТЬ ИЗБРАН", Modifier.padding(horizontal = 8.dp, vertical = 3.dp), color = Color.White, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                    }
+                }
             }
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(12.dp))
             Column(
                 Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(5.dp)

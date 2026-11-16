@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -106,6 +107,12 @@ internal fun AlchemyWorkshopScreen(
                 .border(1.dp, AlchemyViolet.copy(alpha = 0.66f), RoundedCornerShape(18.dp))
                 .padding(horizontal = 13.dp, vertical = 9.dp)
         ) {
+            Image(
+                painter = painterResource(R.drawable.abode_alchemy_scene),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().graphicsLayer(alpha = 0.38f)
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,

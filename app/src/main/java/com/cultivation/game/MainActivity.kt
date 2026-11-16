@@ -125,7 +125,7 @@ private fun CharacterCreationScreen(
                                             painter = painterResource(portraits[index]),
                                             contentDescription = classNames[index],
                                             contentScale = ContentScale.Crop,
-                                            modifier = Modifier.fillMaxWidth().height(142.dp).clip(RoundedCornerShape(10.dp))
+                                            modifier = Modifier.fillMaxWidth().height(142.dp).graphicsLayer(shape = RoundedCornerShape(10.dp), clip = true)
                                         )
                                         Text(classNames[index], color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                         Text(classDescriptions[index], color = Color(0xFFB9C9D8), fontSize = 8.sp, minLines = 2)

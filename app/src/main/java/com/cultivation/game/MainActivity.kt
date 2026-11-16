@@ -3210,6 +3210,7 @@ private fun TreasuryVaultScreen(
                 score = weaponPowerScore(item),
                 rarityColor = weaponRarityColor(item.rarity),
                 comparison = comparison,
+                powerDelta = delta,
                 equipped = equipped,
                 canEquip = stage >= item.requiredStage,
                 onEquip = { onEquipWeapon(item) }
@@ -3233,6 +3234,7 @@ private fun TreasuryVaultScreen(
                 rarityColor = weaponRarityColor(item.rarity),
                 setName = gearSetNames[item.setId] ?: item.setId,
                 comparison = comparison,
+                powerDelta = if (current == null) null else delta,
                 equipped = equipped,
                 canEquip = stage >= item.requiredStage,
                 onEquip = { onEquipGear(item) }
@@ -3354,11 +3356,51 @@ private fun TreasuryRelicTile(
 }
 
 @Composable
+private fun InventoryPowerComparison(score: Int, delta: Int?, equipped: Boolean) {
+    val deltaColor = when {
+        equipped -> Jade
+        delta == null -> Gold
+        delta > 0 -> Jade
+        delta < 0 -> Color(0xFFFF8B83)
+        else -> Color(0xFFB8C7D8)
+    }
+    val deltaLabel = when {
+        equipped -> "АКТИВНО"
+        delta == null -> "НОВЫЙ СЛОТ"
+        delta > 0 -> "+$delta"
+        delta < 0 -> "$delta"
+        else -> "БЕЗ ИЗМЕНЕНИЙ"
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color(0xAA0B1728),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, deltaColor.copy(alpha = .58f))
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("СИЛА РЕЛИКВИИ", color = Color(0xFF9FB2C8), fontSize = 7.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                Text(score.toString(), color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Black)
+            }
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("СРАВНЕНИЕ С ЭКИПИРОВКОЙ", color = Color(0xFF9FB2C8), fontSize = 7.sp, fontWeight = FontWeight.Black)
+                Text(deltaLabel, color = deltaColor, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            }
+        }
+    }
+}
+
+@Composable
 private fun TreasuryWeaponDetail(
     item: WeaponDefinition,
     score: Int,
     rarityColor: Color,
     comparison: String,
+    powerDelta: Int?,
     equipped: Boolean,
     canEquip: Boolean,
     onEquip: () -> Unit
@@ -3389,6 +3431,7 @@ private fun TreasuryWeaponDetail(
                 ClassMetric("shield", "+${item.defenseBonus}")
                 ClassMetric("health", "+${item.healOnHit}")
             }
+            InventoryPowerComparison(score = score, delta = powerDelta, equipped = equipped)
             Text(comparison, color = if (equipped || comparison.startsWith("Сильнее")) Jade else Color(0xFFFFCF9B), fontSize = 9.sp, fontWeight = FontWeight.Bold)
             InventoryActionButton(
                 label = when { equipped -> "УЖЕ ЭКИПИРОВАНО"; !canEquip -> "ТРЕБУЕТСЯ СТУПЕНЬ ${item.requiredStage}"; else -> "ЭКИПИРОВАТЬ РЕЛИКВИЮ" },
@@ -3407,6 +3450,7 @@ private fun TreasuryGearDetail(
     rarityColor: Color,
     setName: String,
     comparison: String,
+    powerDelta: Int?,
     equipped: Boolean,
     canEquip: Boolean,
     onEquip: () -> Unit
@@ -3437,6 +3481,7 @@ private fun TreasuryGearDetail(
                 ClassMetric("health", "+${item.hpBonus}")
                 ClassMetric("skills", "+${item.skillBonus}")
             }
+            InventoryPowerComparison(score = score, delta = powerDelta, equipped = equipped)
             Text(comparison, color = if (equipped || comparison.startsWith("Сильнее")) Jade else Color(0xFFFFCF9B), fontSize = 9.sp, fontWeight = FontWeight.Bold)
             InventoryActionButton(
                 label = when { equipped -> "УЖЕ НАДЕТО"; !canEquip -> "ТРЕБУЕТСЯ СТУПЕНЬ ${item.requiredStage}"; else -> "НАДЕТЬ РЕЛИКВИЮ" },
